@@ -78,6 +78,20 @@ export class CombatPlayer {
     ).finished.then(() => num.remove()).catch(() => {});
   }
 
+  _spark(id, color, n = 4, spread = 22) {
+    const node = this.nodes.get(id); if (!node) return;
+    const m = node.el.style.transform.match(/translate\(([\d.]+)%,\s*([\d.]+)%\)/); if (!m) return;
+    const cx = (+m[1]) * 0.125 + 6, cy = (+m[2]) * 0.125 + 6;
+    for (let i = 0; i < n; i++) {
+      const ang = (Math.PI * 2 * i) / n + i * 1.1;
+      const dx = Math.cos(ang) * spread, dy = Math.sin(ang) * spread - 4;
+      const p = el('.spark', { style: { position: 'absolute', left: `${cx}%`, top: `${cy}%`, width: '5px', height: '5px', borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` } });
+      this.fxLayer.append(p);
+      p.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(0)`, opacity: 0 }],
+        { duration: (320 + i * 20) / this.speed, easing: 'cubic-bezier(.2,.6,.3,1)' }).finished.then(() => p.remove()).catch(() => {});
+    }
+  }
+
   _projectile(from, to, kind) {
     const a = this.nodes.get(from), b = this.nodes.get(to);
     if (!a || !b) return;
@@ -116,7 +130,7 @@ export class CombatPlayer {
       case 'damage': {
         if (n) { n.el.classList.add('flash', 'hit'); setTimeout(() => n.el.classList.remove('flash', 'hit'), 150); }
         this._setHP(e.id, e.hp);
-        if (e.amount > 0) this._floatNum(e.id, e.amount, DT_COLORS[e.type] || 'var(--dt-physical)');
+        if (e.amount > 0) { const col = DT_COLORS[e.type] || 'var(--dt-physical)'; this._floatNum(e.id, e.amount, col); this._spark(e.id, col, e.type === 'magic' ? 5 : 3); }
         this._bumpMana(e.id, 0.05);
         break;
       }
@@ -125,7 +139,7 @@ export class CombatPlayer {
       case 'revive': this._setHP(e.id, e.hp); if (n) n.el.classList.add('flash'); break;
       case 'dodge': this._floatNum(e.id, 'dodge', 'var(--ink-dim)'); break;
       case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); this.shake.add(0.16); if (n) { n.mana = 0; this._setMana(e.id, 0); } } break;
-      case 'faint': if (n) { n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } Sfx.death(); this.shake.add(0.28); break;
+      case 'faint': if (n) { this._spark(e.id, '#ffffff', 8, 30); n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } Sfx.death(); this.shake.add(0.28); break;
       case 'end': break;
     }
   }
