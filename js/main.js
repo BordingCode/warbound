@@ -846,6 +846,18 @@ function heroPalette(m) {
 // ---------- Armory (meta-progression: chests + equipping your Champion) ----------
 function showArmory() {
   audioResume();
+  let invSort = 'slot';            // how the inventory grid is ordered (persists across re-renders)
+  const SLOT_ORDER = Object.fromEntries(Meta.SLOTS.map((s, i) => [s.id, i]));
+  const RAR_ORDER = { common: 0, rare: 1, epic: 2 };
+  const iidNum = (it) => parseInt(String(it.iid).replace(/\D/g, ''), 10) || 0;
+  const sortInv = (items, m) => {
+    const a = [...items];
+    const eq = (it) => (m.equipped[it.slot] === it.iid ? 0 : 1);   // equipped pieces float to the front
+    if (invSort === 'slot') a.sort((x, y) => eq(x) - eq(y) || SLOT_ORDER[x.slot] - SLOT_ORDER[y.slot] || RAR_ORDER[y.rarity] - RAR_ORDER[x.rarity] || iidNum(y) - iidNum(x));
+    else if (invSort === 'rarity') a.sort((x, y) => eq(x) - eq(y) || RAR_ORDER[y.rarity] - RAR_ORDER[x.rarity] || SLOT_ORDER[x.slot] - SLOT_ORDER[y.slot] || iidNum(y) - iidNum(x));
+    else a.sort((x, y) => eq(x) - eq(y) || iidNum(y) - iidNum(x));  // 'recent' = newest first
+    return a;
+  };
   const render = () => {
     const m = Meta.load();
     const rar = (id) => Meta.RARITIES.find((r) => r.id === id);
@@ -895,8 +907,15 @@ function showArmory() {
       ]),
       // Forge: fuse two of the same slot + rarity into one of the next rarity up
       forgePanel(m, rar, render),
-      el('.inv-head', {}, m.inventory.length ? `Inventory · ${m.inventory.length}` : 'No gear yet — open a War Cache'),
-      el('.inv-grid', {}, m.inventory.map(invCell)),
+      el('.inv-bar', {}, [
+        el('.inv-head', {}, m.inventory.length ? `Inventory · ${m.inventory.length}` : 'No gear yet — open a War Cache'),
+        m.inventory.length > 1 ? el('.inv-sort', {}, [
+          el('span.is-label', {}, 'Sort'),
+          ...[['slot', 'Slot'], ['rarity', 'Rarity'], ['recent', 'Newest']].map(([k, lbl]) =>
+            el(`button.is-btn${invSort === k ? ' on' : ''}`, { onclick: () => { invSort = k; Sfx.click(); render(); } }, lbl)),
+        ]) : null,
+      ]),
+      el('.inv-grid', {}, sortInv(m.inventory, m).map(invCell)),
     ]));
   };
   render();
