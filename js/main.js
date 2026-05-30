@@ -1,175 +1,221 @@
-// Warbound — entry point. M0: render a planning-phase layout (board + units + shop +
-// bench + traits + HUD) from sample state so the shell is verifiable. Real logic
-// (drag, sim, economy) layers on in later milestones.
-import { el, $ } from './dom.js';
-import { UNITS, UNITS_BY_ID, statsForStar } from './data/units.js';
+// Warbound — game loop. Planning phase (interactive shop/bench/board + drag) → combat
+// (sim + timeline playback) → resolve → next round, until 10 wins or 0 lives.
+import { el, $, $$ } from './dom.js';
+import { UNITS_BY_ID } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG } from './svg.js';
 import { simulate } from './sim/combat.js';
+import { hashSeed } from './rng.js';
 import { CombatPlayer } from './render/player.js';
+import { createDragController } from './input/drag.js';
+import { getEnemyBoard } from './data/enemies.js';
+import * as Run from './state/run.js';
 
-let player = null;        // CombatPlayer instance
+let run = Run.load() || Run.freshRun();
 let combatSpeed = 1;
 let inCombat = false;
+let dragCtl = null;
+let player = null;
 
-// ---- sample state (placeholder until economy/run state exists) ----
-const sample = {
-  gold: 32, hp: 84, lives: 4, wins: 3, round: 'Act 1 · 4', level: 6, xp: 2, xpMax: 6,
-  board: [
-    { defId: 'knight_captain', star: 2, col: 2, row: 6, team: 'player' },
-    { defId: 'bone_guard', star: 1, col: 4, row: 6, team: 'player' },
-    { defId: 'court_mage', star: 2, col: 3, row: 7, team: 'player' },
-    { defId: 'wood_ranger', star: 1, col: 1, row: 7, team: 'player' },
-    { defId: 'shadow_dancer', star: 1, col: 5, row: 7, team: 'player' },
-    { defId: 'field_medic', star: 1, col: 6, row: 6, team: 'player' },
-    // enemy comp (top half)
-    { defId: 'hellguard', star: 2, col: 3, row: 1, team: 'enemy' },
-    { defId: 'warlock', star: 1, col: 2, row: 0, team: 'enemy' },
-    { defId: 'imp_assassin', star: 2, col: 5, row: 1, team: 'enemy' },
-    { defId: 'fel_archer', star: 1, col: 4, row: 0, team: 'enemy' },
-  ],
-  bench: ['lich', 'wood_ranger', null, 'thornguard', null, null, null, null, null],
-  shop: ['skeleton_archer', 'court_mage', 'shadow_dancer', 'moon_priestess', 'dragon_knight'],
-};
-
-function unitNode(u) {
+// ---------- board ----------
+function unitNode(u, team) {
   const def = UNITS_BY_ID[u.defId];
-  const node = el(`.unit.team-${u.team}`, { dataset: { star: u.star, id: u.defId } });
+  const node = el(`.unit.team-${team}`, { dataset: { star: u.star, uid: u.uid || '' } });
   node.style.transform = `translate(${u.col * 100}%, ${u.row * 100}%)`;
   node.append(
-    el('.stars', {}, '★'.repeat(u.star)),
+    el('.stars', {}, u.star > 1 ? '★'.repeat(u.star) : ''),
     el('.frame', { html: championSVG(def, { size: 60 }) }),
-    el('.bars', {}, [
-      el('.bar.hp', {}, [el('.trail'), el('.fill')]),
-      el('.bar.mana', {}, [el('.fill', { style: { transform: 'scaleX(0.4)' } })]),
-    ]),
+    el('.bars', {}, [el('.bar.hp', {}, [el('.trail'), el('.fill')]), el('.bar.mana', {}, [el('.fill')])]),
   );
-  // set hp/mana fills
+  if (u.items && u.items.length) node.append(el('.item-dots', {}, u.items.map(() => el('i'))));
   node.querySelector('.bar.hp .fill').style.transform = 'scaleX(1)';
   node.querySelector('.bar.hp .trail').style.transform = 'scaleX(1)';
+  node.querySelector('.bar.mana .fill').style.transform = 'scaleX(0)';
   return node;
 }
 
-function buildBoard() {
+function buildBoardEl() {
   const stage = el('.stage');
   const wrap = el('.board-wrap');
   const tiles = el('.tiles');
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const zone = r < 4 ? 'enemy-zone' : 'player-zone';
-      tiles.append(el(`.tile.${zone}${(r + c) % 2 ? ' alt' : ''}`, { dataset: { col: c, row: r } }));
-    }
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const zone = r < 4 ? 'enemy-zone' : 'player-zone';
+    tiles.append(el(`.tile.${zone}${(r + c) % 2 ? ' alt' : ''}`, { dataset: { col: c, row: r } }));
   }
   const units = el('.units');
-  for (const u of sample.board) units.append(unitNode(u));
+  if (!inCombat) for (const u of run.board) {
+    const n = unitNode(u, 'player');
+    units.append(n);
+  }
   wrap.append(tiles, el('.midline'), units, el('.fx-dom'));
   stage.append(wrap);
-  return stage;
+  return { stage, wrap, units };
 }
 
-function buildTraits() {
-  const playerDefs = sample.board.filter((u) => u.team === 'player').map((u) => UNITS_BY_ID[u.defId]);
-  const active = activeTraits(playerDefs);
+// ---------- traits ----------
+function buildTraitsEl() {
+  const defs = run.board.map((u) => UNITS_BY_ID[u.defId]);
+  const active = activeTraits(defs);
   const rail = el('.traits-rail');
-  // sort: active first, by count desc
-  const entries = Object.entries(active).sort((a, b) => (b[1].tier - a[1].tier) || (b[1].count - a[1].count));
+  const entries = Object.entries(active).filter(([t]) => TRAITS[t]).sort((a, b) => (b[1].tier - a[1].tier) || (b[1].count - a[1].count));
+  if (!entries.length) rail.append(el('.trait-chip', {}, 'Place champions to form synergies'));
   for (const [t, info] of entries) {
     const def = TRAITS[t];
     const tierIdx = def.breakpoints.indexOf(info.tier) + 1;
-    rail.append(el(`.trait-chip${info.tier ? ' active tier-' + tierIdx : ''}`, {}, [
+    const next = def.breakpoints.find((b) => b > info.count);
+    rail.append(el(`.trait-chip${info.tier ? ' active tier-' + tierIdx : ''}`, { title: def.bonusText[info.tier] || def.desc }, [
       el('span.dot', { style: { background: def.color } }),
       el('span', {}, def.name),
-      el('span.cnt', {}, `${info.count}`),
+      el('span.cnt', {}, next ? `${info.count}/${next}` : `${info.count}`),
     ]));
   }
   return rail;
 }
 
-function buildShop() {
+// ---------- shop / bench ----------
+function buildShopEl() {
   const row = el('.shop-row');
-  for (const id of sample.shop) {
+  run.shop.forEach((id, i) => {
     const def = id && UNITS_BY_ID[id];
-    if (!def) { row.append(el('.shop-card.empty')); continue; }
-    const owned = sample.board.some((u) => u.defId === id) || sample.bench.includes(id);
-    row.append(el(`.shop-card.cost-${def.cost}${owned ? ' owned' : ''}`, {}, [
+    if (!def) { row.append(el('.shop-card.empty')); return; }
+    const owned = [...run.board, ...run.bench.filter(Boolean)].some((u) => u.defId === id);
+    const card = el(`.shop-card.cost-${def.cost}${owned ? ' owned' : ''}`, { onclick: () => doBuy(i) }, [
       el('span.price', {}, `${def.cost}⛁`),
       el('.art', { html: championSVG(def, { size: 46 }) }),
       el('.nm', {}, def.name),
       el('.tags', {}, `${TRAITS[def.origin].name} · ${TRAITS[def.klass].name}`),
-    ]));
-  }
+    ]);
+    row.append(card);
+  });
+  const inc = Run.income(run);
   const controls = el('.shop-controls', {}, [
-    el('button.btn.primary', {}, [el('span', {}, 'Buy XP'), el('span', { style: { opacity: .7 } }, '4⛁')]),
-    el('button.btn.reroll', {}, [el('span', {}, '⟳ Reroll'), el('span', { style: { opacity: .7 } }, '2⛁')]),
+    el('button.btn.primary', { onclick: doBuyXP }, [el('span', {}, 'Buy XP'), el('span', { style: { opacity: .7 } }, '4⛁')]),
+    el('button.btn.reroll', { onclick: doReroll }, [el('span', {}, '⟳'), el('span', { style: { opacity: .7 } }, '2⛁')]),
+    el('span', { style: { marginLeft: 'auto', fontSize: '11px', color: 'var(--ink-dim)' } }, `+${inc.total}/turn (⛁${inc.interest} int${inc.streakBonus ? ' +' + inc.streakBonus + ' streak' : ''})`),
   ]);
   return el('.shop', {}, [controls, row]);
 }
 
-function buildBench() {
+function buildBenchEl() {
   const bench = el('.bench');
-  for (const id of sample.bench) {
-    const slot = el(`.slot${id ? ' filled' : ''}`);
-    if (id) slot.append(el('.frame', { html: championSVG(UNITS_BY_ID[id], { size: 38 }) }));
+  run.bench.forEach((u) => {
+    const slot = el(`.slot${u ? ' filled' : ''}`);
+    if (u) {
+      const inner = el('.frame', { html: championSVG(UNITS_BY_ID[u.defId], { size: 38 }) });
+      if (u.star > 1) inner.append(el('.stars', { style: { position: 'absolute', top: '-2px' } }, '★'.repeat(u.star)));
+      slot.append(inner);
+      slot.dataset.uid = u.uid;
+    }
     bench.append(slot);
-  }
+  });
   return bench;
 }
 
-function render() {
+// ---------- actions ----------
+function act(fn) { fn(); Run.save(run); renderPlanning(); }
+function doBuy(i) { act(() => Run.buy(run, i)); }
+function doBuyXP() { act(() => Run.buyXP(run)); }
+function doReroll() { act(() => Run.reroll(run)); }
+
+// ---------- planning render ----------
+function renderPlanning() {
+  inCombat = false;
+  const enemy = getEnemyBoard(run.round, null);
+  const boardLimitTxt = `${run.board.length}/${Run.boardLimit(run)}`;
+  const { stage, wrap, units } = buildBoardEl();
+
   const game = el('.game', {}, [
     el('.topbar', {}, [
-      el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, sample.gold)]),
-      el('.stat-pill.hp', {}, [el('span.ico', {}, '♥'), el('span', {}, sample.hp)]),
-      el('.stat-pill', {}, [el('span.lives', {}, '❤'.repeat(sample.lives)), el('span', { style: { color: 'var(--hp)' } }, ` ${sample.wins}W`)]),
-      el('.stat-pill.round', {}, sample.round),
+      el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
+      el('.stat-pill', {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
+      el('.stat-pill.round', {}, `Round ${run.round}`),
     ]),
     el('.topbar', {}, [
-      el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${sample.level}`)]),
-      el('.xpbar', {}, el('.fill', { style: { transform: `scaleX(${sample.xp / sample.xpMax})` } })),
+      el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt}`)]),
+      el('.xpbar', {}, el('.fill', { style: { transform: `scaleX(${Run.xpNeeded(run) ? run.xp / Run.xpNeeded(run) : 1})` } })),
     ]),
-    buildTraits(),
-    el('.phase-banner', {}, 'PLANNING — arrange your warband'),
-    buildBoard(),
+    buildTraitsEl(),
+    el('.phase-banner', {}, `Next: ${enemy.name} — ${enemy.traitHint}`),
+    stage,
     el('.combat-ctl', {}, [
-      el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 24px' } }, '⚔ Ready'),
+      el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, '⚔ Ready'),
       el('button.btn#spd1', { onclick: () => setSpeed(1) }, '1×'),
       el('button.btn#spd2', { onclick: () => setSpeed(2) }, '2×'),
       el('button.btn#spd4', { onclick: () => setSpeed(4) }, '4×'),
+      el('.sell-zone#sellZone', { style: { marginLeft: 'auto' } }, '🗑 Sell'),
     ]),
-    buildBench(),
-    buildShop(),
+    buildBenchEl(),
+    buildShopEl(),
   ]);
   $('#app').replaceChildren(game);
-
-  // wire combat
-  const unitsLayer = $('.units'), fxLayer = $('.fx-dom');
-  player = new CombatPlayer(unitsLayer, fxLayer);
-  $('#readyBtn').addEventListener('click', startCombat);
   highlightSpeed();
+
+  // drag wiring
+  dragCtl = createDragController({
+    boardWrap: wrap, sellZone: $('#sellZone'),
+    onPlace: (uid, col, row) => act(() => Run.placeOnBoard(run, uid, col, row)),
+    onBench: (uid) => act(() => Run.benchUnit(run, uid)),
+    onSell: (uid) => act(() => Run.sellUid(run, uid)),
+  });
+  // make board units + bench units draggable
+  units.querySelectorAll('.unit').forEach((n) => {
+    const uid = n.dataset.uid; const u = run.board.find((x) => x.uid === uid);
+    if (u) dragCtl.makeDraggable(n, uid, 'board', championSVG(UNITS_BY_ID[u.defId], { size: 56 }));
+  });
+  $$('.bench .slot.filled').forEach((s) => {
+    const uid = s.dataset.uid; const u = run.bench.find((x) => x && x.uid === uid);
+    if (u) dragCtl.makeDraggable(s, uid, 'bench', championSVG(UNITS_BY_ID[u.defId], { size: 56 }));
+  });
 }
 
 function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highlightSpeed(); }
-function highlightSpeed() {
-  for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); }
-}
+function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
+function setBanner(t) { const b = $('.phase-banner'); if (b) b.textContent = t; }
 
-function setBanner(text) { const b = $('.phase-banner'); if (b) b.textContent = text; }
-
+// ---------- combat ----------
 async function startCombat() {
   if (inCombat) return;
   inCombat = true;
-  const ready = $('#readyBtn'); if (ready) ready.disabled = true;
-  const playerBoard = sample.board.filter((u) => u.team === 'player').map(({ defId, star, col, row }) => ({ defId, star, col, row }));
-  const enemyBoard = sample.board.filter((u) => u.team === 'enemy').map(({ defId, star, col, row }) => ({ defId, star, col, row }));
-  const seed = 20260530;
-  const { events, result } = simulate(playerBoard, enemyBoard, seed);
-  setBanner('⚔ BATTLE');
+  const enemy = getEnemyBoard(run.round, null);
+  const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
+  const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
+  const seed = hashSeed(run.seed, run.round);
+  const { events } = simulate(playerBoard, enemyBoard, seed);
+
+  // hide planning-only controls, keep board
+  $$('.bench .slot, .shop, .combat-ctl .btn:not(#readyBtn)').forEach(() => {});
+  const ready = $('#readyBtn'); if (ready) { ready.disabled = true; ready.textContent = '⚔ Fighting…'; }
+  setBanner(`⚔ vs ${enemy.name}`);
+
+  player = new CombatPlayer($('.units'), $('.fx-dom'));
   const winner = await player.play(events, { speed: combatSpeed });
-  setBanner(winner === 'player' ? '🏆 VICTORY' : winner === 'enemy' ? '💀 DEFEAT' : '⚖ DRAW');
-  inCombat = false;
-  if (ready) { ready.disabled = false; ready.textContent = '↻ Replay'; }
-  console.log('[warbound] combat result:', result);
+  const won = winner === 'player';
+  setBanner(won ? '🏆 Round won!' : winner === 'enemy' ? '💀 Round lost' : '⚖ Draw — counts as a loss');
+
+  Run.resolveRound(run, won);
+  Run.save(run);
+  setTimeout(() => {
+    if (run.over) endScreen();
+    else renderPlanning();
+  }, 1100);
 }
 
-render();
-console.log('[warbound] M3 shell + combat renderer ready.', UNITS.length, 'units in roster');
+function endScreen() {
+  const won = run.won;
+  const card = el('.endscreen', {}, [
+    el('h1', { style: { fontSize: '34px', margin: '0' } }, won ? '🏆 VICTORY' : '💀 DEFEAT'),
+    el('p', { style: { color: 'var(--ink-dim)' } }, won ? `You won the run with ${run.lives} ❤ to spare!` : `Your warband fell at round ${run.round}. ${run.wins} wins.`),
+    el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => { run = Run.freshRun(); Run.save(run); renderPlanning(); } }, '↻ New Run'),
+  ]);
+  $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '80svh', textAlign: 'center', gap: '16px' } }, [card]));
+}
+
+renderPlanning();
+// Debug hook (also the seed of a future debug menu): inspect/drive state from console.
+window.__wb = {
+  get run() { return run; }, Run,
+  render: renderPlanning, fight: startCombat,
+  place: (uid, c, r) => act(() => Run.placeOnBoard(run, uid, c, r)),
+  giveGold: (n) => act(() => (run.gold += n)),
+};
+console.log('[warbound] game loop ready. Round', run.round, '| board limit', Run.boardLimit(run));
