@@ -603,6 +603,18 @@ function motionOn() { try { return localStorage.getItem('warbound_shake') !== '0
 function toggleMotion() { try { localStorage.setItem('warbound_shake', motionOn() ? '0' : '1'); } catch {} Sfx.click(); renderPlanning(); }
 
 // Explain the economy with the player's CURRENT live values.
+// Shop odds grid: for each level (1–9), the % chance a shop slot rolls each cost tier (rarity).
+// Current level row highlighted, so you can see exactly what levelling up unlocks.
+const COST_COLORS = ['#9aa6b8', '#5fd07a', '#5aa6ff', '#c79bff', '#ffce5c'];
+function shopOddsTable(cur) {
+  const head = el('.so-row.so-head', {}, [el('span.so-lvl', {}, 'Lv'), ...COST_COLORS.map((c, i) => el('span.so-c', { style: { color: c } }, `${i + 1}◆`))]);
+  const rows = [];
+  for (let lv = 1; lv <= Run.MAX_LEVEL; lv++) {
+    const o = Run.SHOP_ODDS[lv] || Run.SHOP_ODDS[Run.MAX_LEVEL];
+    rows.push(el(`.so-row${lv === cur ? ' cur' : ''}`, {}, [el('span.so-lvl', {}, String(lv)), ...o.map((p, i) => el('span.so-c', { style: { color: p ? COST_COLORS[i] : 'var(--ink-faint)' } }, p ? `${p}` : '·'))]));
+  }
+  return el('.shop-odds', {}, [head, ...rows]);
+}
 function showEconomyInfo() {
   Sfx.click();
   const inc = Run.income(run);
@@ -629,6 +641,9 @@ function showEconomyInfo() {
         row('Passive XP', '+2 / round', `You gain XP automatically every round (now ${run.xp}/${Run.xpNeeded(run)} to Lv ${run.level + 1}).`),
         row('Your level', `Lv ${run.level}`, `Your level = how many champions you can place on the board (${Run.boardLimit(run)} now). Higher level also unlocks stronger champions in the shop.`),
       ]),
+      // Shop odds by level — the chance each shop slot is a unit of a given cost (rarity). Current level highlighted.
+      el('.sub', { style: { marginTop: '6px' } }, 'Shop odds by level (chance per cost)'),
+      shopOddsTable(run.level),
       el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Got it'),
     ]));
   document.body.append(ov);
