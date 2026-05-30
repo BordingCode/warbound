@@ -110,12 +110,12 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     post = Math.round(post);
     target.hp -= post;
     gainMana(target, manaFromDamage(raw, post), now);
-    ev(now, 'damage', { id: target.id, src: source ? source.id : -1, amount: post, hp: Math.max(0, target.hp), type });
+    ev(now, 'damage', { id: target.id, src: source ? source.id : -1, amount: post, hp: Math.max(0, target.hp), dmgType: type });
     // thorns: reflect a fraction of physical damage back as true damage (no loop)
     if (type === 'physical' && source && target.thorns > 0 && source.alive) {
       const refl = Math.round(raw * target.thorns);
       source.hp -= refl;
-      ev(now, 'damage', { id: source.id, src: target.id, amount: refl, hp: Math.max(0, source.hp), type: 'true' });
+      ev(now, 'damage', { id: source.id, src: target.id, amount: refl, hp: Math.max(0, source.hp), dmgType: 'true' });
       if (source.hp <= 0) die(source, now);
     }
     if (target.hp <= 0) die(target, now);
@@ -142,9 +142,16 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
   const pendingSummons = [];
   function cast(u, now) {
     const ab = u.ability; if (!ab) return;
-    ev(now, 'cast', { id: u.id, name: ab.name, type: ab.type });
-    const ap = (ab.ap || 0) + u.apBonus;
     const target = nearestEnemy(u, units);
+    // shape drives the renderer's ability VFX
+    let shape = 'bolt';
+    if (ab.type === 'heal') shape = 'heal';
+    else if (ab.type === 'shield') shape = 'shield';
+    else if (ab.type === 'summon') shape = 'summon';
+    else if (ab.type === 'magic') shape = ab.target === 'cluster' ? 'aoe' : 'bolt';
+    else if (ab.type === 'physical') shape = ab.target === 'cluster' ? 'cleave' : 'strike';
+    ev(now, 'cast', { id: u.id, name: ab.name, atype: ab.type, shape, tgt: target ? target.id : -1, dragon: u.origin === 'dragon' });
+    const ap = (ab.ap || 0) + u.apBonus;
     switch (ab.type) {
       case 'magic':
         if (ab.target === 'cluster' && target) {

@@ -76,3 +76,16 @@
 .unit.flash .champ { filter: brightness(3.2) drop-shadow(0 2px 2px #0008); }
 .unit.faint { animation: faint 360ms ease-in forwards; }
 @keyframes faint { to { transform: translate(var(--x,0), var(--y,0)) scale(.2); opacity: 0; } }
+
+/* ability cast wind-up: caster charges up (glow) just before the effect */
+.unit.casting .champ { animation: castglow .42s ease; }
+@keyframes castglow { 0%, 100% { filter: drop-shadow(0 2px 2px #0008); } 45% { filter: brightness(1.9) drop-shadow(0 0 9px var(--gold)) drop-shadow(0 0 4px #fff); } }
+
+/* ability VFX (Dota-style), placed in the fx layer; left/top = center via translate(-50%,-50%) */
+.vfx { position: absolute; pointer-events: none; transform: translate(-50%, -50%); will-change: transform, opacity; }
+.vfx-ring { width: 14%; aspect-ratio: 1; border: 3px solid var(--dt-magic); border-radius: 50%; box-shadow: 0 0 10px currentColor; }
+.vfx-burst { width: 12%; aspect-ratio: 1; border-radius: 50%; filter: blur(2px); box-shadow: 0 0 16px 4px currentColor; }
+.vfx-orb { width: 4.5%; aspect-ratio: 1; border-radius: 50%; box-shadow: 0 0 10px 3px currentColor; }
+.vfx-slash { width: 11%; aspect-ratio: 1; border-radius: 50%; border: 0 solid transparent; border-top: 4px solid #fff; border-right: 4px solid #ffffffcc; filter: drop-shadow(0 0 4px #fff); }
+.vfx-heal { width: 13%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, var(--dt-heal), transparent); }
+.vfx-shield { width: 15%; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--shield); background: radial-gradient(closest-side, transparent 60%, #ffe08a33); box-shadow: 0 0 10px var(--shield); }

@@ -5,22 +5,22 @@
 
 // Base 1-star stats per cost tier.
 const COST_BASE = {
-  1: { hp: 480, ad: 62, as: 0.70, armor: 16, mr: 16, mana: 50 },
-  2: { hp: 560, ad: 72, as: 0.72, armor: 20, mr: 20, mana: 55 },
-  3: { hp: 630, ad: 84, as: 0.75, armor: 24, mr: 24, mana: 60 },
-  4: { hp: 720, ad: 98, as: 0.78, armor: 28, mr: 28, mana: 65 },
-  5: { hp: 850, ad: 118, as: 0.80, armor: 32, mr: 32, mana: 70 },
+  1: { hp: 480, ad: 62, as: 0.70, armor: 16, mr: 16, mana: 35 },
+  2: { hp: 560, ad: 72, as: 0.72, armor: 20, mr: 20, mana: 38 },
+  3: { hp: 630, ad: 84, as: 0.75, armor: 24, mr: 24, mana: 42 },
+  4: { hp: 720, ad: 98, as: 0.78, armor: 28, mr: 28, mana: 46 },
+  5: { hp: 850, ad: 118, as: 0.80, armor: 32, mr: 32, mana: 50 },
 };
 
 // Role shapes: how a class bends the base stats + which mana-gen profile it uses.
 // manaPer = mana gained per auto-attack (TFT: carry 10, caster 7, tank 5).
 const ROLE = {
-  knight:   { hpx: 1.40, adx: 0.92, range: 1, manaPer: 6, startMana: 0.0 },
-  mage:     { hpx: 0.85, adx: 0.70, range: 3, manaPer: 7, startMana: 0.0 },
-  ranger:   { hpx: 0.95, adx: 1.10, range: 3, manaPer: 10, startMana: 0.0 },
-  assassin: { hpx: 0.90, adx: 1.20, range: 1, manaPer: 10, startMana: 0.0, dive: true },
-  healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 7, startMana: 0.25 },
-  summoner: { hpx: 0.95, adx: 0.70, range: 2, manaPer: 7, startMana: 0.15 },
+  knight:   { hpx: 1.40, adx: 0.92, range: 1, manaPer: 7, startMana: 0.20 },
+  mage:     { hpx: 0.85, adx: 0.70, range: 3, manaPer: 8, startMana: 0.35 },
+  ranger:   { hpx: 0.95, adx: 1.10, range: 3, manaPer: 10, startMana: 0.10 },
+  assassin: { hpx: 0.90, adx: 1.20, range: 1, manaPer: 10, startMana: 0.20, dive: true },
+  healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
+  summoner: { hpx: 0.95, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
 };
 
 function mk(defId, name, origin, klass, cost, ability) {

@@ -94,6 +94,72 @@ export class CombatPlayer {
     }
   }
 
+  // tile-center position of a unit in % of the board (for placing fx)
+  _pos(id) {
+    const n = this.nodes.get(id); if (!n) return null;
+    const m = n.el.style.transform.match(/translate\(([\d.]+)%,\s*([\d.]+)%\)/); if (!m) return null;
+    return { x: (+m[1]) * 0.125 + 6.25, y: (+m[2]) * 0.125 + 5.5 };
+  }
+  _fx(cls, x, y, styles = {}) {
+    const e = el('.vfx ' + cls, { style: { position: 'absolute', left: x + '%', top: y + '%', ...styles } });
+    this.fxLayer.append(e); return e;
+  }
+
+  // ability cast wind-up: the caster charges (glow + scale) before the effect lands
+  _windup(id) {
+    const n = this.nodes.get(id); if (!n) return;
+    n.el.classList.remove('casting'); void n.el.offsetWidth; n.el.classList.add('casting');
+    setTimeout(() => n.el && n.el.classList.remove('casting'), 420 / this.speed);
+  }
+
+  // Dota-style per-shape ability visuals
+  _castVfx(e) {
+    const c = this._pos(e.id); if (!c) return;
+    const t = e.tgt >= 0 ? this._pos(e.tgt) : null;
+    const sp = this.speed;
+    switch (e.shape) {
+      case 'aoe': {                       // expanding ring + flash at the target cluster
+        const p = t || c; const col = e.dragon ? 'var(--dt-fire)' : 'var(--dt-magic)';
+        const ring = this._fx('vfx-ring', p.x, p.y, { borderColor: col });
+        ring.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.6)', opacity: 0 }], { duration: 460 / sp, easing: 'cubic-bezier(.2,.7,.3,1)' }).finished.then(() => ring.remove()).catch(() => {});
+        const flash = this._fx('vfx-burst', p.x, p.y, { background: col });
+        flash.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .85 }, { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 0 }], { duration: 320 / sp }).finished.then(() => flash.remove()).catch(() => {});
+        this.shake.add(e.dragon ? 0.32 : 0.22);
+        break;
+      }
+      case 'bolt': {                      // an orb streaks to the target and bursts
+        if (!t) break;
+        const orb = this._fx('vfx-orb', c.x, c.y, { background: 'var(--dt-magic)' });
+        orb.animate([{ left: c.x + '%', top: c.y + '%', transform: 'translate(-50%,-50%) scale(.6)' }, { left: t.x + '%', top: t.y + '%', transform: 'translate(-50%,-50%) scale(1.1)' }], { duration: 220 / sp, easing: 'cubic-bezier(.4,0,.7,1)' }).finished.then(() => { orb.remove(); const b = this._fx('vfx-burst', t.x, t.y, { background: 'var(--dt-magic)' }); b.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 0 }], { duration: 260 / sp }).finished.then(() => b.remove()).catch(() => {}); }).catch(() => {});
+        break;
+      }
+      case 'cleave': case 'strike': {     // a slashing arc bursts at caster front / target
+        const p = t || c;
+        const arc = this._fx('vfx-slash', p.x, p.y, {});
+        arc.animate([{ transform: 'translate(-50%,-50%) rotate(-40deg) scale(.4)', opacity: .95 }, { transform: 'translate(-50%,-50%) rotate(35deg) scale(1.2)', opacity: 0 }], { duration: 240 / sp, easing: 'ease-out' }).finished.then(() => arc.remove()).catch(() => {});
+        this.shake.add(0.2);
+        break;
+      }
+      case 'heal': {                      // green glow + rising plus on the target ally
+        const p = t || c;
+        const g = this._fx('vfx-heal', p.x, p.y, {});
+        g.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: .8 }, { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 0 }], { duration: 520 / sp }).finished.then(() => g.remove()).catch(() => {});
+        break;
+      }
+      case 'shield': {                    // a bubble pops in around the ally
+        const p = t || c;
+        const s = this._fx('vfx-shield', p.x, p.y, {});
+        s.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.1)', opacity: .2 }], { duration: 420 / sp, easing: 'cubic-bezier(.3,1.5,.6,1)' }).finished.then(() => s.remove()).catch(() => {});
+        break;
+      }
+      case 'summon': {                    // dark poof at the caster
+        const s = this._fx('vfx-burst', c.x, c.y, { background: '#9d6bff' });
+        s.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .8 }, { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 0 }], { duration: 360 / sp }).finished.then(() => s.remove()).catch(() => {});
+        break;
+      }
+    }
+  }
+
   _projectile(from, to, kind) {
     const a = this.nodes.get(from), b = this.nodes.get(to);
     if (!a || !b) return;
@@ -122,7 +188,18 @@ export class CombatPlayer {
       case 'attack': {
         const a = this.nodes.get(e.id); if (!a) break;
         const body = a.el.querySelector('.champ-body');
-        body.classList.remove('attacking'); void body.offsetWidth; body.classList.add('attacking');
+        if (e.ranged) {
+          body.classList.remove('attacking'); void body.offsetWidth; body.classList.add('attacking');
+        } else {
+          // melee: lunge TOWARD the target, then a slash arc lands on it
+          const from = this._pos(e.id), to = this._pos(e.tgt);
+          if (from && to) {
+            const dx = Math.max(-1, Math.min(1, (to.x - from.x) / 12.5)), dy = Math.max(-1, Math.min(1, (to.y - from.y) / 12.5));
+            body.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${dx * 42}%, ${dy * 42}%) scale(1.08)`, offset: .35 }, { transform: 'translate(0,0)' }], { duration: 300 / this.speed, easing: 'cubic-bezier(.3,1.4,.5,1)' });
+            const slash = this._fx('vfx-slash', to.x, to.y, { width: '60%' });
+            slash.animate([{ transform: 'translate(-50%,-50%) rotate(-35deg) scale(.4)', opacity: .9 }, { transform: 'translate(-50%,-50%) rotate(30deg) scale(1)', opacity: 0 }], { duration: 200 / this.speed, easing: 'ease-out' }).finished.then(() => slash.remove()).catch(() => {});
+          }
+        }
         if (e.id % 2 === 0 || !e.ranged) { e.ranged ? Sfx.arrow() : Sfx.sword(); }
         if (e.crit) this.shake.add(0.22);
         this._bumpMana(e.id, 0.16);     // visual telegraph of the cast bar filling
@@ -132,7 +209,7 @@ export class CombatPlayer {
       case 'damage': {
         if (n) { n.el.classList.add('flash', 'hit'); setTimeout(() => n.el.classList.remove('flash', 'hit'), 150); }
         this._setHP(e.id, e.hp);
-        if (e.amount > 0) { const col = DT_COLORS[e.type] || 'var(--dt-physical)'; this._floatNum(e.id, e.amount, col); this._spark(e.id, col, e.type === 'magic' ? 5 : 3); }
+        if (e.amount > 0) { const col = DT_COLORS[e.dmgType] || 'var(--dt-physical)'; this._floatNum(e.id, e.amount, col); this._spark(e.id, col, e.dmgType === 'magic' ? 5 : 3); }
         this._bumpMana(e.id, 0.05);
         break;
       }
@@ -140,7 +217,7 @@ export class CombatPlayer {
       case 'shield': if (n) this._floatNum(e.id, '⛨' + e.amount, 'var(--shield)'); break;
       case 'revive': this._setHP(e.id, e.hp); if (n) n.el.classList.add('flash'); break;
       case 'dodge': this._floatNum(e.id, 'dodge', 'var(--ink-dim)'); break;
-      case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); this.shake.add(0.16); if (n) { n.mana = 0; this._setMana(e.id, 0); } } break;
+      case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); this._windup(e.id); this._castVfx(e); n.mana = 0; this._setMana(e.id, 0); } break;
       case 'faint': if (n) { this._spark(e.id, '#ffffff', 8, 30); n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } Sfx.death(); this.shake.add(0.28); break;
       case 'end': break;
     }

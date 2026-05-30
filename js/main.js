@@ -438,5 +438,6 @@ window.__wb = {
   giveGold: (n) => act(() => (run.gold += n)),
   inspect: (uid) => showInspect(uid),
   end: () => endScreen(),
+  sim: (board, round) => simulate(board, getEnemyBoard(round || run.round, null).units.map(({ defId, star, col, row }) => ({ defId, star, col, row })), hashSeed(run.seed, round || run.round), { teamMods: { player: relicCombatMods(run.relics) } }),
 };
 console.log('[warbound] game loop ready. Round', run.round, '| board limit', Run.boardLimit(run));
