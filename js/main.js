@@ -10,6 +10,7 @@ import { CombatPlayer } from './render/player.js';
 import { createDragController } from './input/drag.js';
 import { getEnemyBoard } from './data/enemies.js';
 import * as Run from './state/run.js';
+import { resume as audioResume, Sfx, setEnabled as setSound, isEnabled as soundOn } from './audio/audio.js';
 
 let run = Run.load() || Run.freshRun();
 let combatSpeed = 1;
@@ -112,10 +113,10 @@ function buildBenchEl() {
 }
 
 // ---------- actions ----------
-function act(fn) { fn(); Run.save(run); renderPlanning(); }
-function doBuy(i) { act(() => Run.buy(run, i)); }
-function doBuyXP() { act(() => Run.buyXP(run)); }
-function doReroll() { act(() => Run.reroll(run)); }
+function act(fn) { audioResume(); fn(); Run.save(run); renderPlanning(); }
+function doBuy(i) { act(() => Run.buy(run, i)); Sfx.buy(); }
+function doBuyXP() { act(() => Run.buyXP(run)); Sfx.click(); }
+function doReroll() { act(() => Run.reroll(run)); Sfx.click(); }
 
 // ---------- planning render ----------
 function renderPlanning() {
@@ -129,6 +130,7 @@ function renderPlanning() {
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       el('.stat-pill', {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
       el('.stat-pill.round', {}, `Round ${run.round}`),
+      el('button.btn#soundBtn', { style: { padding: '5px 10px' }, onclick: toggleSound }, soundOn() ? '🔊' : '🔇'),
     ]),
     el('.topbar', {}, [
       el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt}`)]),
@@ -155,7 +157,7 @@ function renderPlanning() {
     boardWrap: wrap, sellZone: $('#sellZone'),
     onPlace: (uid, col, row) => act(() => Run.placeOnBoard(run, uid, col, row)),
     onBench: (uid) => act(() => Run.benchUnit(run, uid)),
-    onSell: (uid) => act(() => Run.sellUid(run, uid)),
+    onSell: (uid) => { act(() => Run.sellUid(run, uid)); Sfx.sell(); },
   });
   // make board units + bench units draggable
   units.querySelectorAll('.unit').forEach((n) => {
@@ -171,10 +173,12 @@ function renderPlanning() {
 function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highlightSpeed(); }
 function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
 function setBanner(t) { const b = $('.phase-banner'); if (b) b.textContent = t; }
+function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soundBtn'); if (b) b.textContent = soundOn() ? '🔊' : '🔇'; if (soundOn()) Sfx.click(); }
 
 // ---------- combat ----------
 async function startCombat() {
   if (inCombat) return;
+  audioResume();
   inCombat = true;
   const enemy = getEnemyBoard(run.round, null);
   const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
@@ -190,6 +194,7 @@ async function startCombat() {
   player = new CombatPlayer($('.units'), $('.fx-dom'));
   const winner = await player.play(events, { speed: combatSpeed });
   const won = winner === 'player';
+  won ? Sfx.victory() : Sfx.defeat();
   setBanner(won ? '🏆 Round won!' : winner === 'enemy' ? '💀 Round lost' : '⚖ Draw — counts as a loss');
 
   Run.resolveRound(run, won);

@@ -4,6 +4,7 @@
 import { el } from '../dom.js';
 import { championSVG } from '../svg.js';
 import { UNITS_BY_ID } from '../data/units.js';
+import { Sfx } from '../audio/audio.js';
 
 const DT_COLORS = { physical: 'var(--dt-physical)', magic: 'var(--dt-magic)', true: 'var(--dt-true)', heal: 'var(--dt-heal)' };
 
@@ -97,6 +98,7 @@ export class CombatPlayer {
         const a = this.nodes.get(e.id); if (!a) break;
         const body = a.el.querySelector('.champ-body');
         body.classList.remove('attacking'); void body.offsetWidth; body.classList.add('attacking');
+        if (e.id % 2 === 0 || !e.ranged) { e.ranged ? Sfx.arrow() : Sfx.sword(); }
         break;
       }
       case 'projectile': this._projectile(e.from, e.to, e.kind); break;
@@ -106,12 +108,12 @@ export class CombatPlayer {
         if (e.amount > 0) this._floatNum(e.id, e.amount, DT_COLORS[e.type] || 'var(--dt-physical)');
         break;
       }
-      case 'heal': this._setHP(e.id, e.hp); this._floatNum(e.id, '+' + e.amount, DT_COLORS.heal); break;
+      case 'heal': this._setHP(e.id, e.hp); this._floatNum(e.id, '+' + e.amount, DT_COLORS.heal); Sfx.heal(); break;
       case 'shield': if (n) this._floatNum(e.id, '⛨' + e.amount, 'var(--shield)'); break;
       case 'revive': this._setHP(e.id, e.hp); if (n) n.el.classList.add('flash'); break;
       case 'dodge': this._floatNum(e.id, 'dodge', 'var(--ink-dim)'); break;
-      case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); } break;
-      case 'faint': if (n) { n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } break;
+      case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); } break;
+      case 'faint': if (n) { n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } Sfx.death(); break;
       case 'end': break;
     }
   }
