@@ -41,7 +41,10 @@ function getOpponent() {
       units: (o.board || []).map((u) => ({ ...u })),
     };
   }
-  return getEnemyBoard(run.round, null);
+  // Warpath: the foe is keyed to WINS, not the round — you only advance to the next warband when
+  // you beat the current one. A loss replays the SAME foe (while your round/economy keeps growing
+  // so you can break the wall), costing a life rather than skipping you past an undefeated enemy.
+  return getEnemyBoard(run.wins + 1, null);
 }
 
 // ---------- board ----------
