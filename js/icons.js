@@ -33,6 +33,17 @@ const P = {
   potion: '<path d="M9 3h6v2l-1 1v3l4 7a3 3 0 01-2.7 4.3H8.7A3 3 0 016 16l4-7V6L9 5z"/>',
   bow:    '<path d="M5 3 Q19 12 5 21" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 3v18M5 12h15l-3-3M20 12l-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   wand:   '<path d="M4 20L14 10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M17 2l1.2 3L21.5 6l-3.3 1L17 10l-1.2-3L12.5 6l3.3-1z"/>',
+  // ---- augment-specific art (one recognisable shape per augment family) ----
+  anvil:    '<path d="M3 7h12a5 5 0 01-5 5H9v3h4v2H6v-2h1v-3a4 4 0 01-4-4z"/><rect x="2" y="5" width="9" height="2.4" rx="1"/><rect x="8" y="18" width="9" height="2.5" rx="1"/>',
+  wall:     '<path d="M3 5h18v14H3z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M3 14.5h18M9.5 5v5M14.5 5v5M7 10v4.5M17 10v4.5M11 14.5V19" stroke="currentColor" stroke-width="1.4"/>',
+  boots:    '<path d="M7 3h3.2v8H15a4 4 0 014 4v2H7z"/><path d="M7 19h13" stroke="currentColor" stroke-width="1.6"/><path d="M10.2 11h2" stroke="#0b0f17" stroke-width="1"/>',
+  fang:     '<path d="M4 4h16l-1.6 7c-.7 4-1.6 9-4.4 9-1.5 0-2.2-1.6-2-3 .2-1.6-1.4-1.6-1.2 0 .2 1.4-.5 3-2 3-2.8 0-3.7-5-4.4-9z"/>',
+  target:   '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.6"/>',
+  paw:      '<ellipse cx="12" cy="15.5" rx="4.4" ry="3.6"/><circle cx="6.2" cy="11.5" r="2"/><circle cx="10" cy="7.6" r="2.1"/><circle cx="14" cy="7.6" r="2.1"/><circle cx="17.8" cy="11.5" r="2"/>',
+  banner:   '<path d="M6 3v18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7.2 4h12l-3 4 3 4h-12z"/>',
+  axe:      '<path d="M5 20.5L14.5 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M11 4.5c4-2.2 8.2-.2 9.2 4-4.2-.3-6.4.8-7.4 3.6-2-3-4.2-5-1.8-7.6z"/>',
+  thorns:   '<path d="M4 13c5 0 8-3 9-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 5l3-1-1 3M8.5 9l3-.6-.7 3M5.5 12.4l3 .2-1.4 2.6" fill="currentColor"/><path d="M11 17c3 .5 6 .2 9-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  telescope:'<path d="M2.5 14.5l13-5 1.7 4.6-13 5z" /><path d="M15.5 9.5l4-1.5 1.3 3.4-4 1.5z"/><path d="M5.5 17l-1.2 3.6M9.5 15.6l1.2 3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
 };
 export function ic(name, { size = '1em', cls = '' } = {}) {
   const body = P[name];

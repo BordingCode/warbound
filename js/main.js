@@ -162,7 +162,7 @@ function modal2(title, body) {
 // a warlord's heraldic crest (works for the human proxy or a bot)
 function crestOf(p, size = 20) { return crest(p.color || (p.style && p.style.color) || '#888', p.sigil || (p.style && p.style.sigil) || '?', size); }
 // an augment's icon by category (no emoji): combat=sword, econ=coffer, synergy=gem, build=star.
-function augIcon(a) { return ic({ combat: 'sword', econ: 'coffer', synergy: 'gem', build: 'star' }[a && a.cat] || 'star'); }
+function augIcon(a) { return ic((a && a.icon) || { combat: 'sword', econ: 'coffer', synergy: 'gem', build: 'star' }[a && a.cat] || 'star'); }
 
 // ---------- ladder standings (warlord HP roster) ----------
 function buildStandings() {
