@@ -15,6 +15,9 @@ export const RELICS = {
   scholar:     { name: "Scholar's Tome", icon: '📜', desc: '+3 XP every round.', econ: { xpPerRound: 3 } },
   swiftboots:  { name: 'Swift Boots', icon: '🥾', desc: 'Your whole team: +12% Attack Speed.', combat: { as: 0.12 } },
   vampiric:    { name: 'Vampiric Sigil', icon: '🩸', desc: 'Your whole team heals 12% of attack damage.', combat: { vamp: 0.12 } },
+  ironhide:    { name: 'Ironhide Totem', icon: '🪖', desc: 'Your whole team: +22 Armor & Magic Resist.', combat: { armor: 22, mr: 22 } },
+  glasscannon: { name: 'Glass Cannon', icon: '💎', desc: 'Your whole team: +28% Attack Damage, but -10% max HP.', combat: { ad: 0.28, hp: -0.10 } },
+  spiked:      { name: 'Spiked Carapace', icon: '🦔', desc: 'Your whole team reflects 14% of attack damage taken.', combat: { thorns: 0.14 } },
 };
 export const RELIC_IDS = Object.keys(RELICS);
 

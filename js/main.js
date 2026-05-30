@@ -299,6 +299,7 @@ function showHelp() {
     ['🔗', '<b>Synergies:</b> matching <b>Origins</b> (Undead, Elf, Dragon…) & <b>Classes</b> (Knight, Mage…) unlock team bonuses — see the bar near the top.'],
     ['⭐', '<b>3 copies</b> of the same champion auto-fuse into a stronger ★★ (then ★★★).'],
     ['🛡️', '<b>Position matters:</b> tanks in front, fragile carries in back. Then press ⚔ Ready.'],
+    ['🔍', '<b>Tap a champion</b> to inspect its stats & ability. Watch the dimmed enemy preview to counter them.'],
     ['🏆', 'Win <b>10 rounds</b> before losing all <b>5 lives ❤</b>.'],
   ];
   const ov = el('.overlay', {}, el('.help-card', {}, [
