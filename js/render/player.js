@@ -31,7 +31,8 @@ export class CombatPlayer {
     node.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`;
     node.style.zIndex = e.row + 1;          // Y-sort: lower rows draw on top
     const art = def ? championSVG(def, { size: 60 }) :
-      `<svg class="champ" viewBox="0 0 100 120"><ellipse cx="50" cy="115" rx="22" ry="5" fill="#0006"/><circle cx="50" cy="60" r="26" fill="#6a7a8a"/><circle cx="42" cy="54" r="4" fill="#1a1a1a"/><circle cx="58" cy="54" r="4" fill="#1a1a1a"/></svg>`;
+      // summoned creature — wrap in .champ-body so attack/idle animations work (else null.animate crash)
+      `<svg class="champ" viewBox="0 0 100 120"><g class="champ-body"><ellipse cx="50" cy="115" rx="22" ry="5" fill="#0006"/><circle cx="50" cy="60" r="26" fill="#6a7a8a"/><circle cx="42" cy="54" r="4" fill="#1a1a1a"/><circle cx="58" cy="54" r="4" fill="#1a1a1a"/></g></svg>`;
     node.append(
       el('.base'),
       e.star > 1 ? el('.stars', {}, '★'.repeat(e.star)) : el('.stars'),
@@ -189,8 +190,8 @@ export class CombatPlayer {
         const a = this.nodes.get(e.id); if (!a) break;
         const body = a.el.querySelector('.champ-body');
         if (e.ranged) {
-          body.classList.remove('attacking'); void body.offsetWidth; body.classList.add('attacking');
-        } else {
+          if (body) { body.classList.remove('attacking'); void body.offsetWidth; body.classList.add('attacking'); }
+        } else if (body) {
           // melee: lunge TOWARD the target, then a slash arc lands on it
           const from = this._pos(e.id), to = this._pos(e.tgt);
           if (from && to) {
@@ -234,8 +235,9 @@ export class CombatPlayer {
       const tick = (nowReal) => {
         const clock = (nowReal - start) * this.speed;  // ms of combat time elapsed
         while (i < events.length && events[i].t <= clock) {
-          this._apply(events[i]);
-          if (onEvent) onEvent(events[i]);
+          // a single bad event must never freeze the whole fight (it would soft-lock the run)
+          try { this._apply(events[i]); if (onEvent) onEvent(events[i]); }
+          catch (err) { console.warn('[warbound] render event skipped:', events[i] && events[i].type, err); }
           i++;
         }
         if (i >= events.length) { resolve(endEvent && endEvent.winner); return; }
