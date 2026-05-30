@@ -88,6 +88,16 @@
 }
 .sell-zone.hot { border-color: var(--danger); color: var(--danger); background: #2a1414; box-shadow: 0 0 10px #ff5a4d40; }
 
+/* help / intro overlay */
+.overlay { position: fixed; inset: 0; z-index: 1500; background: #06070cdd; display: grid; place-items: center; padding: 20px; backdrop-filter: blur(3px); }
+.help-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 22px 18px; max-width: 380px; box-shadow: var(--shadow-2); }
+.help-card h2 { margin: 0 0 4px; font-size: 22px; color: var(--gold); }
+.help-card .sub { color: var(--ink-dim); font-size: 13px; margin-bottom: 14px; }
+.help-card ul { margin: 0 0 16px; padding-left: 4px; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.help-card li { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; line-height: 1.35; }
+.help-card li .e { font-size: 17px; flex-shrink: 0; }
+.help-card .go { width: 100%; justify-content: center; font-size: 15px; padding: 11px; }
+
 /* end screen */
 .endscreen { display: flex; flex-direction: column; align-items: center; gap: 16px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 32px 28px; box-shadow: var(--shadow-2); }
 

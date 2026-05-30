@@ -132,6 +132,7 @@ function renderPlanning() {
       el('.stat-pill', {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
       el('.stat-pill.round', {}, `Round ${run.round}`),
       el('button.btn#soundBtn', { style: { padding: '5px 10px' }, onclick: toggleSound }, soundOn() ? '🔊' : '🔇'),
+      el('button.btn', { style: { padding: '5px 10px' }, onclick: showHelp }, '?'),
     ]),
     el('.topbar', {}, [
       el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt}`)]),
@@ -176,6 +177,25 @@ function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`)
 function setBanner(t) { const b = $('.phase-banner'); if (b) b.textContent = t; }
 function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soundBtn'); if (b) b.textContent = soundOn() ? '🔊' : '🔇'; if (soundOn()) Sfx.click(); }
 
+function showHelp() {
+  const tips = [
+    ['🛒', '<b>Buy champions</b> from the shop (bottom) — tap a card. Each costs gold ⛁.'],
+    ['✋', '<b>Drag</b> champions from your bench onto the board to deploy them. Drag to 🗑 to sell.'],
+    ['🔗', '<b>Synergies:</b> matching <b>Origins</b> (Undead, Elf, Dragon…) & <b>Classes</b> (Knight, Mage…) unlock team bonuses — see the bar near the top.'],
+    ['⭐', '<b>3 copies</b> of the same champion auto-fuse into a stronger ★★ (then ★★★).'],
+    ['🛡️', '<b>Position matters:</b> tanks in front, fragile carries in back. Then press ⚔ Ready.'],
+    ['🏆', 'Win <b>10 rounds</b> before losing all <b>5 lives ❤</b>.'],
+  ];
+  const ov = el('.overlay', {}, el('.help-card', {}, [
+    el('h2', {}, 'How to play'),
+    el('.sub', {}, 'Warbound — a fantasy auto-battler'),
+    el('ul', {}, tips.map(([e, t]) => el('li', {}, [el('span.e', {}, e), el('span', { html: t })]))),
+    el('button.btn.primary.go', { onclick: () => { audioResume(); try { localStorage.setItem('warbound_intro', '1'); } catch {} ov.remove(); } }, "Let's go ⚔"),
+  ]));
+  document.body.append(ov);
+}
+function seenIntro() { try { return localStorage.getItem('warbound_intro') === '1'; } catch { return false; } }
+
 // ---------- combat ----------
 async function startCombat() {
   if (inCombat) return;
@@ -219,6 +239,7 @@ function endScreen() {
 }
 
 renderPlanning();
+if (!seenIntro()) showHelp();
 // Debug hook (also the seed of a future debug menu): inspect/drive state from console.
 window.__wb = {
   get run() { return run; }, Run,
