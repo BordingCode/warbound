@@ -14,6 +14,7 @@ import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
 import * as Bots from './state/bots.js';
 import * as Rank from './state/rank.js';
+import * as Meta from './state/meta.js';
 import { resume as audioResume, Sfx, setEnabled as setSound, isEnabled as soundOn } from './audio/audio.js';
 import { launchConfetti } from './render/fx.js';
 
@@ -89,7 +90,7 @@ function buildBoardEl() {
 // ---------- traits ----------
 function buildTraitsEl() {
   const defs = run.board.map((u) => UNITS_BY_ID[u.defId]);
-  const active = activeTraits(defs, augmentBundle(run.augments).traitBonus);
+  const active = activeTraits(defs, teamTraitBonus());
   const rail = el('.traits-rail');
   const entries = Object.entries(active).filter(([t]) => TRAITS[t]).sort((a, b) => (b[1].tier - a[1].tier) || (b[1].count - a[1].count));
   if (!entries.length) rail.append(el('.trait-chip', {}, 'Place champions to form synergies'));
@@ -476,7 +477,7 @@ function showTraitInfo(traitId) {
   Sfx.click();
   const owned = new Set(run.board.map((u) => u.defId).concat(run.bench.filter(Boolean).map((u) => u.defId)));
   const playerDefs = run.board.map((u) => UNITS_BY_ID[u.defId]);
-  const active = activeTraits(playerDefs, augmentBundle(run.augments).traitBonus)[traitId];
+  const active = activeTraits(playerDefs, teamTraitBonus())[traitId];
   const curTier = active ? active.tier : 0;
   const members = UNITS.filter((u) => u.origin === traitId || u.klass === traitId);
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
@@ -616,7 +617,7 @@ async function startCombat() {
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const seed = hashSeed(run.seed, run.round);
   // build the combat aug: player augments, plus (in ladder) warlord powers + the lobby modifier
-  let augOpt = { aug: { player: augmentBundle(run.augments) } };
+  let augOpt = { aug: { player: Object.assign(augmentBundle(run.augments), { traitBonus: teamTraitBonus() }) } };
   if (run.mode === 'ladder' && lobby) {
     const pb = augmentBundle(run.augments);
     const pf = Bots.powerFlat(lobby.human, lobby);   // human warlord power + modifier
@@ -716,7 +717,9 @@ function endScreen(ladderSummary) {
     if (won) launchConfetti(4000);
     head = won ? '🏆 VICTORY' : '⚔ RUN OVER';
     sub = won ? `You won with ${run.lives} ❤ to spare — a true warlord!` : 'A valiant effort. Tune your warband and try again!';
-    stats = [stat('Wins', `${run.wins} / 10`), stat('Rounds', run.round - 1)];
+    // earn Spoils ONCE (even on a loss) — the meta-progression that eases the climb
+    if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
+    stats = [stat('Wins', `${run.wins} / 10`), stat('Spoils', `+${run.spoilsEarned || 0} 🪙`)];
   }
   const card = el('.endscreen', {}, [
     el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
@@ -733,10 +736,27 @@ function endScreen(ladderSummary) {
 function startSolo(fresh) {
   if (fresh) Run.clearSave();
   clearLobby();
-  run = (!fresh && Run.load()) || Run.freshRun();
+  const resumed = !fresh && Run.load();
+  run = resumed || Run.freshRun();
   run.mode = 'solo'; lobby = null;
+  if (!resumed) applyGear(run);          // a NEW Warpath run starts with your equipped gear's boosts
   Run.save(run); renderPlanning();
   if (!seenIntro()) showHelp();
+}
+// apply the equipped Champion gear's start-of-run boosts to a fresh solo run.
+function applyGear(run) {
+  const b = Meta.gearBonuses();
+  if (b.gold) run.gold += b.gold;
+  if (b.lives) run.lives += b.lives;
+  if (b.xp) { run.xp += b.xp; while (run.level < Run.MAX_LEVEL && run.xp >= Run.xpNeeded(run)) { run.xp -= Run.xpNeeded(run); run.level++; } }
+  if (b.components) { const cs = Object.keys(COMPONENTS); for (let i = 0; i < b.components; i++) Run.addItem(run, cs[Math.floor(Math.random() * cs.length)]); }
+  run.metaTraitBonus = (b.traitBonus && Object.keys(b.traitBonus).length) ? b.traitBonus : null;
+}
+// your team's synergy-count bonus = augment crowns (+ in solo, the gear's synergy crown).
+function teamTraitBonus() {
+  const tb = { ...augmentBundle(run.augments).traitBonus };
+  if (run.mode !== 'ladder' && run.metaTraitBonus) for (const t in run.metaTraitBonus) tb[t] = (tb[t] || 0) + run.metaTraitBonus[t];
+  return tb;
 }
 // Pick a Warlord (your signature power) before the ladder begins — identity + run variety.
 function startLadder() { chooseWarlord(); }
@@ -770,6 +790,50 @@ function beginLadder(styleId) {
   }
   try { if (localStorage.getItem('warbound_intro_ladder') !== '1') { localStorage.setItem('warbound_intro_ladder', '1'); showHelp(); } } catch {}
 }
+// ---------- Armory (meta-progression: chests + equipping your Champion) ----------
+function showArmory() {
+  audioResume();
+  const render = () => {
+    const m = Meta.load();
+    const slotEl = (s) => {
+      const it = Meta.equippedItem(m, s.id);
+      return el(`.armory-slot${it ? ' filled rarity-' + it.rarity : ''}`, { onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null, title: it ? 'Tap to unequip' : 'empty slot' }, [
+        el('.as-slot', {}, `${s.icon} ${s.name}`),
+        el('.as-item', {}, it ? it.name : '—'),
+        el('.as-eff', {}, it ? Meta.effectText(it) : 'empty'),
+      ]);
+    };
+    const invCell = (it) => el(`.inv-item rarity-${it.rarity}${m.equipped[it.slot] === it.iid ? ' eq' : ''}`, { onclick: () => { Meta.equip(it.iid); Sfx.buy(); render(); }, title: 'Tap to equip' }, [
+      el('.ii-icon', {}, it.icon), el('.ii-name', {}, it.name), el('.ii-eff', {}, Meta.effectText(it)),
+    ]);
+    const canBuy = m.spoils >= Meta.CHEST_COST;
+    $('#app').replaceChildren(el('.game', { style: { gap: '10px', padding: '14px', minHeight: '85svh' } }, [
+      el('.armory-top', {}, [el('h1', { style: { fontSize: '24px', margin: 0 } }, '🎁 Armory'), el('.spoils', {}, `${m.spoils} 🪙`)]),
+      el(`button.btn.primary${canBuy ? '' : ' dim'}`, { style: { fontSize: '15px', padding: '11px' }, onclick: () => { const r = Meta.openChest(); if (r.ok) revealItem(r.item, render); else modal2('Not enough Spoils', `A War Cache costs ${Meta.CHEST_COST} 🪙. Earn Spoils by playing Warpath — even a loss pays.`); } }, `📦 Open War Cache · ${Meta.CHEST_COST} 🪙`),
+      el('.sub', { style: { marginTop: '4px' } }, 'Your Champion — one piece per slot (tap equipped to remove):'),
+      el('.armory-slots', {}, Meta.SLOTS.map(slotEl)),
+      el('.sub', {}, m.inventory.length ? `Inventory (${m.inventory.length}) — tap to equip:` : 'No gear yet — open a War Cache!'),
+      el('.inv-grid', {}, m.inventory.map(invCell)),
+      el('button.btn', { style: { marginTop: '4px' }, onclick: () => chooseMode() }, '← Back'),
+    ]));
+  };
+  render();
+}
+function revealItem(item, after) {
+  Sfx.fuse();
+  const ov = el('.overlay', {}, el(`.help-card reveal rarity-${item.rarity}`, { style: { textAlign: 'center', maxWidth: '300px' } }, [
+    el('.reveal-rarity', {}, Meta.RARITIES.find((r) => r.id === item.rarity).name + ' find!'),
+    el('.reveal-icon', {}, item.icon),
+    el('h2', { style: { margin: '6px 0', fontSize: '20px' } }, item.name),
+    el('.sub', {}, Meta.effectText(item)),
+    el('.draft-tools', { style: { justifyContent: 'center', marginTop: '10px' } }, [
+      el('button.btn.primary', { onclick: () => { Meta.equip(item.iid); ov.remove(); after && after(); } }, 'Equip'),
+      el('button.btn', { onclick: () => { ov.remove(); after && after(); } }, 'Stash'),
+    ]),
+  ]));
+  document.body.append(ov);
+}
+
 function chooseMode() {
   Run.clearSave(); clearLobby(); run = Run.freshRun(); run.mode = 'menu'; lobby = null;
   const card = (cls, emoji, title, desc, onclick) => el(`.mode-card${cls}`, { onclick }, [el('.mc-emoji', {}, emoji), el('.mc-title', {}, title), el('.mc-desc', {}, desc)]);
@@ -780,8 +844,9 @@ function chooseMode() {
     el('h1', { style: { fontSize: '32px', margin: '0', textAlign: 'center' } }, 'Warbound'),
     el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-6px' } }, 'Choose your battle'),
     el('.mode-menu', {}, [
-      card('', '🏰', 'Gym Crawl', 'Climb a ladder of authored warbands solo — win 10 before 5 lives run out. Augments & item drafts.', () => startSolo(true)),
+      card('', '🏰', 'Warpath', 'Climb a ladder of authored warbands solo to the boss. Earn Spoils to gear your Champion and make each run easier.', () => startSolo(true)),
       ladderCard,
+      card(' armory', '🎁', 'Armory', `Open War Caches and gear up your Champion. You have ${Meta.load().spoils} Spoils 🪙.`, () => showArmory()),
     ]),
   ]));
 }
