@@ -39,7 +39,11 @@ function place(ids, enemy) {
   return out;
 }
 const NAMES = Object.keys(COMPS);
-const SEEDS = 9;                                   // fights per matchup (more = smoother, slower)
+// IMPORTANT: combat matchups are near-deterministic (RNG only jitters crit/dodge timing), so a
+// matchup resolves ~0%/~100% and per-matchup win-rates are COARSE. With too few seeds the climber
+// overfits the seed sample (verified: a 9-seed optimum did NOT generalise to 15 seeds). Use a high
+// seed count for a trustworthy signal; this is an OFFLINE tool, so prefer slow-but-correct.
+const SEEDS = 25;                                  // fights per matchup (more = smoother + less overfit, slower)
 function winRates() {
   const wins = NAMES.map(() => 0), games = NAMES.map(() => 0);
   for (let i = 0; i < NAMES.length; i++) for (let j = 0; j < NAMES.length; j++) {
