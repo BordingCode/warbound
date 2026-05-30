@@ -105,7 +105,7 @@ function buildShopEl() {
   const inc = Run.income(run);
   const controls = el('.shop-controls', {}, [
     el('button.btn.primary', { onclick: doBuyXP }, [el('span', {}, 'Buy XP'), el('span', { style: { opacity: .7 } }, '4⛁')]),
-    el('button.btn.reroll', { onclick: doReroll }, [el('span', {}, '⟳'), el('span', { style: { opacity: .7 } }, '2⛁')]),
+    el('button.btn.reroll', { onclick: doReroll }, [el('span', {}, '⟳'), el('span', { style: { opacity: .7 } }, Run.freeRerollsLeft(run) > 0 ? 'FREE' : '2⛁')]),
     el('span', { style: { marginLeft: 'auto', fontSize: '11px', color: 'var(--ink-dim)' } }, `+${inc.total}/turn (⛁${inc.interest} int${inc.streakBonus ? ' +' + inc.streakBonus + ' streak' : ''})`),
   ]);
   return el('.shop', {}, [controls, row]);
