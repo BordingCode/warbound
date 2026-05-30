@@ -13,12 +13,28 @@ const DT = 1 / 30;
 const MAX_TICKS = 30 * 45;       // 45s hard cap
 const SUDDEN_DEATH_T = 25;       // after 25s, ramping true damage breaks stalemates
 
-function makeUnit(entry, team, id, mods = {}) {
+const COMBAT_KEYS = ['ad', 'as', 'hp', 'ap', 'armor', 'mr', 'shield', 'vamp', 'thorns', 'critChance', 'critDmg', 'revive'];
+
+function makeUnit(entry, team, id, aug = null) {
   const def = UNITS_BY_ID[entry.defId];
   const s = statsForStar(def, entry.star || 1);
   const im = aggregateMods(entry.items || []);
-  // fold relic/team combat mods into the item-mod object (additive)
-  for (const k of ['ad', 'as', 'hp', 'ap', 'armor', 'mr', 'shield', 'vamp', 'thorns', 'critChance', 'critDmg', 'revive']) im[k] = (im[k] || 0) + (mods[k] || 0);
+  // fold augment combat mods into the item-mod object (additive): flat (whole-team) + any
+  // conditional mods (by synergy/role/row) that match this unit.
+  if (aug) {
+    const flat = aug.flat || {};
+    for (const k of COMBAT_KEYS) if (flat[k]) im[k] = (im[k] || 0) + flat[k];
+    if (aug.cond && aug.cond.length) {
+      const back = team === 'player' ? entry.row >= 6 : entry.row <= 1;
+      for (const c of aug.cond) {
+        const m = c.match || {};
+        if (m.origin && m.origin !== def.origin) continue;
+        if (m.klass && m.klass !== def.klass) continue;
+        if (m.row && (m.row === 'back') !== back) continue;
+        for (const [k, v] of Object.entries(c.mods)) im[k] = (im[k] || 0) + v;
+      }
+    }
+  }
   const hp = Math.round(s.hp * (1 + im.hp));
   return {
     id, team, defId: def.defId, name: def.name, star: entry.star || 1,
@@ -39,9 +55,10 @@ function makeUnit(entry, team, id, mods = {}) {
 }
 
 // Apply a team's active traits to its units (whole-team auras + tagged-only effects).
-function applyTraits(units, board) {
+// traitBonus (from Augment crowns) bumps synergy counts so a breakpoint can light up.
+function applyTraits(units, board, traitBonus = {}) {
   const defs = board.map((e) => UNITS_BY_ID[e.defId]);
-  const active = activeTraits(defs);
+  const active = activeTraits(defs, traitBonus);
   const get = (t) => (active[t] && active[t].bonus) || null;
   for (const u of units) {
     // whole-team
@@ -66,15 +83,19 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
   const rng = new RNG(seed >>> 0);
   const events = [];
   const ev = (t, type, data) => events.push({ t: Math.round(t * 1000), type, ...data });
-  const tm = opts.teamMods || {};
+  // augment bundle per team; accept either the rich {flat,cond,traitBonus} form or a bare
+  // flat-mods object (back-compat with older callers/tests passing opts.teamMods).
+  const norm = (a) => (a ? (a.flat || a.cond || a.traitBonus ? a : { flat: a }) : null);
+  const augP = norm((opts.aug && opts.aug.player) || (opts.teamMods && opts.teamMods.player));
+  const augE = norm((opts.aug && opts.aug.enemy) || (opts.teamMods && opts.teamMods.enemy));
 
   // build units, stable ids: player 0..n, enemy continuing
   let nextId = 0;
   const units = [];
-  for (const e of playerBoard) units.push(makeUnit(e, 'player', nextId++, tm.player));
-  for (const e of enemyBoard) units.push(makeUnit(e, 'enemy', nextId++, tm.enemy));
-  applyTraits(units.filter((u) => u.team === 'player'), playerBoard);
-  applyTraits(units.filter((u) => u.team === 'enemy'), enemyBoard);
+  for (const e of playerBoard) units.push(makeUnit(e, 'player', nextId++, augP));
+  for (const e of enemyBoard) units.push(makeUnit(e, 'enemy', nextId++, augE));
+  applyTraits(units.filter((u) => u.team === 'player'), playerBoard, augP && augP.traitBonus);
+  applyTraits(units.filter((u) => u.team === 'enemy'), enemyBoard, augE && augE.traitBonus);
   for (const u of units) ev(0, 'spawn', { id: u.id, team: u.team, defId: u.defId, star: u.star, col: u.col, row: u.row, hp: u.hp, maxHp: u.maxHp, shield: u.shield });
 
   const occupied = new Set(units.map((u) => idx(u.col, u.row)));

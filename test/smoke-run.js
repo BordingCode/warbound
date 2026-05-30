@@ -5,7 +5,7 @@ import * as Run from '../js/state/run.js';
 import { getEnemyBoard } from '../js/data/enemies.js';
 import { simulate } from '../js/sim/combat.js';
 import { hashSeed } from '../js/rng.js';
-import { relicCombatMods } from '../js/data/relics.js';
+import { augmentBundle } from '../js/data/augments.js';
 
 let fail = 0;
 const bad = (m) => { console.log('  ✗ ' + m); fail++; };
@@ -38,12 +38,12 @@ function runOnce(seedStr) {
     const enemy = getEnemyBoard(run.round, null).units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
     const pb = run.board.map(({ defId, star, col, row, items }) => ({ defId, star, col, row, items }));
     const finished = run.round;
-    const r = simulate(pb, enemy, hashSeed(run.seed, run.round), { teamMods: { player: relicCombatMods(run.relics) } });
+    const r = simulate(pb, enemy, hashSeed(run.seed, run.round), { aug: { player: augmentBundle(run.augments) } });
     if (r.result.durationTicks >= 30 * 45) bad(`combat hit cap at round ${finished}`);
     if (!['player', 'enemy', 'draw'].includes(r.result.winner)) bad(`bad winner at round ${finished}`);
     Run.resolveRound(run, r.result.winner === 'player');
     // simulate the player accepting drafts
-    if (!run.over && [3, 6, 9].includes(finished)) { const ids = Run.draftRelics(run); if (ids[0]) Run.addRelic(run, ids[0]); }
+    if (!run.over && [3, 6, 9].includes(finished)) { const ids = Run.draftAugments(run); if (ids[0]) Run.addAugment(run, ids[0]); }
     if (!run.over && [1, 2, 5, 7, 10].includes(finished)) { const ids = Run.draftComponents(run); if (ids[0]) Run.addItem(run, ids[0]); }
     if (run.gold < 0) bad(`gold negative after resolve round ${finished}`);
     if (run.lives < 0) bad(`lives negative round ${finished}`);

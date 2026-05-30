@@ -3,7 +3,8 @@
 import { RNG, seedFromString } from '../rng.js';
 import { UNITS, UNITS_BY_ID } from '../data/units.js';
 import { COMPONENT_IDS, isComponent, combine } from '../data/items.js';
-import { RELICS, RELIC_IDS, relicEcon } from '../data/relics.js';
+import { AUGMENTS, AUGMENT_IDS, augmentEcon, OFFER_TIER_WEIGHTS } from '../data/augments.js';
+import { activeTraits } from '../data/traits.js';
 
 export const SAVE_KEY = 'warbound_run_v1';
 
@@ -43,7 +44,10 @@ export function freshRun(seedStr = 'warbound-' + Date.now()) {
     bench: Array(BENCH_SIZE).fill(null),
     board: [],
     items: [],
-    relics: [],
+    augments: [],
+    banished: [],
+    banishLeft: 1,
+    augRerollLeft: 1,
     freeRerollsUsed: 0,
     shop: Array(SHOP_SIZE).fill(null),
     shopLocked: false,
@@ -90,7 +94,7 @@ export function rollShop(run) {
   saveRngState(run);
 }
 export function reroll(run) {
-  const econ = relicEcon(run.relics);
+  const econ = augmentEcon(run.augments);
   const free = (econ.freeRerolls || 0) - (run.freeRerollsUsed || 0) > 0;
   if (!free && run.gold < REROLL_COST) return false;
   if (free) run.freeRerollsUsed = (run.freeRerollsUsed || 0) + 1;
@@ -100,18 +104,60 @@ export function reroll(run) {
   return true;
 }
 
-// ---- relics ----
-export function addRelic(run, id) {
-  if (run.relics.includes(id)) return;
-  run.relics.push(id);
-  const r = RELICS[id];
-  if (r && r.once && r.once.lifeMax) run.lives += r.once.lifeMax;
+// ---- augments ----
+export function addAugment(run, id) {
+  if (run.augments.includes(id)) return;
+  run.augments.push(id);
+  const a = AUGMENTS[id];
+  if (a && a.once && a.once.lifeMax) run.lives += a.once.lifeMax;
 }
-export function draftRelics(run) {
-  const avail = RELIC_IDS.filter((id) => !run.relics.includes(id));
-  const ids = _rng.shuffle(avail).slice(0, 3); saveRngState(run); return ids;
+export function banishAugment(run, id) {
+  if ((run.banishLeft || 0) <= 0 || run.augments.includes(id)) return false;
+  run.banished = run.banished || [];
+  if (!run.banished.includes(id)) run.banished.push(id);
+  run.banishLeft = (run.banishLeft || 0) - 1;
+  return true;
 }
-export function freeRerollsLeft(run) { const econ = relicEcon(run.relics); return Math.max(0, (econ.freeRerolls || 0) - (run.freeRerollsUsed || 0)); }
+// Offer 3 augments: tiers weighted by which offer this is, biased toward the player's
+// active synergies (with at least one off-build "pivot"), never all-economy.
+export function draftAugments(run) {
+  const offerIdx = Math.min(run.augments.length, OFFER_TIER_WEIGHTS.length - 1);
+  const weights = OFFER_TIER_WEIGHTS[offerIdx];
+  const owned = new Set(run.augments);
+  const banned = new Set(run.banished || []);
+  const avail = AUGMENT_IDS.filter((id) => !owned.has(id) && !banned.has(id));
+  // player's active synergies (for smart weighting)
+  const myTraits = new Set(Object.keys(activeTraits(run.board.map((u) => UNITS_BY_ID[u.defId]))));
+  const byTier = { common: [], rare: [], prismatic: [] };
+  for (const id of avail) byTier[AUGMENTS[id].tier].push(id);
+
+  const rollTier = () => {
+    const r = _rng.next() * 100; let acc = 0;
+    for (const t of ['common', 'rare', 'prismatic']) { acc += weights[t] || 0; if (r < acc) return t; }
+    return 'common';
+  };
+  const pickFromTier = (tier, picked) => {
+    let pool = byTier[tier].filter((id) => !picked.has(id));
+    if (!pool.length) pool = ['common', 'rare', 'prismatic'].flatMap((t) => byTier[t]).filter((id) => !picked.has(id));
+    if (!pool.length) return null;
+    // weighted: synergy augments matching my traits are 3x more likely to appear
+    const weighted = [];
+    for (const id of pool) { const a = AUGMENTS[id]; const w = (a.wantTrait && myTraits.has(a.wantTrait)) ? 3 : 1; for (let i = 0; i < w; i++) weighted.push(id); }
+    return weighted[Math.floor(_rng.next() * weighted.length)];
+  };
+
+  const picked = new Set();
+  const out = [];
+  for (let i = 0; i < 3; i++) { const id = pickFromTier(rollTier(), picked); if (id) { picked.add(id); out.push(id); } }
+  // never offer all-economy: swap the last for a non-econ option if possible
+  if (out.length === 3 && out.every((id) => AUGMENTS[id].cat === 'econ')) {
+    const alt = avail.find((id) => !picked.has(id) && AUGMENTS[id].cat !== 'econ');
+    if (alt) out[2] = alt;
+  }
+  saveRngState(run);
+  return out;
+}
+export function freeRerollsLeft(run) { const econ = augmentEcon(run.augments); return Math.max(0, (econ.freeRerolls || 0) - (run.freeRerollsUsed || 0)); }
 
 // ---- buy / sell / fuse ----
 function allUnits(run) { return [...run.board, ...run.bench.filter(Boolean)]; }
@@ -204,7 +250,7 @@ export function buyXP(run) {
   return true;
 }
 export function xpNeeded(run) { return XP_TO_NEXT[run.level] || 0; }
-export function boardLimit(run) { return run.level + (relicEcon(run.relics).boardPlus || 0); }
+export function boardLimit(run) { return run.level + (augmentEcon(run.augments).boardPlus || 0); }
 
 // ---- placement (drag results) ----
 export function placeOnBoard(run, uid, col, row) {
@@ -260,7 +306,7 @@ export function equipItem(run, iid, uid) {
 
 // ---- round resolution ----
 export function income(run) {
-  const econ = relicEcon(run.relics);
+  const econ = augmentEcon(run.augments);
   const interest = Math.min(5 + (econ.interestCap || 0), Math.floor(run.gold / 10));
   const base = (run.round <= 4 ? 2 : run.round <= 11 ? 4 : 5) + (econ.goldPerRound || 0);
   const streakBonus = run.streak.n >= 5 ? 3 : run.streak.n >= 4 ? 2 : run.streak.n >= 2 ? 1 : 0;
@@ -279,7 +325,7 @@ export function resolveRound(run, won) {
   const inc = income(run);
   run.gold += inc.total + (won ? 1 : 0);
   // passive xp every round (TFT-style), plus any relic xp
-  const bonusXp = 2 + (relicEcon(run.relics).xpPerRound || 0);
+  const bonusXp = 2 + (augmentEcon(run.augments).xpPerRound || 0);
   if (bonusXp && run.level < MAX_LEVEL) { run.xp += bonusXp; while (run.level < MAX_LEVEL && run.xp >= XP_TO_NEXT[run.level]) { run.xp -= XP_TO_NEXT[run.level]; run.level++; } }
   run.freeRerollsUsed = 0;
   // life back at round 3 if hurt (anti-stomp floor)
@@ -302,7 +348,11 @@ export function load() {
     const run = JSON.parse(raw);
     if (run.v !== 1) return null;
     // backfill fields added after a save was written (forward-compatible migration)
-    run.relics = run.relics || [];
+    run.augments = run.augments || run.relics || [];   // relics were renamed to augments
+    run.augments = run.augments.filter((id) => AUGMENTS[id]);  // drop any ids no longer valid
+    run.banished = run.banished || [];
+    if (run.banishLeft == null) run.banishLeft = 1;
+    if (run.augRerollLeft == null) run.augRerollLeft = 1;
     run.items = run.items || [];
     run.freeRerollsUsed = run.freeRerollsUsed || 0;
     ensureRng(run);

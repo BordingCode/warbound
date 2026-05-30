@@ -107,10 +107,29 @@
 .relic-bar { display: flex; gap: 5px; flex-wrap: wrap; }
 .relic-bar .relic { width: 26px; height: 26px; display: grid; place-items: center; font-size: 15px; background: var(--bg-2); border: 1px solid var(--gold-deep); border-radius: 6px; }
 .draft-row.relics { flex-direction: column; }
-.draft-row.relics .draft-pick { flex-direction: row; align-items: center; gap: 10px; text-align: left; }
+.draft-row.relics .draft-pick { flex-direction: row; align-items: center; gap: 10px; text-align: left; position: relative; padding-left: 12px; }
 .draft-row.relics .draft-pick .di { font-size: 22px; }
 .draft-row.relics .draft-pick .dn { min-width: 96px; }
 .draft-row.relics .draft-pick .dm { flex: 1; }
+
+/* augment tiers (colour by rarity) — chips, draft cards, codex rows */
+.relic.tier-common { border-color: var(--tier-silver); }
+.relic.tier-rare { border-color: #5aa6ff; box-shadow: 0 0 5px #5aa6ff66; }
+.relic.tier-prismatic { border-color: var(--gold); box-shadow: 0 0 7px #ffce5c88; }
+.draft-pick.aug-common { border-left: 4px solid var(--tier-silver); }
+.draft-pick.aug-rare { border-left: 4px solid #5aa6ff; }
+.draft-pick.aug-prismatic { border-left: 4px solid var(--gold); box-shadow: inset 0 0 14px #ffce5c22; }
+.draft-pick .aug-tier { position: absolute; top: 3px; right: 8px; font-size: 8.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-faint); }
+.draft-pick.aug-rare .aug-tier { color: #7ab8ff; }
+.draft-pick.aug-prismatic .aug-tier { color: var(--gold); }
+.aug-banish { position: absolute; bottom: 4px; right: 6px; background: none; border: none; font-size: 13px; opacity: .55; padding: 2px; }
+.aug-banish:active { opacity: 1; }
+.draft-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.aug-row { display: flex; align-items: center; gap: 9px; padding: 7px 9px; background: var(--bg-1); border: 1px solid var(--line); border-left-width: 4px; border-radius: var(--radius-sm); cursor: pointer; }
+.aug-row.tier-common { border-left-color: var(--tier-silver); }
+.aug-row.tier-rare { border-left-color: #5aa6ff; }
+.aug-row.tier-prismatic { border-left-color: var(--gold); }
+.aug-row .aug-ic { font-size: 16px; }
 
 /* champion inspect */
 .unit-traits { display: flex; gap: 6px; margin: 8px 0 4px; }

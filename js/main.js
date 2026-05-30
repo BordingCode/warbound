@@ -10,7 +10,7 @@ import { CombatPlayer } from './render/player.js';
 import { createDragController } from './input/drag.js';
 import { getEnemyBoard } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
-import { RELICS, relicCombatMods } from './data/relics.js';
+import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
 import { resume as audioResume, Sfx, setEnabled as setSound, isEnabled as soundOn } from './audio/audio.js';
 import { launchConfetti } from './render/fx.js';
@@ -68,7 +68,7 @@ function buildBoardEl() {
 // ---------- traits ----------
 function buildTraitsEl() {
   const defs = run.board.map((u) => UNITS_BY_ID[u.defId]);
-  const active = activeTraits(defs);
+  const active = activeTraits(defs, augmentBundle(run.augments).traitBonus);
   const rail = el('.traits-rail');
   const entries = Object.entries(active).filter(([t]) => TRAITS[t]).sort((a, b) => (b[1].tier - a[1].tier) || (b[1].count - a[1].count));
   if (!entries.length) rail.append(el('.trait-chip', {}, 'Place champions to form synergies'));
@@ -186,7 +186,7 @@ function renderPlanning() {
       el('.xpbar', { title: 'XP to next level (+2 each round)' }, el('.fill', { style: { transform: `scaleX(${Run.xpNeeded(run) ? run.xp / Run.xpNeeded(run) : 1})` } })),
       el('span', { style: { fontSize: '10px', color: 'var(--ink-dim)', whiteSpace: 'nowrap' } }, Run.xpNeeded(run) ? `${run.xp}/${Run.xpNeeded(run)} ⓘ` : 'MAX'),
     ]),
-    run.relics.length ? el('.relic-bar', {}, run.relics.map((id) => el('span.relic', { title: `${RELICS[id].name}: ${RELICS[id].desc}` }, RELICS[id].icon))) : null,
+    run.augments.length ? el('.relic-bar', {}, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: `${AUGMENTS[id].name}: ${AUGMENTS[id].desc}`, onclick: () => showAugmentInfo(id) }, AUGMENTS[id].icon))) : null,
     buildTraitsEl(),
     el('.phase-banner', {}, `Next: ${enemy.name} — ${enemy.traitHint}`),
     buildEnemyScout(enemy),
@@ -247,21 +247,51 @@ function offerDraft(after) {
   document.body.append(ov);
 }
 function shouldDraft(finishedRound) { return [1, 2, 5, 7, 10].includes(finishedRound); }
-function shouldRelic(finishedRound) { return [3, 6, 9].includes(finishedRound); }
+function shouldAugment(finishedRound) { return [3, 6, 9].includes(finishedRound); }
 
-// relic draft at act boundaries (pick 1 of 3 run-long blessings)
-function offerRelic(after) {
-  const ids = Run.draftRelics(run);
-  if (!ids.length) { after ? after() : renderPlanning(); return; }
-  const pick = (id) => { Run.addRelic(run, id); Run.save(run); Sfx.fuse(); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
-  const ov = el('.overlay', {}, el('.help-card', {}, [
-    el('h2', {}, '✦ Choose a Relic'),
-    el('.sub', {}, 'A permanent blessing for the rest of your run.'),
-    el('.draft-row.relics', {}, ids.map((id) => {
-      const r = RELICS[id];
-      return el('button.draft-pick', { onclick: () => pick(id) }, [el('span.di', {}, r.icon), el('span.dn', {}, r.name), el('span.dm', {}, r.desc)]);
-    })),
-  ]));
+// Augment draft (pick 1 of 3 run-shaping powers), with skip-for-gold, banish, reroll.
+function offerAugment(after) {
+  const SKIP_GOLD = 4;
+  const done = () => { Run.save(run); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
+  const render = () => {
+    const existing = document.querySelector('.overlay'); if (existing) existing.remove();
+    const ids = Run.draftAugments(run);
+    if (!ids.length) { done(); return; }
+    const pick = (id) => { Run.addAugment(run, id); Sfx.fuse(); done(); };
+    const banish = (id, e) => { e.stopPropagation(); if (Run.banishAugment(run, id)) { Sfx.click(); Run.save(run); render(); } };
+    const ov = el('.overlay', {}, el('.help-card', { style: { maxWidth: '360px', width: '92%' } }, [
+      el('h2', {}, '✦ Choose an Augment'),
+      el('.sub', {}, `A run-shaping power (offer ${Math.min(run.augments.length + 1, 3)} of 3).`),
+      el('.draft-row.relics', {}, ids.map((id) => {
+        const a = AUGMENTS[id];
+        const card = el(`button.draft-pick aug-${a.tier}`, { onclick: () => pick(id) }, [
+          el('.aug-tier', {}, `${TIER_LABEL[a.tier]} · ${a.cat}`),
+          el('span.di', {}, a.icon), el('span.dn', {}, a.name), el('span.dm', {}, a.desc),
+        ]);
+        if ((run.banishLeft || 0) > 0) card.append(el('button.aug-banish', { title: 'Banish (remove from this run\'s offers)', onclick: (e) => banish(id, e) }, '🚫'));
+        return card;
+      })),
+      el('.draft-tools', {}, [
+        el('button.btn', { onclick: () => { run.gold += SKIP_GOLD; Sfx.sell(); done(); } }, `Skip (+${SKIP_GOLD}⛁)`),
+        (run.augRerollLeft || 0) > 0 ? el('button.btn', { onclick: () => { run.augRerollLeft--; Sfx.click(); render(); } }, `⟳ Reroll (${run.augRerollLeft})`) : null,
+        (run.banishLeft || 0) > 0 ? el('span', { style: { fontSize: '10px', color: 'var(--ink-faint)', alignSelf: 'center' } }, `🚫 ${run.banishLeft} banish`) : null,
+      ]),
+    ]));
+    document.body.append(ov);
+  };
+  render();
+}
+
+// Quick augment detail popup (from the augment bar).
+function showAugmentInfo(id) {
+  const a = AUGMENTS[id]; if (!a) return; Sfx.click();
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
+    el('.help-card', { style: { maxWidth: '300px' } }, [
+      el('h2', { style: { fontSize: '19px' } }, `${a.icon} ${a.name}`),
+      el('.sub', {}, `${TIER_LABEL[a.tier]} · ${a.cat}`),
+      el('p', { style: { fontSize: '13.5px', lineHeight: '1.4' } }, a.desc),
+      el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
+    ]));
   document.body.append(ov);
 }
 
@@ -295,7 +325,7 @@ function showTraitInfo(traitId) {
   Sfx.click();
   const owned = new Set(run.board.map((u) => u.defId).concat(run.bench.filter(Boolean).map((u) => u.defId)));
   const playerDefs = run.board.map((u) => UNITS_BY_ID[u.defId]);
-  const active = activeTraits(playerDefs)[traitId];
+  const active = activeTraits(playerDefs, augmentBundle(run.augments).traitBonus)[traitId];
   const curTier = active ? active.tier : 0;
   const members = UNITS.filter((u) => u.origin === traitId || u.klass === traitId);
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
@@ -324,7 +354,7 @@ function showCodex(tab = 'units') {
           el('.art', { html: championSVG(u, { size: 40 }) }), el('.nm', {}, u.name),
         ])));
       body.append(grid);
-    } else {
+    } else if (which === 'traits') {
       const list = el('.codex-list');
       for (const [id, t] of Object.entries(TRAITS)) list.append(
         el('.trait-chip.active', { style: { justifyContent: 'flex-start' }, onclick: () => showTraitInfo(id) }, [
@@ -332,11 +362,21 @@ function showCodex(tab = 'units') {
           el('span', { style: { color: 'var(--ink-faint)', fontSize: '10px', marginLeft: 'auto' } }, t.axis),
         ]));
       body.append(list);
+    } else {
+      const list = el('.codex-list');
+      const order = { common: 0, rare: 1, prismatic: 2 };
+      for (const [id, a] of Object.entries(AUGMENTS).sort((x, y) => order[x[1].tier] - order[y[1].tier])) list.append(
+        el(`.aug-row tier-${a.tier}`, { onclick: () => showAugmentInfo(id) }, [
+          el('span.aug-ic', {}, a.icon), el('span', { style: { fontWeight: 700 } }, a.name),
+          el('span', { style: { color: 'var(--ink-faint)', fontSize: '10px', marginLeft: 'auto' } }, TIER_LABEL[a.tier]),
+        ]));
+      body.append(list);
     }
   };
-  const mkTab = (key, label) => el(`button.btn${tab === key ? ' primary' : ''}`, { onclick: () => { tab = key; [...tabs.children].forEach((c, i) => c.classList.toggle('primary', (key === 'units') === (i === 0))); render(key); } }, label);
   const tabs = el('.codex-tabs');
-  tabs.append(mkTab('units', `Champions (${UNITS.length})`), mkTab('traits', `Synergies (${Object.keys(TRAITS).length})`));
+  const tabDefs = [['units', `Champions (${UNITS.length})`], ['traits', `Synergies (${Object.keys(TRAITS).length})`], ['augments', `Augments (${Object.keys(AUGMENTS).length})`]];
+  const tabBtns = tabDefs.map(([key, label]) => el(`button.btn${tab === key ? ' primary' : ''}`, { onclick: () => { tab = key; tabBtns.forEach((b, i) => b.classList.toggle('primary', tabDefs[i][0] === key)); render(key); } }, label));
+  tabs.append(...tabBtns);
   render(tab);
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
     el('.help-card', { style: { maxWidth: '360px', width: '92%' } }, [
@@ -424,7 +464,7 @@ async function startCombat() {
   const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const seed = hashSeed(run.seed, run.round);
-  const { events, result } = simulate(playerBoard, enemyBoard, seed, { teamMods: { player: relicCombatMods(run.relics) } });
+  const { events, result } = simulate(playerBoard, enemyBoard, seed, { aug: { player: augmentBundle(run.augments) } });
 
   // hide planning-only controls, keep board
   $$('.bench .slot, .shop, .combat-ctl .btn:not(#readyBtn)').forEach(() => {});
@@ -444,7 +484,7 @@ async function startCombat() {
   Run.save(run);
   setTimeout(() => {
     if (run.over) endScreen();
-    else if (shouldRelic(finishedRound)) offerRelic(renderPlanning);
+    else if (shouldAugment(finishedRound)) offerAugment(renderPlanning);
     else if (shouldDraft(finishedRound)) offerDraft(renderPlanning);
     else renderPlanning();
   }, 1100);
@@ -458,7 +498,7 @@ function endScreen() {
     el('h1', { style: { fontSize: '34px', margin: '0' } }, won ? '🏆 VICTORY' : '⚔ RUN OVER'),
     el('p', { style: { color: 'var(--ink-dim)', margin: '0' } }, won ? `You won with ${run.lives} ❤ to spare — a true warlord!` : `A valiant effort. Tune your warband and try again!`),
     el('.istats', { style: { maxWidth: '280px' } }, [stat('Wins', `${run.wins} / 10`), stat('Rounds', run.round - 1)]),
-    run.relics.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Relics gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.relics.map((id) => el('span.relic', { title: RELICS[id].name }, RELICS[id].icon)))]) : null,
+    run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name }, AUGMENTS[id].icon)))]) : null,
     el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => { run = Run.freshRun(); Run.save(run); renderPlanning(); } }, '↻ New Run'),
   ]);
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', textAlign: 'center', gap: '14px' } }, [card]));
@@ -474,6 +514,6 @@ window.__wb = {
   giveGold: (n) => act(() => (run.gold += n)),
   inspect: (uid) => showInspect(uid),
   end: () => endScreen(),
-  sim: (board, round) => simulate(board, getEnemyBoard(round || run.round, null).units.map(({ defId, star, col, row }) => ({ defId, star, col, row })), hashSeed(run.seed, round || run.round), { teamMods: { player: relicCombatMods(run.relics) } }),
+  sim: (board, round) => simulate(board, getEnemyBoard(round || run.round, null).units.map(({ defId, star, col, row }) => ({ defId, star, col, row })), hashSeed(run.seed, round || run.round), { aug: { player: augmentBundle(run.augments) } }),
 };
 console.log('[warbound] game loop ready. Round', run.round, '| board limit', Run.boardLimit(run));

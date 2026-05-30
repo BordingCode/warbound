@@ -94,9 +94,10 @@ export const TRAITS = {
 };
 
 // Given a list of unit defs on the board, compute active trait counts (distinct units per
-// trait) and the highest reached breakpoint for each.
-export function activeTraits(units) {
-  const counts = {};
+// trait) and the highest reached breakpoint for each. `bonus` adds to a trait's COUNT
+// (from Augment crowns, e.g. {mage:1}) so it can push a synergy to its next breakpoint.
+export function activeTraits(units, bonus) {
+  bonus = bonus || {};
   const seen = {};
   for (const u of units) {
     for (const t of [u.origin, u.klass]) {
@@ -105,13 +106,14 @@ export function activeTraits(units) {
     }
   }
   const result = {};
-  for (const [t, set] of Object.entries(seen)) {
+  const allTraits = new Set([...Object.keys(seen), ...Object.keys(bonus)]);
+  for (const t of allTraits) {
     const def = TRAITS[t];
     if (!def) continue;
-    const count = set.size;
+    const count = (seen[t] ? seen[t].size : 0) + (bonus[t] || 0);
+    if (count <= 0) continue;
     let tier = 0;
     for (const bp of def.breakpoints) if (count >= bp) tier = bp;
-    counts[t] = count;
     result[t] = { count, tier, bonus: tier ? def.bonuses[tier] : null };
   }
   return result;
