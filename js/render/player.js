@@ -16,9 +16,16 @@ export class CombatPlayer {
     this.nodes = new Map();      // id -> { el, maxHp, hp }
     this.speed = 1;
     this.raf = 0;
+    this.critPending = new Set();   // attacker ids whose next hit lands a crit
+    this.pauseFor = 0;              // remaining hit-stop in *combat ms* (frozen clock)
+    this.stageEl = unitsLayer.closest('.stage') || unitsLayer.closest('.board-wrap') || unitsLayer;
     // shake the .stage (no overflow/clip/shadow of its own) so it moves as one cheap GPU layer
-    this.shake = new Shake(unitsLayer.closest('.stage') || unitsLayer.closest('.board-wrap') || unitsLayer);
+    this.shake = new Shake(this.stageEl);
   }
+
+  _ms(base) { return base / this.speed; }   // scale every animation/timeout by combat speed
+  // hit-stop: freeze the combat clock briefly so an impact reads with weight (Vlambeer/Smash).
+  hitStop(ms) { this.pauseFor = Math.max(this.pauseFor, ms); }
 
   clear() {
     this.unitsLayer.replaceChildren();
@@ -46,8 +53,34 @@ export class CombatPlayer {
     node.querySelector('.bar.hp .fill').style.transform = 'scaleX(1)';
     node.querySelector('.bar.hp .trail').style.transform = 'scaleX(1)';
     if (e.summon) node.classList.add('summon');
+    // cheap hit-flash overlay (opacity = compositor-only; replaces per-hit filter:brightness)
+    node.querySelector('.frame').append(el('.hitflash'));
     this.unitsLayer.append(node);
     this.nodes.set(e.id, { el: node, maxHp: e.maxHp, hp: e.hp });
+    // spawn pop-in (0 -> 1.15 -> 1, ease-out-back) on the body so the cell anchor never shifts
+    const body = node.querySelector('.champ-body');
+    if (body) body.animate(
+      [{ transform: 'scale(.2)', opacity: 0 }, { transform: 'scale(1.15)', opacity: 1, offset: .7 }, { transform: 'scale(1)' }],
+      { duration: this._ms(340), easing: 'cubic-bezier(.34,1.56,.64,1)' });
+  }
+
+  // brief white flash on the struck unit (opacity overlay, GPU-cheap)
+  _flash(node, strength = 0.85, ms = 120) {
+    const f = node.querySelector('.hitflash'); if (!f) return;
+    f.animate([{ opacity: strength }, { opacity: 0 }], { duration: this._ms(ms), easing: 'ease-out' });
+  }
+  // squash & stretch on the body (volume-preserving), settling with overshoot
+  _squash(node, sx = 1.18, sy = 0.84) {
+    const body = node.querySelector('.champ-body'); if (!body) return;
+    body.animate(
+      [{ transform: 'scale(1,1)' }, { transform: `scale(${sx},${sy})`, offset: .3 }, { transform: 'scale(1,1)' }],
+      { duration: this._ms(220), easing: 'cubic-bezier(.34,1.56,.64,1)' });
+  }
+  // a scorch decal left where a unit died (Vlambeer "permanence" — makes kills memorable)
+  _scorch(x, y) {
+    const d = this._fx('vfx-scorch', x, y, {});
+    d.animate([{ opacity: .55, transform: 'translate(-50%,-50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(.8)' }],
+      { duration: 2600, easing: 'ease-in' }).finished.then(() => d.remove()).catch(() => {});
   }
 
   _setMana(id, frac) {
@@ -64,21 +97,23 @@ export class CombatPlayer {
     n.el.querySelector('.bar.hp .fill').style.transform = `scaleX(${f})`;
     // trail lags behind (set after a beat)
     const trail = n.el.querySelector('.bar.hp .trail');
-    setTimeout(() => { trail.style.transform = `scaleX(${f})`; }, 90);
+    setTimeout(() => { trail.style.transform = `scaleX(${f})`; }, this._ms(90));
   }
 
-  _floatNum(id, text, color) {
+  _floatNum(id, text, color, big = false) {
     const n = this.nodes.get(id); if (!n) return;
     const m = n.el.style.transform.match(/translate\(([\d.]+)%,\s*([\d.]+)%\)/);
     if (!m) return;
-    const num = el('.dmg-num', { style: { color } }, text);
+    const num = el(`.dmg-num${big ? ' crit' : ''}`, { style: { color } }, text);
     // place at the unit's tile (percentages of board); convert tile->% of board (tile=12.5%)
     num.style.left = `${(+m[1]) * 0.125 + 6}%`;
     num.style.top = `${(+m[2]) * 0.125 + 4}%`;
     this.fxLayer.append(num);
+    // crit numbers pop bigger with an overshoot, then drift up; normals are subtler
+    const peak = big ? 1.65 : 1.05;
     num.animate(
-      [{ transform: 'translateY(0) scale(1)', opacity: 1 }, { transform: 'translateY(-26px) scale(1.05)', opacity: 0 }],
-      { duration: 650 / this.speed, easing: 'cubic-bezier(0,0,.3,1)' }
+      [{ transform: 'translateY(0) scale(.6)', opacity: 1 }, { transform: `translateY(-6px) scale(${peak})`, opacity: 1, offset: .25 }, { transform: `translateY(-30px) scale(${big ? 1.2 : 1})`, opacity: 0 }],
+      { duration: this._ms(big ? 780 : 650), easing: 'cubic-bezier(.2,1.4,.5,1)' }
     ).finished.then(() => num.remove()).catch(() => {});
   }
 
@@ -112,7 +147,7 @@ export class CombatPlayer {
   _windup(id) {
     const n = this.nodes.get(id); if (!n) return;
     n.el.classList.remove('casting'); void n.el.offsetWidth; n.el.classList.add('casting');
-    setTimeout(() => n.el && n.el.classList.remove('casting'), 420 / this.speed);
+    setTimeout(() => n.el && n.el.classList.remove('casting'), this._ms(420));
   }
 
   // Dota-style per-shape ability visuals
@@ -203,43 +238,65 @@ export class CombatPlayer {
           }
         }
         if (e.id % 2 === 0 || !e.ranged) { e.ranged ? Sfx.arrow() : Sfx.sword(); }
-        if (e.crit) this.shake.add(0.12);
+        if (e.crit) { this.critPending.add(e.id); this.shake.add(0.18); this.hitStop(55); }
         this._bumpMana(e.id, 0.16);     // visual telegraph of the cast bar filling
         break;
       }
       case 'projectile': this._projectile(e.from, e.to, e.kind); break;
       case 'damage': {
-        if (n) { n.el.classList.add('flash', 'hit'); setTimeout(() => n.el.classList.remove('flash', 'hit'), 150); }
+        const lethal = e.hp <= 0;
+        const crit = e.src >= 0 && this.critPending.delete(e.src);
+        if (n) { this._flash(n.el, lethal ? 1 : crit ? 0.95 : 0.8, lethal ? 150 : 110); this._squash(n.el, lethal ? 1.3 : crit ? 1.26 : 1.18, lethal ? 0.72 : 0.84); }
         this._setHP(e.id, e.hp);
-        if (e.amount > 0) { const col = DT_COLORS[e.dmgType] || 'var(--dt-physical)'; this._floatNum(e.id, e.amount, col); this._spark(e.id, col, e.dmgType === 'magic' ? 5 : 3); }
+        if (e.amount > 0) {
+          const col = crit ? 'var(--gold)' : (DT_COLORS[e.dmgType] || 'var(--dt-physical)');
+          this._floatNum(e.id, crit ? e.amount + '!' : e.amount, col, crit);
+          this._spark(e.id, col, e.dmgType === 'magic' ? 5 : crit ? 5 : 3);
+        }
         this._bumpMana(e.id, 0.05);
         break;
       }
-      case 'heal': this._setHP(e.id, e.hp); this._floatNum(e.id, '+' + e.amount, DT_COLORS.heal); Sfx.heal(); break;
+      case 'heal': this._setHP(e.id, e.hp); this._floatNum(e.id, '+' + e.amount, DT_COLORS.heal); if (n) this._flash(n.el, 0.5, 160); Sfx.heal(); break;
       case 'shield': if (n) this._floatNum(e.id, '⛨' + e.amount, 'var(--shield)'); break;
-      case 'revive': this._setHP(e.id, e.hp); if (n) n.el.classList.add('flash'); break;
+      case 'revive': this._setHP(e.id, e.hp); if (n) { this._flash(n.el, 1, 260); this._spark(e.id, 'var(--dt-heal)', 6, 26); this.shake.add(0.14); } break;
       case 'dodge': this._floatNum(e.id, 'dodge', 'var(--ink-dim)'); break;
-      case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); this._windup(e.id); this._castVfx(e); n.mana = 0; this._setMana(e.id, 0); } break;
-      case 'faint': if (n) { this._spark(e.id, '#ffffff', 8, 30); n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } Sfx.death(); this.shake.add(0.16); break;
+      case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); this._windup(e.id); this._castVfx(e); if (e.shape === 'aoe' || e.shape === 'summon') this.hitStop(60); n.mana = 0; this._setMana(e.id, 0); } break;
+      case 'faint': {
+        const pos = this._pos(e.id);
+        if (n) { this._spark(e.id, '#ffffff', 8, 30); this._flash(n.el, 1, 90); n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, this._ms(360)); }
+        if (pos) this._scorch(pos.x, pos.y);          // permanence: a mark stays where they fell
+        Sfx.death(); this.shake.add(0.3); this.hitStop(70);   // a kill is the punchiest beat
+        try { if (navigator.vibrate) navigator.vibrate(18); } catch {}
+        break;
+      }
       case 'end': break;
     }
   }
 
   // Play the timeline. Returns a promise resolving with the winner.
+  // Accumulator clock (decoupled from wall-time) so we can inject hit-stop pauses and so
+  // every effect's duration scales cleanly with speed. CSS reactions read --spd to scale too.
   play(events, { speed = 1, onEvent } = {}) {
     this.clear();
     this.speed = speed;
+    this.pauseFor = 0;
+    if (this.stageEl) this.stageEl.style.setProperty('--spd', String(speed));
     return new Promise((resolve) => {
       let i = 0;
-      const start = performance.now();
+      let clock = 0;                 // combat ms elapsed
+      let last = performance.now();
       const endEvent = events[events.length - 1];
       const tick = (nowReal) => {
-        const clock = (nowReal - start) * this.speed;  // ms of combat time elapsed
+        const realDt = Math.min(nowReal - last, 100);   // clamp (tab-stall = no avalanche)
+        last = nowReal;
+        if (this.pauseFor > 0) { this.pauseFor -= realDt; }   // real-time freeze so it reads at any speed
+        else { clock += realDt * this.speed; }
         while (i < events.length && events[i].t <= clock) {
           // a single bad event must never freeze the whole fight (it would soft-lock the run)
           try { this._apply(events[i]); if (onEvent) onEvent(events[i]); }
           catch (err) { console.warn('[warbound] render event skipped:', events[i] && events[i].type, err); }
           i++;
+          if (this.pauseFor > 0) break;   // honour a hit-stop triggered by the event just applied
         }
         if (i >= events.length) { resolve(endEvent && endEvent.winner); return; }
         this.raf = requestAnimationFrame(tick);
@@ -248,7 +305,7 @@ export class CombatPlayer {
     });
   }
 
-  setSpeed(s) { this.speed = s; }
+  setSpeed(s) { this.speed = s; if (this.stageEl) this.stageEl.style.setProperty('--spd', String(s)); }
   skip() { /* fast path: jump remaining; handled by caller re-play at high speed or instant */ }
   stop() { cancelAnimationFrame(this.raf); }
 }

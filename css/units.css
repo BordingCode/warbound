@@ -73,17 +73,30 @@
   filter: drop-shadow(0 8px 10px #000a);
 }
 
-/* combat expression hooks (toggled by renderer) */
-.champ-body.attacking { animation: lunge 280ms ease-out; }
+/* combat expression hooks (toggled by renderer). Durations divide by --spd so 2x/4x stay in sync. */
+.champ-body.attacking { animation: lunge calc(280ms / var(--spd, 1)) ease-out; }
 @keyframes lunge { 40% { transform: translateY(-12%) scale(1.06); } }
-.unit.hit .champ-body { animation: hitshake 160ms ease; }
-@keyframes hitshake { 25% { transform: translateX(-6%); } 75% { transform: translateX(6%); } }
-.unit.flash .champ { filter: brightness(3.2); }
-.unit.faint { animation: faint 360ms ease-in forwards; }
-@keyframes faint { to { transform: translate(var(--x,0), var(--y,0)) scale(.2); opacity: 0; } }
+.unit.faint { animation: faint calc(360ms / var(--spd, 1)) ease-in forwards; }
+@keyframes faint { to { transform: translate(var(--x,0), var(--y,0)) scale(.2) rotate(8deg); opacity: 0; } }
+
+/* fuse / upgrade celebration: the champion pops bigger + flares (the genre's emotional peak) */
+.fusing { z-index: 60 !important; }
+.fusing .champ-body { animation: fusepop .62s cubic-bezier(.34,1.7,.5,1); }
+@keyframes fusepop { 30% { transform: scale(1.35); } 60% { transform: scale(.94); } 100% { transform: scale(1); } }
+.fusing .champ { animation: fuseshine .62s ease; }
+@keyframes fuseshine { 0%, 100% { filter: none; } 35% { filter: drop-shadow(0 0 10px var(--gold)) drop-shadow(0 0 4px #fff) brightness(1.5); } }
+.fusing-gold .champ { animation: fuseshine .62s ease; }
+@keyframes fuseshineGold { 0%, 100% { filter: none; } 35% { filter: drop-shadow(0 0 16px var(--gold)) drop-shadow(0 0 6px #fff) saturate(1.6) brightness(1.6); } }
+.fusing-gold .champ { animation-name: fuseshineGold; }
+
+/* GPU-cheap hit flash: a white blob over the champ, popped via opacity (no per-hit filter) */
+.unit .hitflash {
+  position: absolute; inset: -12% 0 8% 0; border-radius: 50%; pointer-events: none; z-index: 2;
+  background: radial-gradient(closest-side, #ffffff, #ffffff00); opacity: 0;
+}
 
 /* ability cast wind-up: caster charges up (glow) just before the effect */
-.unit.casting .champ { animation: castglow .42s ease; }
+.unit.casting .champ { animation: castglow calc(.42s / var(--spd, 1)) ease; }
 @keyframes castglow { 0%, 100% { filter: drop-shadow(0 2px 2px #0008); } 45% { filter: brightness(1.9) drop-shadow(0 0 9px var(--gold)) drop-shadow(0 0 4px #fff); } }
 
 /* ability VFX (Dota-style), placed in the fx layer; left/top = center via translate(-50%,-50%) */
@@ -94,3 +107,7 @@
 .vfx-slash { width: 11%; aspect-ratio: 1; border-radius: 50%; border: 0 solid transparent; border-top: 4px solid #fff; border-right: 4px solid #ffffffcc; filter: drop-shadow(0 0 4px #fff); }
 .vfx-heal { width: 13%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, var(--dt-heal), transparent); }
 .vfx-shield { width: 15%; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--shield); background: radial-gradient(closest-side, transparent 60%, #ffe08a33); box-shadow: 0 0 10px var(--shield); }
+.vfx-scorch { width: 9%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, #000a, #0000); }
+
+/* crit damage number: bigger, bold, gold with a punchy outline */
+.dmg-num.crit { font-size: 20px; font-weight: 900; text-shadow: 0 2px 4px #000, 0 0 6px var(--gold), 0 0 2px #000; letter-spacing: -0.5px; }

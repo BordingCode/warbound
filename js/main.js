@@ -216,7 +216,24 @@ function buildBenchEl() {
 
 // ---------- actions ----------
 function act(fn) { audioResume(); fn(); Run.save(run); renderPlanning(); }
-function doBuy(i) { act(() => Run.buy(run, i)); Sfx.buy(); }
+// map uid -> star across board+bench (to detect a fuse/upgrade after a buy)
+function starMap() { const m = {}; for (const u of [...run.board, ...run.bench.filter(Boolean)]) m[u.uid] = u.star; return m; }
+function doBuy(i) {
+  const before = starMap();
+  act(() => Run.buy(run, i));
+  // celebrate the emotional peak of the genre: a champion that just leveled up (TFT 1→2→3★)
+  const upgraded = [...run.board, ...run.bench.filter(Boolean)].find((u) => before[u.uid] != null && u.star > before[u.uid]);
+  if (upgraded) { celebrateFuse(upgraded.uid, upgraded.star); Sfx.fuse(); }
+  else Sfx.buy();
+}
+// pop + gold shine on the upgraded champion's node (board unit or bench slot)
+function celebrateFuse(uid, star) {
+  const node = document.querySelector(`.units .unit[data-uid="${uid}"]`) || document.querySelector(`.bench .slot[data-uid="${uid}"]`);
+  if (!node) return;
+  node.classList.add('fusing');
+  if (star >= 3) node.classList.add('fusing-gold');   // ★★★ = the holographic gold moment
+  setTimeout(() => node.classList.remove('fusing', 'fusing-gold'), 700);
+}
 function doBuyXP() { act(() => Run.buyXP(run)); Sfx.click(); }
 function doReroll() { act(() => Run.reroll(run)); Sfx.click(); }
 function doLock() { run.shopLocked = !run.shopLocked; Run.save(run); Sfx.click(); renderPlanning(); }
