@@ -350,12 +350,15 @@ async function startCombat() {
 function endScreen() {
   const won = run.won;
   if (won) launchConfetti(4000);
+  const stat = (label, val) => el('.istat', { style: { minWidth: '120px' } }, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
   const card = el('.endscreen', {}, [
-    el('h1', { style: { fontSize: '34px', margin: '0' } }, won ? '🏆 VICTORY' : '💀 DEFEAT'),
-    el('p', { style: { color: 'var(--ink-dim)' } }, won ? `You won the run with ${run.lives} ❤ to spare!` : `Your warband fell at round ${run.round}. ${run.wins} wins.`),
+    el('h1', { style: { fontSize: '34px', margin: '0' } }, won ? '🏆 VICTORY' : '⚔ RUN OVER'),
+    el('p', { style: { color: 'var(--ink-dim)', margin: '0' } }, won ? `You won with ${run.lives} ❤ to spare — a true warlord!` : `A valiant effort. Tune your warband and try again!`),
+    el('.istats', { style: { maxWidth: '280px' } }, [stat('Wins', `${run.wins} / 10`), stat('Rounds', run.round - 1)]),
+    run.relics.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Relics gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.relics.map((id) => el('span.relic', { title: RELICS[id].name }, RELICS[id].icon)))]) : null,
     el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => { run = Run.freshRun(); Run.save(run); renderPlanning(); } }, '↻ New Run'),
   ]);
-  $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '80svh', textAlign: 'center', gap: '16px' } }, [card]));
+  $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', textAlign: 'center', gap: '14px' } }, [card]));
 }
 
 renderPlanning();
@@ -367,5 +370,6 @@ window.__wb = {
   place: (uid, c, r) => act(() => Run.placeOnBoard(run, uid, c, r)),
   giveGold: (n) => act(() => (run.gold += n)),
   inspect: (uid) => showInspect(uid),
+  end: () => endScreen(),
 };
 console.log('[warbound] game loop ready. Round', run.round, '| board limit', Run.boardLimit(run));
