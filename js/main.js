@@ -169,8 +169,8 @@ function renderPlanning() {
   const game = el('.game', {}, [
     el('.topbar', {}, [
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
-      el('.stat-pill', {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
-      el('.stat-pill.round', {}, `Round ${run.round}`),
+      el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
+      el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn#soundBtn', { style: { padding: '5px 10px' }, onclick: toggleSound }, soundOn() ? '🔊' : '🔇'),
       el('button.btn', { style: { padding: '5px 10px' }, onclick: showHelp }, '?'),
     ]),

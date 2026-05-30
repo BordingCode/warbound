@@ -19,6 +19,8 @@
 .stat-pill.hp { color: var(--hp); }
 .stat-pill .lives { letter-spacing: 1px; color: var(--danger); }
 .stat-pill.round { color: var(--ink-dim); margin-left: auto; }
+.stat-pill.danger { border-color: var(--danger); animation: lowlife 1.1s ease-in-out infinite; }
+@keyframes lowlife { 50% { box-shadow: 0 0 10px var(--danger); border-color: var(--danger); } }
 .xpbar { flex: 1; height: 8px; background: var(--bg-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
 .xpbar .fill { height: 100%; background: linear-gradient(90deg, var(--mana), #7ad0ff); transform-origin: left; }
 
