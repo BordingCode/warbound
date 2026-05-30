@@ -1,0 +1,11 @@
+{
+  "name": "warbound",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Solo fantasy auto-battler — vanilla JS PWA. No build step; package.json only marks ES modules for the Node test harness.",
+  "scripts": {
+    "test": "node test/run.js",
+    "balance": "node js/sim/autobalance.js"
+  }
+}
