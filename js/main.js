@@ -110,7 +110,7 @@ function buildShopEl() {
     el('button.btn.primary', { onclick: doBuyXP }, [el('span', {}, 'Buy XP'), el('span', { style: { opacity: .7 } }, '4⛁')]),
     el('button.btn.reroll', { onclick: doReroll }, [el('span', {}, '⟳'), el('span', { style: { opacity: .7 } }, Run.freeRerollsLeft(run) > 0 ? 'FREE' : '2⛁')]),
     el(`button.btn${run.shopLocked ? ' primary' : ''}`, { title: 'Freeze the shop so it keeps these champions next round', onclick: doLock }, run.shopLocked ? '🔒' : '🔓'),
-    el('span', { style: { marginLeft: 'auto', fontSize: '11px', color: 'var(--ink-dim)' } }, `+${inc.total}/turn (⛁${inc.interest} int${inc.streakBonus ? ' +' + inc.streakBonus + ' streak' : ''})`),
+    el('button.econ-info', { style: { marginLeft: 'auto' }, onclick: showEconomyInfo }, [el('span', {}, `+${inc.total}⛁/turn`), el('span', { style: { opacity: .7 } }, 'ⓘ')]),
   ]);
   return el(`.shop${run.shopLocked ? ' locked' : ''}`, {}, [controls, row]);
 }
@@ -180,9 +180,10 @@ function renderPlanning() {
       el('button.btn#soundBtn', { style: { padding: '5px 10px' }, onclick: toggleSound }, soundOn() ? '🔊' : '🔇'),
       el('button.btn', { style: { padding: '5px 10px' }, onclick: showHelp }, '?'),
     ]),
-    el('.topbar', {}, [
-      el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt}`)]),
-      el('.xpbar', {}, el('.fill', { style: { transform: `scaleX(${Run.xpNeeded(run) ? run.xp / Run.xpNeeded(run) : 1})` } })),
+    el('.topbar', { style: { cursor: 'pointer' }, onclick: showEconomyInfo }, [
+      el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt} units`)]),
+      el('.xpbar', { title: 'XP to next level (+2 each round)' }, el('.fill', { style: { transform: `scaleX(${Run.xpNeeded(run) ? run.xp / Run.xpNeeded(run) : 1})` } })),
+      el('span', { style: { fontSize: '10px', color: 'var(--ink-dim)', whiteSpace: 'nowrap' } }, Run.xpNeeded(run) ? `${run.xp}/${Run.xpNeeded(run)} ⓘ` : 'MAX'),
     ]),
     run.relics.length ? el('.relic-bar', {}, run.relics.map((id) => el('span.relic', { title: `${RELICS[id].name}: ${RELICS[id].desc}` }, RELICS[id].icon))) : null,
     buildTraitsEl(),
@@ -358,6 +359,38 @@ function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highligh
 function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
 function setBanner(t) { const b = $('.phase-banner'); if (b) b.textContent = t; }
 function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soundBtn'); if (b) b.textContent = soundOn() ? '🔊' : '🔇'; if (soundOn()) Sfx.click(); }
+
+// Explain the economy with the player's CURRENT live values.
+function showEconomyInfo() {
+  Sfx.click();
+  const inc = Run.income(run);
+  const interestNext = 10 - (run.gold % 10);
+  const row = (label, val, hint) => el('.econ-row', {}, [el('span', { style: { fontWeight: 700 } }, label), el('span', {}, val), hint ? el('.econ-hint', {}, hint) : null]);
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
+    el('.help-card', { style: { maxWidth: '340px' } }, [
+      el('h2', { style: { fontSize: '20px' } }, '⛁ Economy'),
+      el('.sub', {}, `You earn gold at the end of every round. This round you'll get +${inc.total}.`),
+      el('.econ-rows', {}, [
+        row('Base income', `+${inc.base}`, 'Grows a little as the game goes on.'),
+        row('Interest', `+${inc.interest}`, `+1 gold per 10 saved (max +5). Save ${interestNext} more to reach the next +1.`),
+        row('Win/loss streak', inc.streakBonus ? `+${inc.streakBonus}` : '+0', 'Win OR lose 2+ in a row for bonus gold — losing streaks help you recover.'),
+        row('Win bonus', '+1', 'Extra gold each round you win.'),
+      ]),
+      el('.sub', { style: { marginTop: '6px' } }, 'Spending'),
+      el('.econ-rows', {}, [
+        row('Buy champion', '3–5⛁', 'Buy 3 of the same to fuse into ★★ (then ★★★).'),
+        row('Reroll shop', '2⛁', 'New shop choices. Freeze 🔒 to keep them next round.'),
+        row('Buy XP', '4⛁', 'Levels you up faster (see below).'),
+      ]),
+      el('.sub', { style: { marginTop: '6px' } }, 'Levels & XP'),
+      el('.econ-rows', {}, [
+        row('Passive XP', '+2 / round', `You gain XP automatically every round (now ${run.xp}/${Run.xpNeeded(run)} to Lv ${run.level + 1}).`),
+        row('Your level', `Lv ${run.level}`, `Your level = how many champions you can place on the board (${Run.boardLimit(run)} now). Higher level also unlocks stronger champions in the shop.`),
+      ]),
+      el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Got it'),
+    ]));
+  document.body.append(ov);
+}
 
 function showHelp() {
   const tips = [

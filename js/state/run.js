@@ -278,8 +278,8 @@ export function resolveRound(run, won) {
   // payout (win bonus +1)
   const inc = income(run);
   run.gold += inc.total + (won ? 1 : 0);
-  // free xp from round 5+ (plus any relic xp)
-  const bonusXp = (run.round >= 5 ? 2 : 0) + (relicEcon(run.relics).xpPerRound || 0);
+  // passive xp every round (TFT-style), plus any relic xp
+  const bonusXp = 2 + (relicEcon(run.relics).xpPerRound || 0);
   if (bonusXp && run.level < MAX_LEVEL) { run.xp += bonusXp; while (run.level < MAX_LEVEL && run.xp >= XP_TO_NEXT[run.level]) { run.xp -= XP_TO_NEXT[run.level]; run.level++; } }
   run.freeRerollsUsed = 0;
   // life back at round 3 if hurt (anti-stomp floor)
