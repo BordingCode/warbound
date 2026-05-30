@@ -14,6 +14,11 @@ import { RNG, seedFromString } from '../rng.js';
 import { UNITS, UNITS_BY_ID, statsForStar } from '../data/units.js';
 import { SHOP_ODDS, XP_TO_NEXT, MAX_LEVEL, POOL_COPIES } from './run.js';
 import { simulate, playerDamage } from '../sim/combat.js';
+import { augmentBundle, AUGMENT_IDS, AUGMENTS } from '../data/augments.js';
+
+// augments a bot may draft — combat/synergy/build value (skip pure-econ; a bot's economy
+// doesn't model interest/reroll perks). Bots draft RANDOMLY, so a thinking player still wins.
+const BOT_AUGMENTS = AUGMENT_IDS.filter((id) => AUGMENTS[id].cat !== 'econ');
 
 export const START_HP = 130;     // ladder HP pool — tuned for ~12-20 round games
 const INTEREST_CAP = 5;
@@ -94,8 +99,27 @@ function newBot(style, seed) {
     rng: new RNG(seed >>> 0),
     gold: 2, level: 2, xp: 0,
     hp: START_HP, alive: true, place: null,
-    roster: [], board: [], streakN: 0, lastWon: null, lastStreakWon: null,
+    roster: [], board: [], augments: [], streakN: 0, lastWon: null, lastStreakWon: null,
   };
+}
+
+// a bot drafts one augment, biased toward its trait (thematic + effective), else random.
+function botDraftAugment(bot) {
+  const owned = new Set(bot.augments);
+  let pool = BOT_AUGMENTS.filter((id) => !owned.has(id));
+  if (!pool.length) return;
+  const pref = bot.style.pref && bot.style.pref !== 'lowcost'
+    ? pool.filter((id) => AUGMENTS[id].wantTrait === bot.style.pref) : [];
+  const from = (pref.length && bot.rng.next() < 0.7) ? pref : pool;
+  bot.augments.push(from[Math.floor(bot.rng.next() * from.length)]);
+}
+// the FULL combat aug for a player/bot: their augments + warlord power + lobby modifier.
+export function botBundle(player, lobby) {
+  if (!player || player.ghost) return { flat: powerFlat(player, lobby) };
+  const b = augmentBundle(player.augments || []);
+  const pf = powerFlat(player, lobby);
+  for (const [k, v] of Object.entries(pf)) b.flat[k] = (b.flat[k] || 0) + v;
+  return b;
 }
 
 // Build a fresh shared pool: POOL_COPIES of every champion, in one bag for the whole lobby.
@@ -156,6 +180,7 @@ export function botTurn(bot, round, lobby) {
     }
     if (bot.gold <= 2) break;
   }
+  if ([3, 6, 9, 12].includes(round)) botDraftAugment(bot);   // match the player's augment power curve
   fuseRoster(bot);
   buildBotBoard(bot);
   return bot;
@@ -242,7 +267,7 @@ function bumpStreak(p, won) { if (won == null) return; p.streakN = (p.lastStreak
 function resolveBotPair(a, b, round, seed, lobby) {
   const A = mirror(a.board || []), B = (b.board || []);
   if (!A.length && !B.length) return;
-  const res = simulate(A, B, seed, { aug: { player: { flat: powerFlat(a, lobby) }, enemy: { flat: powerFlat(b, lobby) } } });
+  const res = simulate(A, B, seed, { aug: { player: botBundle(a, lobby), enemy: botBundle(b, lobby) } });
   const w = res.result.winner;
   if (w === 'player') { if (!b.ghost) b.hp -= dmgFrom(res.finalState.survivors.player, round); a.lastWon = true; }
   else if (w === 'enemy') { a.hp -= dmgFrom(res.finalState.survivors.enemy, round); a.lastWon = false; }
@@ -292,7 +317,7 @@ export function resolveLadderRound(lobby, humanBoard, humanResult, playedRound) 
 // ---- persistence (survive a page reload) ----
 function serializePlayer(p) {
   if (p.isHuman) return { isHuman: true, name: p.name, emoji: p.emoji, warlordName: p.warlordName, powerId: p.powerId, hp: p.hp, alive: p.alive, place: p.place, board: p.board, streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
-  return { id: p.id, name: p.name, emoji: p.emoji, styleId: p.style.id, rng: p.rng.save(), gold: p.gold, level: p.level, xp: p.xp, hp: p.hp, alive: p.alive, place: p.place, roster: p.roster, board: p.board, streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
+  return { id: p.id, name: p.name, emoji: p.emoji, styleId: p.style.id, rng: p.rng.save(), gold: p.gold, level: p.level, xp: p.xp, hp: p.hp, alive: p.alive, place: p.place, roster: p.roster, board: p.board, augments: p.augments || [], streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
 }
 export function serializeLobby(lobby) {
   const ref = (o) => o ? (o.ghost ? { ghost: true, board: o.board } : (o.isHuman ? 'you' : o.id)) : null;
@@ -301,7 +326,7 @@ export function serializeLobby(lobby) {
 export function deserializeLobby(obj) {
   if (!obj || !obj.bots) return null;
   const human = { isHuman: true, id: 'you', name: obj.human.name, emoji: obj.human.emoji, warlordName: obj.human.warlordName, powerId: obj.human.powerId, hp: obj.human.hp, alive: obj.human.alive, place: obj.human.place, board: obj.human.board || [], streakN: obj.human.streakN || 0, lastWon: obj.human.lastWon, lastStreakWon: obj.human.lastStreakWon };
-  const bots = obj.bots.map((b) => ({ id: b.id, name: b.name, emoji: b.emoji, style: STYLES.find((s) => s.id === b.styleId) || STYLES[0], powerId: b.styleId, rng: new RNG(b.rng.seed).load(b.rng), gold: b.gold, level: b.level, xp: b.xp, hp: b.hp, alive: b.alive, place: b.place, roster: b.roster || [], board: b.board || [], streakN: b.streakN || 0, lastWon: b.lastWon, lastStreakWon: b.lastStreakWon }));
+  const bots = obj.bots.map((b) => ({ id: b.id, name: b.name, emoji: b.emoji, style: STYLES.find((s) => s.id === b.styleId) || STYLES[0], powerId: b.styleId, rng: new RNG(b.rng.seed).load(b.rng), gold: b.gold, level: b.level, xp: b.xp, hp: b.hp, alive: b.alive, place: b.place, roster: b.roster || [], board: b.board || [], augments: b.augments || [], streakN: b.streakN || 0, lastWon: b.lastWon, lastStreakWon: b.lastStreakWon }));
   const byId = { you: human }; for (const b of bots) byId[b.id] = b;
   const deref = (r) => r == null ? null : (r.ghost ? { ghost: true, board: r.board } : byId[r]);
   return { rng: new RNG(obj.rng.seed).load(obj.rng), round: obj.round, pool: obj.pool || freshPool(), underdog: obj.underdog || null, modifier: obj.modifier || MODIFIERS[0], human, bots, players: [human, ...bots], opponent: deref(obj.opponent), pairs: (obj.pairs || []).map(([a, b]) => [deref(a), deref(b)]) };

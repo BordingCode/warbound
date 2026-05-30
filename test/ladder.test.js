@@ -1,8 +1,9 @@
 // Ladder / AI-warlord tests. Run: node test/ladder.test.js
 // Proves the bots are real economy players sharing ONE champion pool, that the pool is
 // conserved (the genre's signature contention), that boards scale, and a full lobby resolves.
-import { createLobby, botTurn, resolveLadderRound, underdog, STYLES, shuffled, START_HP, POWERS, MODIFIERS, powerFlat } from '../js/state/bots.js';
+import { createLobby, botTurn, resolveLadderRound, underdog, STYLES, shuffled, START_HP, POWERS, MODIFIERS, powerFlat, botBundle } from '../js/state/bots.js';
 import { simulate } from '../js/sim/combat.js';
+import { augmentBundle, AUGMENT_IDS, AUGMENTS } from '../js/data/augments.js';
 import { UNITS, UNITS_BY_ID } from '../js/data/units.js';
 import { POOL_COPIES } from '../js/state/run.js';
 import { RNG } from '../js/rng.js';
@@ -126,6 +127,33 @@ function copiesInExistence(lobby) {
   ok('modifier: lobby has a modifier from the table', lobby.modifier && MODIFIERS.some((m) => m.id === lobby.modifier.id));
   const flat = powerFlat(lobby.human, lobby);
   ok('powers: powerFlat merges power + modifier into combat mods', flat && Object.keys(flat).length >= 1 && flat.vamp >= 0.12);
+}
+
+// ---- 11. balance: an augmented (but unskilled) reference player must NOT dominate the lobby ----
+// Guards the augment-asymmetry regression: the player gets augments+power, so the bots must too.
+{
+  const PICK = AUGMENT_IDS.filter((id) => AUGMENTS[id].cat !== 'econ');
+  const merge = (b, flat) => { const f = { ...(b.flat || {}) }; for (const [k, v] of Object.entries(flat || {})) f[k] = (f[k] || 0) + v; return { ...b, flat: f }; };
+  const places = [];
+  for (let g = 0; g < 10; g++) {
+    const lobby = createLobby('baltest' + g, ['warlord', 'demon', 'mage'][g % 3]);
+    const ref = createLobby('baltestp' + g, 'warlord').bots[0];
+    const augs = []; let over = false, place = null, s = 0;
+    while (!over && s++ < 80) {
+      const round = lobby.round;
+      botTurn(ref, round, lobby);
+      if ([3, 6, 9, 12].includes(round)) augs.push(PICK[(g * 7 + round) % PICK.length]);
+      lobby.human.board = ref.board.map((u) => ({ ...u, row: u.row + 4 }));
+      const ob = (lobby.opponent.board || []).map((u) => ({ ...u, row: u.row <= 3 ? u.row : u.row - 4 }));
+      const res = simulate(lobby.human.board, ob, round * 7 + 3, { aug: { player: merge(augmentBundle(augs), powerFlat(lobby.human, lobby)), enemy: botBundle(lobby.opponent, lobby) } });
+      const r = resolveLadderRound(lobby, lobby.human.board, res, round);
+      over = r.over; place = r.humanPlace;
+    }
+    places.push(place);
+  }
+  const firsts = places.filter((p) => p === 1).length;
+  const avg = places.reduce((a, b) => a + b, 0) / places.length;
+  ok(`balance: unskilled augmented player doesn't run away (1st ${firsts}/10, avg ${avg.toFixed(1)})`, firsts <= 4 && avg >= 2.3);
 }
 
 console.log(`\n\n${pass} passed, ${fail} failed`);

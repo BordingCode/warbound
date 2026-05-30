@@ -620,7 +620,7 @@ async function startCombat() {
     const pb = augmentBundle(run.augments);
     const pf = Bots.powerFlat(lobby.human, lobby);   // human warlord power + modifier
     for (const [k, v] of Object.entries(pf)) pb.flat[k] = (pb.flat[k] || 0) + v;
-    augOpt = { aug: { player: pb, enemy: { flat: Bots.powerFlat(lobby.opponent, lobby) } } };
+    augOpt = { aug: { player: pb, enemy: Bots.botBundle(lobby.opponent, lobby) } };
   }
   const sim = simulate(playerBoard, enemyBoard, seed, augOpt);
   const { events, result } = sim;
