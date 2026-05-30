@@ -27,7 +27,9 @@ function unitNode(u, team) {
   const def = UNITS_BY_ID[u.defId];
   const node = el(`.unit.team-${team}`, { dataset: { star: u.star, uid: u.uid || '' } });
   node.style.transform = `translate(${u.col * 100}%, ${u.row * 100}%)`;
+  node.style.zIndex = u.row + 1;            // Y-sort: lower rows draw on top
   node.append(
+    el('.base'),
     el('.stars', {}, u.star > 1 ? '★'.repeat(u.star) : ''),
     el('.frame', { html: championSVG(def, { size: 60 }) }),
     el('.bars', {}, [el('.bar.hp', {}, [el('.trail'), el('.fill')]), el('.bar.mana', {}, [el('.fill')])]),
