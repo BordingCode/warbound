@@ -390,3 +390,24 @@
 .socket .socket-icon, .inv-item .ii-icon, .loadout-row .lr-icon { line-height: 0; }
 .loadout-row .lr-icon { width: auto; }
 .reveal-card .reveal-icon { display: flex; justify-content: center; }
+
+/* Per-star upgrade scaling table in the champion detail sheet */
+.star-scaling { display: flex; flex-direction: column; gap: 2px; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 6px 8px; margin: 8px 0; }
+.ss-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; align-items: center; font-variant-numeric: tabular-nums; font-size: 13px; }
+.ss-row.ss-head { font-size: 11px; color: var(--ink-dim); border-bottom: 1px solid var(--line); padding-bottom: 3px; margin-bottom: 2px; }
+.ss-row .ss-l { color: var(--ink-dim); }
+.ss-row .ss-v { text-align: center; color: var(--ink); font-weight: 600; }
+.ss-row .ss-v.cur { color: var(--gold); font-weight: 800; background: color-mix(in srgb, var(--gold) 14%, transparent); border-radius: 5px; }
+
+/* Live in-battle stats panel (DPS dealt + damage tanked, per team) */
+.combat-stats { position: absolute; top: 5px; left: 5px; z-index: 6; display: flex; flex-direction: column; gap: 3px;
+  background: color-mix(in srgb, var(--bg-1) 78%, transparent); border: 1px solid var(--line); border-radius: 8px;
+  padding: 4px 7px; font-size: 11px; font-variant-numeric: tabular-nums; pointer-events: none; backdrop-filter: blur(2px); }
+.combat-stats .cs-row { display: flex; align-items: center; gap: 4px; }
+.combat-stats .cs-lbl { width: 26px; font-weight: 800; }
+.combat-stats .cs-row.you .cs-lbl { color: var(--hp); }
+.combat-stats .cs-row.foe .cs-lbl { color: var(--danger); }
+.combat-stats .cs-ic { display: inline-flex; opacity: .8; }
+.combat-stats .cs-ic .ic { width: 12px; height: 12px; }
+.combat-stats .cs-dps { min-width: 42px; color: var(--gold); font-weight: 700; }
+.combat-stats .cs-tank { min-width: 30px; color: var(--ink-dim); }

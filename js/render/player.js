@@ -6,6 +6,7 @@ import { championSVG } from '../svg.js';
 import { UNITS_BY_ID } from '../data/units.js';
 import { Sfx } from '../audio/audio.js';
 import { Shake } from './fx.js';
+import { ic } from '../icons.js';
 
 const DT_COLORS = { physical: 'var(--dt-physical)', magic: 'var(--dt-magic)', true: 'var(--dt-true)', heal: 'var(--dt-heal)' };
 
@@ -18,6 +19,8 @@ export class CombatPlayer {
     this.raf = 0;
     this.critPending = new Set();   // attacker ids whose next hit lands a crit
     this.pauseFor = 0;              // remaining hit-stop in *combat ms* (frozen clock)
+    this.dmgTo = { player: 0, enemy: 0 };  // running damage absorbed by each team (for live DPS/tanked)
+    this.fightMs = 0; this.statsEl = null; this._statsDirty = false;
     this.stageEl = unitsLayer.closest('.stage') || unitsLayer.closest('.board-wrap') || unitsLayer;
     // shake the .stage (no overflow/clip/shadow of its own) so it moves as one cheap GPU layer
     this.shake = new Shake(this.stageEl);
@@ -31,6 +34,32 @@ export class CombatPlayer {
     this.unitsLayer.replaceChildren();
     this.fxLayer.replaceChildren();
     this.nodes.clear();
+    this.dmgTo = { player: 0, enemy: 0 }; this.fightMs = 0;
+    if (this.statsEl) { this.statsEl.remove(); this.statsEl = null; }
+  }
+
+  // Live combat stats panel: per-team DPS dealt + total damage tanked (damage to enemy = your
+  // DPS; damage to you = your tanked). Built once; updates only touch the number text nodes.
+  _ensureStats() {
+    if (this.statsEl) return;
+    const mkRow = (cls, label) => el(`.cs-row.${cls}`, {}, [
+      el('span.cs-lbl', {}, label),
+      el('span.cs-ic', { html: ic('sword') }), el('span.cs-dps', {}, '0/s'),
+      el('span.cs-ic', { html: ic('shield') }), el('span.cs-tank', {}, '0'),
+    ]);
+    this.statsEl = el('.combat-stats', {}, [mkRow('you', 'You'), mkRow('foe', 'Foe')]);
+    (this.unitsLayer.closest('.board-wrap') || this.stageEl).appendChild(this.statsEl);
+  }
+  _updateStats() {
+    if (!this.statsEl) this._ensureStats();
+    const secs = Math.max(0.3, this.fightMs / 1000);
+    const set = (sel, dealt, tank) => {
+      const r = this.statsEl.querySelector(sel);
+      r.querySelector('.cs-dps').textContent = Math.round(dealt / secs) + '/s';
+      r.querySelector('.cs-tank').textContent = tank;
+    };
+    set('.you', this.dmgTo.enemy, this.dmgTo.player);   // you dealt = damage to enemy; you tanked = damage to you
+    set('.foe', this.dmgTo.player, this.dmgTo.enemy);
   }
 
   _spawn(e) {
@@ -56,7 +85,7 @@ export class CombatPlayer {
     // cheap hit-flash overlay (opacity = compositor-only; replaces per-hit filter:brightness)
     node.querySelector('.frame').append(el('.hitflash'));
     this.unitsLayer.append(node);
-    this.nodes.set(e.id, { el: node, maxHp: e.maxHp, hp: e.hp });
+    this.nodes.set(e.id, { el: node, maxHp: e.maxHp, hp: e.hp, team: e.team });
     // spawn pop-in (0 -> 1.15 -> 1, ease-out-back) on the body so the cell anchor never shifts
     const body = node.querySelector('.champ-body');
     if (body) body.animate(
@@ -260,6 +289,7 @@ export class CombatPlayer {
           this._spark(e.id, col, e.dmgType === 'magic' ? 5 : crit ? 5 : 3);
         }
         this._bumpMana(e.id, 0.05);
+        if (e.amount > 0) { const tt = n && n.team; if (tt) { this.dmgTo[tt] += e.amount; this._statsDirty = true; } }
         break;
       }
       case 'heal': this._setHP(e.id, e.hp); this._floatNum(e.id, '+' + e.amount, DT_COLORS.heal); if (n) this._flash(n.el, 0.5, 160); Sfx.heal(); break;
@@ -287,6 +317,7 @@ export class CombatPlayer {
     this.speed = speed;
     this.pauseFor = 0;
     if (this.stageEl) this.stageEl.style.setProperty('--spd', String(speed));
+    this._ensureStats(); this._updateStats();
     return new Promise((resolve) => {
       let i = 0;
       let clock = 0;                 // combat ms elapsed
@@ -297,6 +328,7 @@ export class CombatPlayer {
         last = nowReal;
         if (this.pauseFor > 0) { this.pauseFor -= realDt; }   // real-time freeze so it reads at any speed
         else { clock += realDt * this.speed; }
+        this.fightMs = clock;
         while (i < events.length && events[i].t <= clock) {
           // a single bad event must never freeze the whole fight (it would soft-lock the run)
           try { this._apply(events[i]); if (onEvent) onEvent(events[i]); }
@@ -304,6 +336,7 @@ export class CombatPlayer {
           i++;
           if (this.pauseFor > 0) break;   // honour a hit-stop triggered by the event just applied
         }
+        if (this._statsDirty) { this._updateStats(); this._statsDirty = false; }
         if (i >= events.length) { resolve(endEvent && endEvent.winner); return; }
         this.raf = requestAnimationFrame(tick);
       };

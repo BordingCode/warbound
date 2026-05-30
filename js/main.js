@@ -1,7 +1,7 @@
 // Warbound — game loop. Planning phase (interactive shop/bench/board + drag) → combat
 // (sim + timeline playback) → resolve → next round, until 10 wins or 0 lives.
 import { el, $, $$ } from './dom.js';
-import { UNITS, UNITS_BY_ID, statsForStar } from './data/units.js';
+import { UNITS, UNITS_BY_ID, statsForStar, STAR_MULT } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG } from './svg.js';
 import { ic, iconEl, crest, rankMedal } from './icons.js';
@@ -466,21 +466,51 @@ function showInspect(uid) {
   const u = run.board.find((b) => b.uid === uid) || run.bench.find((b) => b && b.uid === uid);
   if (u) showUnitInfo(UNITS_BY_ID[u.defId], u.star, u.items);
 }
+// the ability's headline output number at a given star (so the upgrade benefit is visible).
+function abilityValue(def, star) {
+  const a = def.ability, m = STAR_MULT[star] || 1;
+  if (a.type === 'magic' || a.type === 'heal' || a.type === 'shield') return Math.round((a.ap || 0) * m);
+  if (a.type === 'physical') return Math.round(statsForStar(def, star).ad * (a.adRatio || 1.5));
+  if (a.type === 'summon') return Math.round((a.summonAd || 0) * m);
+  return 0;
+}
+function abilityDesc(def, star) {
+  const a = def.ability, v = abilityValue(def, star);
+  if (a.type === 'magic') return `Deals ${v} magic damage${a.target === 'cluster' ? ' to all nearby foes' : ''}.`;
+  if (a.type === 'physical') return a.target === 'lowestEnemyHP' ? `Executes the lowest-HP enemy for ${Math.round(v * 1.3)}.` : a.target === 'mostEnemies' ? `Hits several foes for ${Math.round(v * 0.9)} each.` : a.stun ? `Smashes for ${v} and stuns.` : `Cleaves nearby foes for ${v}.`;
+  if (a.type === 'heal') return `Heals the most wounded ally for ${v}.`;
+  if (a.type === 'shield') return `Shields the most wounded ally for ${v}.`;
+  if (a.type === 'summon') return `Raises a creature (${Math.round((a.summonHp || 0) * (STAR_MULT[star] || 1))} HP, ${v} AD).`;
+  return abilityText(a);
+}
 // Reusable champion detail sheet (used by inspect, shop (i), and the codex).
+// Shows a per-STAR scaling table (HP / Attack / Ability across ★1–★3) so the upgrade payoff is clear.
 function showUnitInfo(def, star = 1, items = []) {
   const s = statsForStar(def, star);
   Sfx.click();
-  const row = (label, val) => el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
+  const STARS = [1, 2, 3];
+  const abScales = ['magic', 'heal', 'shield', 'physical', 'summon'].includes(def.ability.type);
+  const abLabel = { magic: 'Spell', heal: 'Heal', shield: 'Shield', summon: 'Minion AD' }[def.ability.type] || 'Ability';
+  const ssRow = (label, fn) => el('.ss-row', {}, [el('span.ss-l', {}, label), ...STARS.map((st) => el(`span.ss-v${st === star ? ' cur' : ''}`, {}, String(fn(st))))]);
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
     el('.help-card', { style: { maxWidth: '320px' } }, [
       el('h2', { style: { fontSize: '19px' } }, `${def.name} ${star > 1 ? '★'.repeat(star) : ''}`),
       el('.unit-traits', {}, [TRAITS[def.origin], TRAITS[def.klass]].map((t) => el('.trait-chip.active', { onclick: () => showTraitInfo(t === TRAITS[def.origin] ? def.origin : def.klass) }, [el('span.dot', { style: { background: t.color } }), el('span', {}, t.name)]))),
       el('.sub', {}, `Cost ${def.cost}⛁ · ${def.range === 1 ? 'melee' : 'ranged ' + def.range}`),
-      el('.istats', {}, [
-        row('Health', s.hp), row('Attack', s.ad), row('Atk speed', s.as.toFixed(2)),
-        row('Armor', s.armor), row('Magic res', s.mr), row('Mana', def.maxMana),
+      // per-star scaling — the upgrade benefit, with the current star highlighted
+      el('.star-scaling', {}, [
+        el('.ss-row.ss-head', {}, [el('span.ss-l', {}, 'Upgrade'), ...STARS.map((st) => el(`span.ss-v${st === star ? ' cur' : ''}`, {}, '★'.repeat(st)))]),
+        ssRow('Health', (st) => statsForStar(def, st).hp),
+        ssRow('Attack', (st) => statsForStar(def, st).ad),
+        abScales ? ssRow(abLabel, (st) => abilityValue(def, st)) : null,
       ]),
-      el('.iability', {}, [el('b', {}, `✦ ${def.ability.name} `), el('span', { style: { color: 'var(--ink-dim)' } }, abilityText(def.ability))]),
+      el('.istats', {}, [
+        el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Atk speed'), el('span', {}, s.as.toFixed(2))]),
+        el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Armor'), el('span', {}, s.armor)]),
+        el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Magic res'), el('span', {}, s.mr)]),
+        el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Mana'), el('span', {}, def.maxMana)]),
+      ]),
+      el('.iability', {}, [el('b', { html: ic('burst') + ' ' + def.ability.name + ' ' }), el('span', { style: { color: 'var(--ink-dim)' } }, abilityDesc(def, star))]),
       (items && items.length) ? el('.iitems', {}, ['Items: ', items.map((id) => itemLabel(id)).join(', ')]) : null,
       el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
     ]));
