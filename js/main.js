@@ -321,7 +321,7 @@ async function startCombat() {
   const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const seed = hashSeed(run.seed, run.round);
-  const { events } = simulate(playerBoard, enemyBoard, seed, { teamMods: { player: relicCombatMods(run.relics) } });
+  const { events, result } = simulate(playerBoard, enemyBoard, seed, { teamMods: { player: relicCombatMods(run.relics) } });
 
   // hide planning-only controls, keep board
   $$('.bench .slot, .shop, .combat-ctl .btn:not(#readyBtn)').forEach(() => {});
@@ -333,7 +333,8 @@ async function startCombat() {
   const won = winner === 'player';
   won ? Sfx.victory() : Sfx.defeat();
   if (won) launchConfetti(2000);
-  setBanner(won ? '🏆 Round won!' : winner === 'enemy' ? '💀 Round lost' : '⚖ Draw — counts as a loss');
+  const sv = result.survivors;
+  setBanner(won ? `🏆 Round won! (${sv.player} survived)` : winner === 'enemy' ? `💀 Round lost — ${sv.enemy} enemies left` : '⚖ Draw — counts as a loss');
 
   const finishedRound = run.round;
   Run.resolveRound(run, won);
