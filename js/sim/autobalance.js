@@ -1,6 +1,13 @@
 // Headless balance + pacing harness. Because combat is a pure deterministic function,
 // we brute-force thousands of fights offline to measure pacing and spot outlier units.
 // Run: node js/sim/autobalance.js
+//
+// NOTE on the per-unit read: combat is near-deterministic (RNG only from crit/dodge/proc
+// timing), so a FIXED matchup resolves ~0% or ~100% across seeds — the per-unit numbers
+// are effectively binary "beats/loses-to baseline", not a smooth gradient. That's enough
+// to confirm cost-monotonicity and catch gross outliers, but a proper power gradient needs
+// a round-robin over many representative comps with averaged win-rates. TODO (next balance
+// pass): author ~12 archetype comps and build the NxN win-rate matrix described in DESIGN §10.
 import { simulate } from './combat.js';
 import { UNITS, UNITS_BY_ID } from '../data/units.js';
 import { LADDER, getEnemyBoard } from '../data/enemies.js';
@@ -28,23 +35,31 @@ function pacing() {
   return { medianS: SECONDS(median), p90S: SECONDS(p90), maxS: SECONDS(durations[durations.length - 1]), cappedPct: ((capped / durations.length) * 100).toFixed(1) };
 }
 
-// --- 2. Per-unit power: win rate of a 3x-2star board of this unit vs a fixed baseline ---
-function baselineBoard(row) {
+// --- 2. Per-unit power: each unit as a CARRY behind a neutral frontline, vs a fixed
+// mixed baseline. Fairer than single-type boards (backliners get a frontline to hide
+// behind, melee get peers). Measures marginal carry value within a real formation. ---
+function neutralFront(team) {
+  const r = team === 'player' ? [5, 5] : [2, 2];
   return [
-    { defId: 'knight_captain', star: 2, col: 3, row: row[0] },
-    { defId: 'skeleton_archer', star: 2, col: 2, row: row[1] },
-    { defId: 'court_mage', star: 2, col: 4, row: row[1] },
+    { defId: 'bone_guard', star: 2, col: 2, row: r[0] },
+    { defId: 'bone_guard', star: 2, col: 5, row: r[1] },
   ];
 }
+function baselineBoard() {
+  return [...neutralFront('enemy'),
+    { defId: 'skeleton_archer', star: 2, col: 1, row: 0 },
+    { defId: 'court_mage', star: 2, col: 4, row: 0 },
+    { defId: 'shadow_dancer', star: 2, col: 6, row: 1 }];
+}
 function unitPower() {
-  const baseline = baselineBoard([1, 0]);
+  const baseline = baselineBoard();
   const rows = [];
   for (const u of UNITS) {
-    const A = [
-      { defId: u.defId, star: 2, col: 3, row: 6 },
-      { defId: u.defId, star: 2, col: 2, row: 6 },
-      { defId: u.defId, star: 2, col: 4, row: 7 },
-    ];
+    const carryRow = u.range > 1 ? 7 : 6;     // ranged hide in back, melee mid
+    const A = [...neutralFront('player'),
+      { defId: u.defId, star: 2, col: 3, row: carryRow },
+      { defId: u.defId, star: 2, col: 4, row: carryRow },
+      { defId: u.defId, star: 2, col: 2, row: carryRow }];
     let w = 0; const N = 80;
     for (let s = 1; s <= N; s++) if (simulate(A, baseline, s * 13 + 1).result.winner === 'player') w++;
     rows.push({ id: u.defId, cost: u.cost, klass: u.klass, wr: w / N });
