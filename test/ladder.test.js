@@ -1,7 +1,7 @@
 // Ladder / AI-warlord tests. Run: node test/ladder.test.js
 // Proves the bots are real economy players sharing ONE champion pool, that the pool is
 // conserved (the genre's signature contention), that boards scale, and a full lobby resolves.
-import { createLobby, botTurn, resolveLadderRound, underdog, STYLES, shuffled, START_HP } from '../js/state/bots.js';
+import { createLobby, botTurn, resolveLadderRound, underdog, STYLES, shuffled, START_HP, POWERS, MODIFIERS, powerFlat } from '../js/state/bots.js';
 import { simulate } from '../js/sim/combat.js';
 import { UNITS, UNITS_BY_ID } from '../js/data/units.js';
 import { POOL_COPIES } from '../js/state/run.js';
@@ -30,9 +30,10 @@ function copiesInExistence(lobby) {
 
 // ---- 2. SHARED POOL is conserved after a round of bot shopping (the headline feature) ----
 {
-  const lobby = createLobby('poolcons');
+  const lobby = createLobby('poolcons', 'mage');   // keep the aggressive warlord bot in the lobby
   ok(`shared pool: total copies conserved at creation (${copiesInExistence(lobby)}/${TOTAL_COPIES})`, copiesInExistence(lobby) === TOTAL_COPIES);
-  // bots already shopped round 1, so the pool must have shrunk below the untouched total
+  // run a few economy rounds, then the shared bag must have shrunk as bots bought
+  for (let r = 2; r <= 5; r++) for (const b of lobby.bots) botTurn(b, r, lobby);
   const inBag = Object.values(lobby.pool).reduce((a, b) => a + b, 0);
   ok(`shared pool: bag shrank as bots bought (bag ${inBag} < total ${TOTAL_COPIES})`, inBag < TOTAL_COPIES);
   // advance several rounds; conservation must hold every round
@@ -52,7 +53,7 @@ function copiesInExistence(lobby) {
 // ---- 4. bots level + build scaling boards ----
 {
   const lobby = createLobby('grow');
-  const bot = lobby.bots.find((b) => b.id === 'warlord');
+  const bot = lobby.bots.find((b) => b.id === 'gambit');
   const lvl1 = bot.level, board1 = bot.board.length;
   for (let r = 2; r <= 12; r++) botTurn(bot, r, lobby);
   ok(`growth: warlord leveled (${lvl1} -> ${bot.level})`, bot.level > lvl1);
@@ -114,6 +115,17 @@ function copiesInExistence(lobby) {
 {
   const sh = shuffled([0, 1, 2, 3, 4, 5, 6, 7], new RNG(5));
   ok('shuffle: permutation', sh.length === 8 && new Set(sh).size === 8);
+}
+
+// ---- 10. warlord powers + lobby modifier (Phase 3 variety) ----
+{
+  const lobby = createLobby('powers', 'demon');     // player picks the Demon warlord
+  ok('powers: player has the chosen power', lobby.human.powerId === 'demon' && POWERS.demon);
+  ok('powers: chosen warlord is NOT also an opponent', !lobby.bots.some((b) => b.id === 'demon'));
+  ok('powers: every bot carries a signature power id', lobby.bots.every((b) => POWERS[b.powerId]));
+  ok('modifier: lobby has a modifier from the table', lobby.modifier && MODIFIERS.some((m) => m.id === lobby.modifier.id));
+  const flat = powerFlat(lobby.human, lobby);
+  ok('powers: powerFlat merges power + modifier into combat mods', flat && Object.keys(flat).length >= 1 && flat.vamp >= 0.12);
 }
 
 console.log(`\n\n${pass} passed, ${fail} failed`);

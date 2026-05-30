@@ -40,12 +40,57 @@ export const STYLES = [
   { id: 'mage',    name: 'Archmagus Vorne',    emoji: '🔮', desc: 'Mage burst',                       levelBias: 1.0,  econFloor: 22, pref: 'mage',    reroll: 0.5 },
 ];
 
+// Signature powers — one per warlord (and the player picks one at run start). Each is a
+// modest, roughly-balanced whole-warband COMBAT buff routed through the sim's aug.flat channel
+// (COMBAT_KEYS), so it applies identically to a human or AI board. Identity + run variety.
+export const POWERS = {
+  warlord: { name: "Warlord's Banner", icon: '🗡', desc: '+9% Attack Damage to your whole warband.', flat: { ad: 0.09 } },
+  baron:   { name: 'War Chest',        icon: '💰', desc: '+9% max Health to your whole warband.', flat: { hp: 0.09 } },
+  gambit:  { name: 'Frenzy',           icon: '🎲', desc: '+9% Attack Speed to your whole warband.', flat: { as: 0.09 } },
+  undead:  { name: 'Grave Bond',       icon: '💀', desc: 'Your champions revive once at 25% HP.', flat: { revive: 0.25 } },
+  elf:     { name: 'Moonward',         icon: '🏹', desc: 'Your champions start with a 130 shield.', flat: { shield: 130 } },
+  demon:   { name: 'Soul Drain',       icon: '👹', desc: 'Lifesteal: heal 12% of damage dealt.', flat: { vamp: 0.12 } },
+  knight:  { name: 'Bulwark',          icon: '🛡', desc: '+18 Armor & Magic Resist to your warband.', flat: { armor: 18, mr: 18 } },
+  mage:    { name: 'Arcane Surge',     icon: '🔮', desc: '+45 Ability Power to your whole warband.', flat: { ap: 45 } },
+};
+// Lobby-wide modifier — one random rule per match, applied to EVERY warband's combat. Forces a
+// fresh approach each game (TFT Encounters / HS Battlegrounds Anomalies).
+export const MODIFIERS = [
+  { id: 'none',     name: 'Fair Fight',    icon: '⚔', desc: 'No special rules this match.', flat: {} },
+  { id: 'bloodlust',name: 'Bloodlust',     icon: '🩸', desc: 'Every champion has +12% Attack Damage.', flat: { ad: 0.12 } },
+  { id: 'ironhide', name: 'Ironhide',      icon: '🪨', desc: 'Every champion has +20 Armor & MR.', flat: { armor: 20, mr: 20 } },
+  { id: 'haste',    name: 'Battle Haste',  icon: '💨', desc: 'Every champion has +14% Attack Speed.', flat: { as: 0.14 } },
+  { id: 'arcane',   name: 'Arcane Storm',  icon: '🔮', desc: 'Every champion has +30 Ability Power.', flat: { ap: 30 } },
+  { id: 'vampiric', name: 'Vampiric Field',icon: '🧛', desc: 'Every champion heals 10% of damage dealt.', flat: { vamp: 0.10 } },
+  { id: 'glass',    name: 'Glass Cannons', icon: '💥', desc: '+18% Attack Damage but -12% Health for all.', flat: { ad: 0.18, hp: -0.12 } },
+  { id: 'fortified',name: 'Fortified',     icon: '🏰', desc: 'Every champion starts with a 160 shield.', flat: { shield: 160 } },
+];
+const mergeFlat = (...objs) => { const o = {}; for (const m of objs) if (m) for (const [k, v] of Object.entries(m)) o[k] = (o[k] || 0) + v; return o; };
+// the combat aug.flat bundle for a player = their warlord power + the lobby modifier.
+export function powerFlat(player, lobby) {
+  const pw = player && !player.ghost && player.powerId ? (POWERS[player.powerId] && POWERS[player.powerId].flat) : null;
+  const mod = lobby && lobby.modifier ? lobby.modifier.flat : null;
+  return mergeFlat(pw, mod);
+}
+
+// short personality barks per warlord (shown when you scout / face them)
+export const TAUNTS = {
+  warlord: 'Numbers win wars. I have more.',
+  baron: 'Patience. Then I buy your defeat.',
+  gambit: 'Roll the bones — fortune favours me!',
+  undead: 'My fallen simply rise again.',
+  elf: 'You cannot strike what you cannot touch.',
+  demon: 'Your strength will feed mine.',
+  knight: 'Break upon my wall, then.',
+  mage: 'Knowledge is the sharpest blade.',
+};
+
 function stdLevel(round) { return Math.max(2, Math.min(MAX_LEVEL, 2 + Math.floor(round * 0.6))); }
 function levelUp(bot) { while (bot.level < MAX_LEVEL && bot.xp >= XP_TO_NEXT[bot.level]) { bot.xp -= XP_TO_NEXT[bot.level]; bot.level++; } }
 
 function newBot(style, seed) {
   return {
-    id: style.id, name: style.name, emoji: style.emoji, style,
+    id: style.id, name: style.name, emoji: style.emoji, style, powerId: style.id,
     rng: new RNG(seed >>> 0),
     gold: 2, level: 2, xp: 0,
     hp: START_HP, alive: true, place: null,
@@ -56,14 +101,18 @@ function newBot(style, seed) {
 // Build a fresh shared pool: POOL_COPIES of every champion, in one bag for the whole lobby.
 function freshPool() { const p = {}; for (const u of UNITS) p[u.defId] = POOL_COPIES[u.cost]; return p; }
 
-// Create the lobby: a human proxy + 7 rival warlords + ONE shared champion pool.
-export function createLobby(seedStr, opponents = 7) {
+// Create the lobby: a human proxy (with the warlord power they chose) + 7 OTHER rival warlords
+// + ONE shared champion pool + one random lobby-wide modifier for the whole match.
+export function createLobby(seedStr, playerStyleId = 'warlord', opponents = 7) {
   const base = seedFromString(String(seedStr) + '-ladder');
   const pool = freshPool();
-  const styles = STYLES.slice(0, opponents);
+  const styles = STYLES.filter((s) => s.id !== playerStyleId).slice(0, opponents);
   const bots = styles.map((s, i) => newBot(s, base + i * 7919));
-  const human = { id: 'you', name: 'You', emoji: '🧢', isHuman: true, hp: START_HP, alive: true, place: null, board: [], streakN: 0, lastWon: null, lastStreakWon: null };
-  const lobby = { rng: new RNG(base + 104729), human, bots, players: [human, ...bots], pool, round: 1, pairs: [], opponent: null, underdog: null };
+  const chosen = STYLES.find((s) => s.id === playerStyleId) || STYLES[0];
+  const human = { id: 'you', name: 'You', emoji: (POWERS[playerStyleId] && POWERS[playerStyleId].icon) || '🧢', warlordName: chosen.name, powerId: playerStyleId, isHuman: true, hp: START_HP, alive: true, place: null, board: [], streakN: 0, lastWon: null, lastStreakWon: null };
+  const rng = new RNG(base + 104729);
+  const modifier = MODIFIERS[Math.floor(rng.next() * MODIFIERS.length)];
+  const lobby = { rng, human, bots, players: [human, ...bots], pool, round: 1, pairs: [], opponent: null, underdog: null, modifier };
   for (const b of bots) botTurn(b, 1, lobby);     // bots shop round 1 (draws from the shared pool)
   matchmake(lobby);
   return lobby;
@@ -190,10 +239,10 @@ const dmgFrom = (survivors, round) => playerDamage(survivors || [], round);
 export const mirror = (board) => (board || []).map((u) => ({ ...u, row: 7 - u.row }));
 function bumpStreak(p, won) { if (won == null) return; p.streakN = (p.lastStreakWon === won) ? p.streakN + 1 : 1; p.lastStreakWon = won; }
 
-function resolveBotPair(a, b, round, seed) {
+function resolveBotPair(a, b, round, seed, lobby) {
   const A = mirror(a.board || []), B = (b.board || []);
   if (!A.length && !B.length) return;
-  const res = simulate(A, B, seed);
+  const res = simulate(A, B, seed, { aug: { player: { flat: powerFlat(a, lobby) }, enemy: { flat: powerFlat(b, lobby) } } });
   const w = res.result.winner;
   if (w === 'player') { if (!b.ghost) b.hp -= dmgFrom(res.finalState.survivors.player, round); a.lastWon = true; }
   else if (w === 'enemy') { a.hp -= dmgFrom(res.finalState.survivors.enemy, round); a.lastWon = false; }
@@ -220,7 +269,7 @@ export function resolveLadderRound(lobby, humanBoard, humanResult, playedRound) 
   let s = 1;
   for (const [a, b] of lobby.pairs) {
     if (a.isHuman || b.isHuman) continue;
-    resolveBotPair(a, b, playedRound, (playedRound * 131 + (s++) * 17) >>> 0);
+    resolveBotPair(a, b, playedRound, (playedRound * 131 + (s++) * 17) >>> 0, lobby);
   }
   // eliminate the dead; assign placements; return their champions to the shared pool
   const dead = alivePlayers(lobby).filter((p) => p.hp <= 0).sort((x, y) => x.hp - y.hp);
@@ -242,18 +291,18 @@ export function resolveLadderRound(lobby, humanBoard, humanResult, playedRound) 
 
 // ---- persistence (survive a page reload) ----
 function serializePlayer(p) {
-  if (p.isHuman) return { isHuman: true, name: p.name, emoji: p.emoji, hp: p.hp, alive: p.alive, place: p.place, board: p.board, streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
+  if (p.isHuman) return { isHuman: true, name: p.name, emoji: p.emoji, warlordName: p.warlordName, powerId: p.powerId, hp: p.hp, alive: p.alive, place: p.place, board: p.board, streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
   return { id: p.id, name: p.name, emoji: p.emoji, styleId: p.style.id, rng: p.rng.save(), gold: p.gold, level: p.level, xp: p.xp, hp: p.hp, alive: p.alive, place: p.place, roster: p.roster, board: p.board, streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
 }
 export function serializeLobby(lobby) {
   const ref = (o) => o ? (o.ghost ? { ghost: true, board: o.board } : (o.isHuman ? 'you' : o.id)) : null;
-  return { rng: lobby.rng.save(), round: lobby.round, pool: lobby.pool, underdog: lobby.underdog, human: serializePlayer(lobby.human), bots: lobby.bots.map(serializePlayer), opponent: ref(lobby.opponent), pairs: lobby.pairs.map(([a, b]) => [ref(a), ref(b)]) };
+  return { rng: lobby.rng.save(), round: lobby.round, pool: lobby.pool, underdog: lobby.underdog, modifier: lobby.modifier, human: serializePlayer(lobby.human), bots: lobby.bots.map(serializePlayer), opponent: ref(lobby.opponent), pairs: lobby.pairs.map(([a, b]) => [ref(a), ref(b)]) };
 }
 export function deserializeLobby(obj) {
   if (!obj || !obj.bots) return null;
-  const human = { isHuman: true, id: 'you', name: obj.human.name, emoji: obj.human.emoji, hp: obj.human.hp, alive: obj.human.alive, place: obj.human.place, board: obj.human.board || [], streakN: obj.human.streakN || 0, lastWon: obj.human.lastWon, lastStreakWon: obj.human.lastStreakWon };
-  const bots = obj.bots.map((b) => ({ id: b.id, name: b.name, emoji: b.emoji, style: STYLES.find((s) => s.id === b.styleId) || STYLES[0], rng: new RNG(b.rng.seed).load(b.rng), gold: b.gold, level: b.level, xp: b.xp, hp: b.hp, alive: b.alive, place: b.place, roster: b.roster || [], board: b.board || [], streakN: b.streakN || 0, lastWon: b.lastWon, lastStreakWon: b.lastStreakWon }));
+  const human = { isHuman: true, id: 'you', name: obj.human.name, emoji: obj.human.emoji, warlordName: obj.human.warlordName, powerId: obj.human.powerId, hp: obj.human.hp, alive: obj.human.alive, place: obj.human.place, board: obj.human.board || [], streakN: obj.human.streakN || 0, lastWon: obj.human.lastWon, lastStreakWon: obj.human.lastStreakWon };
+  const bots = obj.bots.map((b) => ({ id: b.id, name: b.name, emoji: b.emoji, style: STYLES.find((s) => s.id === b.styleId) || STYLES[0], powerId: b.styleId, rng: new RNG(b.rng.seed).load(b.rng), gold: b.gold, level: b.level, xp: b.xp, hp: b.hp, alive: b.alive, place: b.place, roster: b.roster || [], board: b.board || [], streakN: b.streakN || 0, lastWon: b.lastWon, lastStreakWon: b.lastStreakWon }));
   const byId = { you: human }; for (const b of bots) byId[b.id] = b;
   const deref = (r) => r == null ? null : (r.ghost ? { ghost: true, board: r.board } : byId[r]);
-  return { rng: new RNG(obj.rng.seed).load(obj.rng), round: obj.round, pool: obj.pool || freshPool(), underdog: obj.underdog || null, human, bots, players: [human, ...bots], opponent: deref(obj.opponent), pairs: (obj.pairs || []).map(([a, b]) => [deref(a), deref(b)]) };
+  return { rng: new RNG(obj.rng.seed).load(obj.rng), round: obj.round, pool: obj.pool || freshPool(), underdog: obj.underdog || null, modifier: obj.modifier || MODIFIERS[0], human, bots, players: [human, ...bots], opponent: deref(obj.opponent), pairs: (obj.pairs || []).map(([a, b]) => [deref(a), deref(b)]) };
 }
