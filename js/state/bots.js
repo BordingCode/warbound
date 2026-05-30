@@ -68,41 +68,42 @@ const traitPool = {};
 for (const u of UNITS) for (const t of [u.origin, u.klass]) (traitPool[t] = traitPool[t] || []).push(u.defId);
 
 // ---- the rival warlords (fantasy-flavoured styles) ----
+// each warlord is shown as a heraldic CREST (sigil letter on a tinted shield), not an emoji.
 export const STYLES = [
-  { id: 'warlord', name: 'Warlord Gorn',      emoji: '🗡', desc: 'Levels fast, fields a big warband', levelBias: 1.2,  econFloor: 0,  pref: null,       reroll: 0.1 },
-  { id: 'baron',   name: 'Baron Goldhand',    emoji: '💰', desc: 'Hoards gold, spikes hard late',     levelBias: 1.0,  econFloor: 50, pref: null,       reroll: 0.05 },
-  { id: 'gambit',  name: 'Gambit the Mad',    emoji: '🎲', desc: 'Rerolls relentlessly for ★★★',      levelBias: 0.85, econFloor: 18, pref: 'lowcost', reroll: 0.9 },
-  { id: 'undead',  name: 'Necrarch the Risen', emoji: '💀', desc: 'Undead horde',                     levelBias: 1.0,  econFloor: 22, pref: 'undead',  reroll: 0.5 },
-  { id: 'elf',     name: 'Sylvaen Dawnblade',  emoji: '🏹', desc: 'Elf evasion',                      levelBias: 1.0,  econFloor: 22, pref: 'elf',     reroll: 0.5 },
-  { id: 'demon',   name: "Mal'akar the Fell",  emoji: '👹', desc: 'Demon burn',                       levelBias: 1.0,  econFloor: 22, pref: 'demon',   reroll: 0.5 },
-  { id: 'knight',  name: 'Dame Ironwall',      emoji: '🛡', desc: 'Knight wall',                      levelBias: 0.95, econFloor: 25, pref: 'knight',  reroll: 0.4 },
-  { id: 'mage',    name: 'Archmagus Vorne',    emoji: '🔮', desc: 'Mage burst',                       levelBias: 1.0,  econFloor: 22, pref: 'mage',    reroll: 0.5 },
+  { id: 'warlord', name: 'Warlord Gorn',       sigil: 'G', color: '#ff7a3c', desc: 'Levels fast, fields a big warband', levelBias: 1.2,  econFloor: 0,  pref: null,       reroll: 0.1 },
+  { id: 'baron',   name: 'Baron Goldhand',     sigil: 'B', color: '#ffce5c', desc: 'Hoards gold, spikes hard late',     levelBias: 1.0,  econFloor: 50, pref: null,       reroll: 0.05 },
+  { id: 'gambit',  name: 'Gambit the Mad',     sigil: 'M', color: '#ff7eb6', desc: 'Rerolls relentlessly for 3-stars',  levelBias: 0.85, econFloor: 18, pref: 'lowcost', reroll: 0.9 },
+  { id: 'undead',  name: 'Necrarch the Risen', sigil: 'N', color: '#8cff9e', desc: 'Undead horde',                      levelBias: 1.0,  econFloor: 22, pref: 'undead',  reroll: 0.5 },
+  { id: 'elf',     name: 'Sylvaen Dawnblade',  sigil: 'S', color: '#54e6c0', desc: 'Elf evasion',                       levelBias: 1.0,  econFloor: 22, pref: 'elf',     reroll: 0.5 },
+  { id: 'demon',   name: "Mal'akar the Fell",  sigil: 'K', color: '#ff5a3c', desc: 'Demon burn',                        levelBias: 1.0,  econFloor: 22, pref: 'demon',   reroll: 0.5 },
+  { id: 'knight',  name: 'Dame Ironwall',      sigil: 'I', color: '#b9c4d0', desc: 'Knight wall',                       levelBias: 0.95, econFloor: 25, pref: 'knight',  reroll: 0.4 },
+  { id: 'mage',    name: 'Archmagus Vorne',    sigil: 'V', color: '#c79bff', desc: 'Mage burst',                        levelBias: 1.0,  econFloor: 22, pref: 'mage',    reroll: 0.5 },
 ];
 
 // Signature powers — one per warlord (and the player picks one at run start). Each is a
 // modest, roughly-balanced whole-warband COMBAT buff routed through the sim's aug.flat channel
 // (COMBAT_KEYS), so it applies identically to a human or AI board. Identity + run variety.
 export const POWERS = {
-  warlord: { name: "Warlord's Banner", icon: '🗡', desc: '+9% Attack Damage to your whole warband.', flat: { ad: 0.09 } },
-  baron:   { name: 'War Chest',        icon: '💰', desc: '+9% max Health to your whole warband.', flat: { hp: 0.09 } },
-  gambit:  { name: 'Frenzy',           icon: '🎲', desc: '+9% Attack Speed to your whole warband.', flat: { as: 0.09 } },
-  undead:  { name: 'Grave Bond',       icon: '💀', desc: 'Your champions revive once at 25% HP.', flat: { revive: 0.25 } },
-  elf:     { name: 'Moonward',         icon: '🏹', desc: 'Your champions start with a 130 shield.', flat: { shield: 130 } },
-  demon:   { name: 'Soul Drain',       icon: '👹', desc: 'Lifesteal: heal 12% of damage dealt.', flat: { vamp: 0.12 } },
-  knight:  { name: 'Bulwark',          icon: '🛡', desc: '+18 Armor & Magic Resist to your warband.', flat: { armor: 18, mr: 18 } },
-  mage:    { name: 'Arcane Surge',     icon: '🔮', desc: '+45 Ability Power to your whole warband.', flat: { ap: 45 } },
+  warlord: { name: "Warlord's Banner", icon: 'sword',  desc: '+9% Attack Damage to your whole warband.', flat: { ad: 0.09 } },
+  baron:   { name: 'War Chest',        icon: 'heart',  desc: '+9% max Health to your whole warband.', flat: { hp: 0.09 } },
+  gambit:  { name: 'Frenzy',           icon: 'star',   desc: '+9% Attack Speed to your whole warband.', flat: { as: 0.09 } },
+  undead:  { name: 'Grave Bond',       icon: 'skull',  desc: 'Your champions revive once at 25% HP.', flat: { revive: 0.25 } },
+  elf:     { name: 'Moonward',         icon: 'shield', desc: 'Your champions start with a 130 shield.', flat: { shield: 130 } },
+  demon:   { name: 'Soul Drain',       icon: 'potion', desc: 'Lifesteal: heal 12% of damage dealt.', flat: { vamp: 0.12 } },
+  knight:  { name: 'Bulwark',          icon: 'shield', desc: '+18 Armor & Magic Resist to your warband.', flat: { armor: 18, mr: 18 } },
+  mage:    { name: 'Arcane Surge',     icon: 'gem',    desc: '+45 Ability Power to your whole warband.', flat: { ap: 45 } },
 };
 // Lobby-wide modifier — one random rule per match, applied to EVERY warband's combat. Forces a
 // fresh approach each game (TFT Encounters / HS Battlegrounds Anomalies).
 export const MODIFIERS = [
-  { id: 'none',     name: 'Fair Fight',    icon: '⚔', desc: 'No special rules this match.', flat: {} },
-  { id: 'bloodlust',name: 'Bloodlust',     icon: '🩸', desc: 'Every champion has +12% Attack Damage.', flat: { ad: 0.12 } },
-  { id: 'ironhide', name: 'Ironhide',      icon: '🪨', desc: 'Every champion has +20 Armor & MR.', flat: { armor: 20, mr: 20 } },
-  { id: 'haste',    name: 'Battle Haste',  icon: '💨', desc: 'Every champion has +14% Attack Speed.', flat: { as: 0.14 } },
-  { id: 'arcane',   name: 'Arcane Storm',  icon: '🔮', desc: 'Every champion has +30 Ability Power.', flat: { ap: 30 } },
-  { id: 'vampiric', name: 'Vampiric Field',icon: '🧛', desc: 'Every champion heals 10% of damage dealt.', flat: { vamp: 0.10 } },
-  { id: 'glass',    name: 'Glass Cannons', icon: '💥', desc: '+18% Attack Damage but -12% Health for all.', flat: { ad: 0.18, hp: -0.12 } },
-  { id: 'fortified',name: 'Fortified',     icon: '🏰', desc: 'Every champion starts with a 160 shield.', flat: { shield: 160 } },
+  { id: 'none',     name: 'Fair Fight',    icon: 'sword',  desc: 'No special rules this match.', flat: {} },
+  { id: 'bloodlust',name: 'Bloodlust',     icon: 'sword',  desc: 'Every champion has +12% Attack Damage.', flat: { ad: 0.12 } },
+  { id: 'ironhide', name: 'Ironhide',      icon: 'shield', desc: 'Every champion has +20 Armor & MR.', flat: { armor: 20, mr: 20 } },
+  { id: 'haste',    name: 'Battle Haste',  icon: 'star',   desc: 'Every champion has +14% Attack Speed.', flat: { as: 0.14 } },
+  { id: 'arcane',   name: 'Arcane Storm',  icon: 'gem',    desc: 'Every champion has +30 Ability Power.', flat: { ap: 30 } },
+  { id: 'vampiric', name: 'Vampiric Field',icon: 'potion', desc: 'Every champion heals 10% of damage dealt.', flat: { vamp: 0.10 } },
+  { id: 'glass',    name: 'Glass Cannons', icon: 'burst',  desc: '+18% Attack Damage but -12% Health for all.', flat: { ad: 0.18, hp: -0.12 } },
+  { id: 'fortified',name: 'Fortified',     icon: 'shield', desc: 'Every champion starts with a 160 shield.', flat: { shield: 160 } },
 ];
 const mergeFlat = (...objs) => { const o = {}; for (const m of objs) if (m) for (const [k, v] of Object.entries(m)) o[k] = (o[k] || 0) + v; return o; };
 // the combat aug.flat bundle for a player = their warlord power + the lobby modifier.
@@ -129,7 +130,7 @@ function levelUp(bot) { while (bot.level < MAX_LEVEL && bot.xp >= XP_TO_NEXT[bot
 
 function newBot(style, seed) {
   return {
-    id: style.id, name: style.name, emoji: style.emoji, style, powerId: style.id,
+    id: style.id, name: style.name, style, powerId: style.id,
     rng: new RNG(seed >>> 0),
     gold: 2, level: 2, xp: 0,
     hp: START_HP, alive: true, place: null,
@@ -188,7 +189,7 @@ export function createLobby(seedStr, playerStyleId = 'warlord', difficulty = 0, 
   const styles = STYLES.filter((s) => s.id !== playerStyleId).slice(0, opponents);
   const bots = styles.map((s, i) => newBot(s, base + i * 7919));
   const chosen = STYLES.find((s) => s.id === playerStyleId) || STYLES[0];
-  const human = { id: 'you', name: 'You', emoji: (POWERS[playerStyleId] && POWERS[playerStyleId].icon) || '🧢', warlordName: chosen.name, powerId: playerStyleId, isHuman: true, hp: START_HP, alive: true, place: null, board: [], streakN: 0, lastWon: null, lastStreakWon: null };
+  const human = { id: 'you', name: 'You', sigil: chosen.sigil, color: chosen.color, warlordName: chosen.name, powerId: playerStyleId, isHuman: true, hp: START_HP, alive: true, place: null, board: [], streakN: 0, lastWon: null, lastStreakWon: null };
   const rng = new RNG(base + 104729);
   const modifier = MODIFIERS[Math.floor(rng.next() * MODIFIERS.length)];
   const lobby = { rng, human, bots, players: [human, ...bots], pool, round: 1, pairs: [], opponent: null, underdog: null, modifier, difficulty };
@@ -418,8 +419,8 @@ export function resolveLadderRound(lobby, humanBoard, humanResult, playedRound) 
 
 // ---- persistence (survive a page reload) ----
 function serializePlayer(p) {
-  if (p.isHuman) return { isHuman: true, name: p.name, emoji: p.emoji, warlordName: p.warlordName, powerId: p.powerId, hp: p.hp, alive: p.alive, place: p.place, board: p.board, streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
-  return { id: p.id, name: p.name, emoji: p.emoji, styleId: p.style.id, rng: p.rng.save(), gold: p.gold, level: p.level, xp: p.xp, hp: p.hp, alive: p.alive, place: p.place, roster: p.roster, board: p.board, augments: p.augments || [], streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
+  if (p.isHuman) return { isHuman: true, name: p.name, sigil: p.sigil, color: p.color, warlordName: p.warlordName, powerId: p.powerId, hp: p.hp, alive: p.alive, place: p.place, board: p.board, streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
+  return { id: p.id, name: p.name, styleId: p.style.id, rng: p.rng.save(), gold: p.gold, level: p.level, xp: p.xp, hp: p.hp, alive: p.alive, place: p.place, roster: p.roster, board: p.board, augments: p.augments || [], streakN: p.streakN, lastWon: p.lastWon, lastStreakWon: p.lastStreakWon };
 }
 export function serializeLobby(lobby) {
   const ref = (o) => o ? (o.ghost ? { ghost: true, board: o.board } : (o.isHuman ? 'you' : o.id)) : null;
@@ -427,8 +428,8 @@ export function serializeLobby(lobby) {
 }
 export function deserializeLobby(obj) {
   if (!obj || !obj.bots) return null;
-  const human = { isHuman: true, id: 'you', name: obj.human.name, emoji: obj.human.emoji, warlordName: obj.human.warlordName, powerId: obj.human.powerId, hp: obj.human.hp, alive: obj.human.alive, place: obj.human.place, board: obj.human.board || [], streakN: obj.human.streakN || 0, lastWon: obj.human.lastWon, lastStreakWon: obj.human.lastStreakWon };
-  const bots = obj.bots.map((b) => ({ id: b.id, name: b.name, emoji: b.emoji, style: STYLES.find((s) => s.id === b.styleId) || STYLES[0], powerId: b.styleId, rng: new RNG(b.rng.seed).load(b.rng), gold: b.gold, level: b.level, xp: b.xp, hp: b.hp, alive: b.alive, place: b.place, roster: b.roster || [], board: b.board || [], augments: b.augments || [], streakN: b.streakN || 0, lastWon: b.lastWon, lastStreakWon: b.lastStreakWon }));
+  const human = { isHuman: true, id: 'you', name: obj.human.name, sigil: obj.human.sigil, color: obj.human.color, warlordName: obj.human.warlordName, powerId: obj.human.powerId, hp: obj.human.hp, alive: obj.human.alive, place: obj.human.place, board: obj.human.board || [], streakN: obj.human.streakN || 0, lastWon: obj.human.lastWon, lastStreakWon: obj.human.lastStreakWon };
+  const bots = obj.bots.map((b) => ({ id: b.id, name: b.name, style: STYLES.find((s) => s.id === b.styleId) || STYLES[0], powerId: b.styleId, rng: new RNG(b.rng.seed).load(b.rng), gold: b.gold, level: b.level, xp: b.xp, hp: b.hp, alive: b.alive, place: b.place, roster: b.roster || [], board: b.board || [], augments: b.augments || [], streakN: b.streakN || 0, lastWon: b.lastWon, lastStreakWon: b.lastStreakWon }));
   const byId = { you: human }; for (const b of bots) byId[b.id] = b;
   const deref = (r) => r == null ? null : (r.ghost ? { ghost: true, board: r.board } : byId[r]);
   return { rng: new RNG(obj.rng.seed).load(obj.rng), round: obj.round, pool: obj.pool || freshPool(), underdog: obj.underdog || null, modifier: obj.modifier || MODIFIERS[0], difficulty: obj.difficulty || 0, human, bots, players: [human, ...bots], opponent: deref(obj.opponent), pairs: (obj.pairs || []).map(([a, b]) => [deref(a), deref(b)]) };

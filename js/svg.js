@@ -114,8 +114,9 @@ const TORSO_KIND = {
 };
 
 // Build the inner SVG content (no <svg> wrapper) for a champion definition.
-export function championInner(def) {
-  const p = PALETTES[def.origin] || PALETTES.human;
+// `paletteOverride` lets callers recolor pieces (e.g. the Armory hero's armor = its gear).
+export function championInner(def, paletteOverride) {
+  const p = Object.assign({}, PALETTES[def.origin] || PALETTES.human, paletteOverride || {});
   const kind = TORSO_KIND[def.klass] || 'leather';
   const slim = def.klass === 'assassin' || def.klass === 'ranger';
   return [
@@ -130,10 +131,10 @@ export function championInner(def) {
   ].join('');
 }
 
-// Full standalone SVG string (used for previews / shop cards).
-export function championSVG(def, { size = 80, cls = '' } = {}) {
+// Full standalone SVG string (used for previews / shop cards). `palette` recolors pieces.
+export function championSVG(def, { size = 80, cls = '', palette = null } = {}) {
   return `<svg class="champ ${cls}" viewBox="0 0 100 120" width="${size}" height="${size * 1.2}"
             xmlns="http://www.w3.org/2000/svg" data-origin="${def.origin}" data-class="${def.klass}">
-            <g class="champ-body">${championInner(def)}</g>
+            <g class="champ-body">${championInner(def, palette)}</g>
           </svg>`;
 }

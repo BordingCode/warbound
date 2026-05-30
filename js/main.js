@@ -4,6 +4,7 @@ import { el, $, $$ } from './dom.js';
 import { UNITS, UNITS_BY_ID, statsForStar } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG } from './svg.js';
+import { ic, iconEl, crest, rankMedal } from './icons.js';
 import { simulate } from './sim/combat.js';
 import { hashSeed } from './rng.js';
 import { CombatPlayer } from './render/player.js';
@@ -36,7 +37,7 @@ function getOpponent() {
   if (run.mode === 'ladder' && lobby && lobby.opponent) {
     const o = lobby.opponent;
     return {
-      name: o.ghost ? '👁 Battle Echo' : `${o.emoji} ${o.name}`,
+      name: o.ghost ? 'Battle Echo' : o.name,
       traitHint: o.ghost ? 'a mirror of a rival warband' : o.style.desc,
       units: (o.board || []).map((u) => ({ ...u })),
     };
@@ -134,7 +135,7 @@ function buildShopEl() {
   const controls = el('.shop-controls', {}, [
     el('button.btn.primary', { onclick: doBuyXP }, [el('span', {}, 'Buy XP'), el('span', { style: { opacity: .7 } }, '4⛁')]),
     el('button.btn.reroll', { onclick: doReroll }, [el('span', {}, '⟳'), el('span', { style: { opacity: .7 } }, Run.freeRerollsLeft(run) > 0 ? 'FREE' : '2⛁')]),
-    el(`button.btn${run.shopLocked ? ' primary' : ''}`, { title: 'Freeze the shop so it keeps these champions next round', onclick: doLock }, run.shopLocked ? '🔒' : '🔓'),
+    el(`button.btn${run.shopLocked ? ' primary' : ''}`, { title: 'Freeze the shop so it keeps these champions next round', onclick: doLock, html: ic(run.shopLocked ? 'lock' : 'unlock') }),
     el('button.econ-info', { style: { marginLeft: 'auto' }, onclick: showEconomyInfo }, [el('span', {}, `+${inc.total}⛁/turn`), el('span', { style: { opacity: .7 } }, 'ⓘ')]),
   ]);
   return el(`.shop${run.shopLocked ? ' locked' : ''}`, {}, [controls, row]);
@@ -145,9 +146,9 @@ function buildLobbyBar() {
   if (!lobby) return null;
   const bar = el('.lobby-bar');
   const pw = Bots.POWERS[lobby.human.powerId];
-  if (pw) bar.append(el('.lobby-chip.power', { title: `${pw.name}: ${pw.desc}`, onclick: () => showWarlordInfo(lobby.human) }, [el('span', {}, pw.icon), el('span', {}, pw.name)]));
+  if (pw) bar.append(el('.lobby-chip.power', { title: `${pw.name}: ${pw.desc}`, onclick: () => showWarlordInfo(lobby.human) }, [el('span.lc-ic', { html: ic(pw.icon) }), el('span', {}, pw.name)]));
   const m = lobby.modifier;
-  if (m && m.id !== 'none') bar.append(el('.lobby-chip.mod', { title: m.desc, onclick: () => modal2(`${m.icon} ${m.name}`, m.desc) }, [el('span', {}, m.icon), el('span', {}, m.name)]));
+  if (m && m.id !== 'none') bar.append(el('.lobby-chip.mod', { title: m.desc, onclick: () => modal2(m.name, m.desc) }, [el('span.lc-ic', { html: ic(m.icon) }), el('span', {}, m.name)]));
   return bar.children.length ? bar : null;
 }
 // tiny info popup
@@ -156,6 +157,11 @@ function modal2(title, body) {
     el('.help-card', { style: { maxWidth: '300px' } }, [el('h2', { style: { fontSize: '19px' } }, title), el('p', { style: { fontSize: '13.5px', lineHeight: '1.4' } }, body), el('button.btn.primary.go', { onclick: () => ov.remove() }, 'OK')]));
   document.body.append(ov);
 }
+
+// a warlord's heraldic crest (works for the human proxy or a bot)
+function crestOf(p, size = 20) { return crest(p.color || (p.style && p.style.color) || '#888', p.sigil || (p.style && p.style.sigil) || '?', size); }
+// an augment's icon by category (no emoji): combat=sword, econ=coffer, synergy=gem, build=star.
+function augIcon(a) { return ic({ combat: 'sword', econ: 'coffer', synergy: 'gem', build: 'star' }[a && a.cat] || 'star'); }
 
 // ---------- ladder standings (warlord HP roster) ----------
 function buildStandings() {
@@ -168,7 +174,7 @@ function buildStandings() {
     const isUnder = p.alive && lobby.underdog === p.id;
     row.append(el(`.warlord${p.alive ? '' : ' dead'}${p.isHuman ? ' you' : ''}${p.id === oppId ? ' foe' : ''}${isUnder ? ' under' : ''}`,
       { dataset: { id: p.isHuman ? 'you' : p.id }, title: `${p.name}${p.isHuman ? '' : ' — ' + p.style.desc}${p.alive ? ' · ' + hp + ' HP' : ' · #' + p.place}`, onclick: () => showWarlordInfo(p) }, [
-        el('span.wem', {}, p.emoji),
+        el('span.wem', { html: crestOf(p, 20) }),
         el('.hpbar', {}, el('.hpfill', { style: { transform: `scaleX(${Math.min(1, hp / Bots.START_HP)})` } })),
         el('span.whp', {}, p.alive ? hp : '#' + p.place),
       ]));
@@ -218,7 +224,7 @@ function animateStandings(oldRects) {
   });
   // "you took damage" flash on the HP pill
   if (prevHumanHp != null && lobby.human.hp < prevHumanHp - 0.5) {
-    const pill = [...document.querySelectorAll('.stat-pill')].find((p) => /❤/.test(p.textContent));
+    const pill = document.querySelector('.stat-pill.hppill');
     if (pill) { pill.classList.add('hp-hit'); setTimeout(() => pill.classList.remove('hp-hit'), 600); }
   }
   // refresh snapshot
@@ -232,7 +238,7 @@ function showWarlordInfo(p) {
   const isFoe = lobby && lobby.opponent && !lobby.opponent.ghost && lobby.opponent.id === p.id;
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
     el('.help-card', { style: { maxWidth: '300px' } }, [
-      el('h2', { style: { fontSize: '19px' } }, `${p.emoji} ${p.isHuman ? (p.warlordName || 'You') : p.name}`),
+      el('h2', { style: { fontSize: '19px', display: 'flex', alignItems: 'center', gap: '7px' }, html: crestOf(p, 24) + `<span>${p.isHuman ? (p.warlordName || 'You') : p.name}</span>` }),
       el('.sub', {}, p.isHuman ? 'Your warband.' : p.style.desc),
       el('.istats', {}, [
         el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Status'), el('span', {}, p.alive ? `${hp} HP` : `Fallen · #${p.place}`)]),
@@ -240,8 +246,8 @@ function showWarlordInfo(p) {
       ]),
       Bots.POWERS[p.powerId] ? el('.sub', { style: { color: 'var(--gold)', marginTop: '8px' } }, `✦ ${Bots.POWERS[p.powerId].name}: ${Bots.POWERS[p.powerId].desc}`) : null,
       (!p.isHuman && Bots.TAUNTS[p.id]) ? el('.sub', { style: { fontStyle: 'italic', marginTop: '4px' } }, `“${Bots.TAUNTS[p.id]}”`) : null,
-      (lobby.underdog === p.id && p.alive) ? el('.sub', { style: { color: 'var(--gold)', marginTop: '6px' } }, '⭐ Underdog — lowest HP gets a free item each round.') : null,
-      isFoe ? el('.sub', { style: { color: 'var(--hp)', marginTop: '6px' } }, '⚔ Your foe this round — scout their warband on the dimmed board.') : null,
+      (lobby.underdog === p.id && p.alive) ? el('.sub', { style: { color: 'var(--gold)', marginTop: '6px' } }, 'Underdog — lowest HP gets a free item each round.') : null,
+      isFoe ? el('.sub', { style: { color: 'var(--hp)', marginTop: '6px' } }, 'Your foe this round — scout their warband on the dimmed board.') : null,
       el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
     ]));
   document.body.append(ov);
@@ -252,7 +258,7 @@ function buildEnemyScout(enemy) {
   const active = Object.entries(activeTraits(defs)).filter(([t, i]) => TRAITS[t] && i.tier > 0)
     .sort((a, b) => b[1].count - a[1].count).slice(0, 4);
   const row = el('.enemy-scout');
-  row.append(el('span.scout-label', {}, '👁 Foe:'));
+  row.append(el('span.scout-label', {}, 'Foe:'));
   if (!active.length) row.append(el('span', { style: { color: 'var(--ink-faint)', fontSize: '11px' } }, 'no synergies'));
   for (const [t, info] of active) {
     const def = TRAITS[t];
@@ -265,7 +271,7 @@ function buildEnemyScout(enemy) {
 
 function buildItemsTray() {
   const tray = el('.items-tray');
-  tray.append(el('span.tray-label', {}, '🎒'));
+  tray.append(el('span.tray-label', { html: ic('bag') }));
   if (!run.items.length) { tray.append(el('span', { style: { color: 'var(--ink-faint)', fontSize: '11px' } }, 'No items — win rounds to earn them. Drag an item onto a champion.')); return tray; }
   for (const it of run.items) {
     const d = itemDef(it.id);
@@ -324,20 +330,20 @@ function renderPlanning() {
     el('.topbar', {}, [
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       run.mode === 'ladder'
-        ? el(`.stat-pill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [el('span', { style: { color: 'var(--hp)' } }, `❤ ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
-        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
+        ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
+        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' } }, `${run.wins}/10`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
-      el('button.btn', { style: { padding: '5px 10px' }, onclick: () => showCodex('units') }, '📖'),
-      el(`button.btn#shakeBtn${motionOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Screen shake (turn off if the game feels laggy)', onclick: toggleMotion }, '💥'),
-      el('button.btn#soundBtn', { style: { padding: '5px 10px' }, onclick: toggleSound }, soundOn() ? '🔊' : '🔇'),
-      el('button.btn', { style: { padding: '5px 10px' }, onclick: showHelp }, '?'),
+      el('button.btn', { style: { padding: '5px 10px' }, title: 'Codex', onclick: () => showCodex('units'), html: ic('codex') }),
+      el(`button.btn#shakeBtn${motionOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Screen shake (turn off if the game feels laggy)', onclick: toggleMotion, html: ic('burst') }),
+      el('button.btn#soundBtn', { style: { padding: '5px 10px' }, title: 'Sound', onclick: toggleSound, html: ic(soundOn() ? 'sound' : 'mute') }),
+      el('button.btn', { style: { padding: '5px 10px' }, title: 'How to play', onclick: showHelp }, '?'),
     ]),
     el('.topbar', { style: { cursor: 'pointer' }, onclick: showEconomyInfo }, [
       el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt} units`)]),
       el('.xpbar', { title: 'XP to next level (+2 each round)' }, el('.fill', { style: { transform: `scaleX(${Run.xpNeeded(run) ? run.xp / Run.xpNeeded(run) : 1})` } })),
       el('span', { style: { fontSize: '10px', color: 'var(--ink-dim)', whiteSpace: 'nowrap' } }, Run.xpNeeded(run) ? `${run.xp}/${Run.xpNeeded(run)} ⓘ` : 'MAX'),
     ]),
-    run.augments.length ? el('.relic-bar', {}, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: `${AUGMENTS[id].name}: ${AUGMENTS[id].desc}`, onclick: () => showAugmentInfo(id) }, AUGMENTS[id].icon))) : null,
+    run.augments.length ? el('.relic-bar', {}, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: `${AUGMENTS[id].name}: ${AUGMENTS[id].desc}`, onclick: () => showAugmentInfo(id), html: augIcon(AUGMENTS[id]) }))) : null,
     buildTraitsEl(),
     run.mode === 'ladder' ? buildLobbyBar() : null,
     run.mode === 'ladder' ? buildStandings() : null,
@@ -345,11 +351,11 @@ function renderPlanning() {
     buildEnemyScout(enemy),
     stage,
     el('.combat-ctl', {}, [
-      el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, '⚔ Ready'),
+      el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, 'Ready'),
       el('button.btn#spd1', { onclick: () => setSpeed(1) }, '1×'),
       el('button.btn#spd2', { onclick: () => setSpeed(2) }, '2×'),
       el('button.btn#spd4', { onclick: () => setSpeed(4) }, '4×'),
-      el('.sell-zone#sellZone', { style: { marginLeft: 'auto' } }, '🗑 Sell'),
+      el('.sell-zone#sellZone', { style: { marginLeft: 'auto' }, html: ic('sell') + ' Sell' }),
     ]),
     buildItemsTray(),
     buildBenchEl(),
@@ -421,15 +427,15 @@ function offerAugment(after) {
         const a = AUGMENTS[id];
         const card = el(`button.draft-pick aug-${a.tier}`, { onclick: () => pick(id) }, [
           el('.aug-tier', {}, `${TIER_LABEL[a.tier]} · ${a.cat}`),
-          el('span.di', {}, a.icon), el('span.dn', {}, a.name), el('span.dm', {}, a.desc),
+          el('span.di', { html: augIcon(a) }), el('span.dn', {}, a.name), el('span.dm', {}, a.desc),
         ]);
-        if ((run.banishLeft || 0) > 0) card.append(el('button.aug-banish', { title: 'Banish (remove from this run\'s offers)', onclick: (e) => banish(id, e) }, '🚫'));
+        if ((run.banishLeft || 0) > 0) card.append(el('button.aug-banish', { title: 'Banish (remove from this run\'s offers)', onclick: (e) => banish(id, e), html: ic('ban') }));
         return card;
       })),
       el('.draft-tools', {}, [
         el('button.btn', { onclick: () => { run.gold += SKIP_GOLD; Sfx.sell(); done(); } }, `Skip (+${SKIP_GOLD}⛁)`),
         (run.augRerollLeft || 0) > 0 ? el('button.btn', { onclick: () => { run.augRerollLeft--; Sfx.click(); render(); } }, `⟳ Reroll (${run.augRerollLeft})`) : null,
-        (run.banishLeft || 0) > 0 ? el('span', { style: { fontSize: '10px', color: 'var(--ink-faint)', alignSelf: 'center' } }, `🚫 ${run.banishLeft} banish`) : null,
+        (run.banishLeft || 0) > 0 ? el('span', { style: { fontSize: '10px', color: 'var(--ink-faint)', alignSelf: 'center' } }, `${run.banishLeft} banish left`) : null,
       ]),
     ]));
     document.body.append(ov);
@@ -442,7 +448,7 @@ function showAugmentInfo(id) {
   const a = AUGMENTS[id]; if (!a) return; Sfx.click();
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
     el('.help-card', { style: { maxWidth: '300px' } }, [
-      el('h2', { style: { fontSize: '19px' } }, `${a.icon} ${a.name}`),
+      el('h2', { style: { fontSize: '19px' }, html: augIcon(a) + ' ' + a.name }),
       el('.sub', {}, `${TIER_LABEL[a.tier]} · ${a.cat}`),
       el('p', { style: { fontSize: '13.5px', lineHeight: '1.4' } }, a.desc),
       el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
@@ -522,7 +528,7 @@ function showCodex(tab = 'units') {
       const order = { common: 0, rare: 1, prismatic: 2 };
       for (const [id, a] of Object.entries(AUGMENTS).sort((x, y) => order[x[1].tier] - order[y[1].tier])) list.append(
         el(`.aug-row tier-${a.tier}`, { onclick: () => showAugmentInfo(id) }, [
-          el('span.aug-ic', {}, a.icon), el('span', { style: { fontWeight: 700 } }, a.name),
+          el('span.aug-ic', { html: augIcon(a) }), el('span', { style: { fontWeight: 700 } }, a.name),
           el('span', { style: { color: 'var(--ink-faint)', fontSize: '10px', marginLeft: 'auto' } }, TIER_LABEL[a.tier]),
         ]));
       body.append(list);
@@ -535,7 +541,7 @@ function showCodex(tab = 'units') {
   render(tab);
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
     el('.help-card', { style: { maxWidth: '360px', width: '92%' } }, [
-      el('h2', { style: { fontSize: '20px' } }, '📖 Codex'),
+      el('h2', { style: { fontSize: '20px' }, html: ic('codex') + ' Codex' }),
       tabs, body,
       el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
     ]));
@@ -554,7 +560,7 @@ function abilityText(a) {
 function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highlightSpeed(); }
 function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
 function setBanner(t) { const b = $('.phase-banner'); if (b) b.textContent = t; }
-function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soundBtn'); if (b) b.textContent = soundOn() ? '🔊' : '🔇'; if (soundOn()) Sfx.click(); }
+function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soundBtn'); if (b) b.innerHTML = ic(soundOn() ? 'sound' : 'mute'); if (soundOn()) Sfx.click(); }
 function motionOn() { try { return localStorage.getItem('warbound_shake') !== '0'; } catch { return true; } }
 function toggleMotion() { try { localStorage.setItem('warbound_shake', motionOn() ? '0' : '1'); } catch {} Sfx.click(); renderPlanning(); }
 
@@ -577,7 +583,7 @@ function showEconomyInfo() {
       el('.sub', { style: { marginTop: '6px' } }, 'Spending'),
       el('.econ-rows', {}, [
         row('Buy champion', '3–5⛁', 'Buy 3 of the same to fuse into ★★ (then ★★★).'),
-        row('Reroll shop', '2⛁', 'New shop choices. Freeze 🔒 to keep them next round.'),
+        row('Reroll shop', '2⛁', 'New shop choices. Freeze to keep them next round.'),
         row('Buy XP', '4⛁', 'Levels you up faster (see below).'),
       ]),
       el('.sub', { style: { marginTop: '6px' } }, 'Levels & XP'),
@@ -592,19 +598,19 @@ function showEconomyInfo() {
 
 function showHelp() {
   const tips = [
-    ['🛒', '<b>Buy champions</b> from the shop (bottom) — tap a card. Each costs gold ⛁.'],
-    ['✋', '<b>Drag</b> champions from your bench onto the board to deploy them. Drag to 🗑 to sell.'],
-    ['🔗', '<b>Synergies:</b> matching <b>Origins</b> (Undead, Elf, Dragon…) & <b>Classes</b> (Knight, Mage…) unlock team bonuses — see the bar near the top.'],
-    ['⭐', '<b>3 copies</b> of the same champion auto-fuse into a stronger ★★ (then ★★★).'],
-    ['🛡️', '<b>Position matters:</b> tanks in front, fragile carries in back. Then press ⚔ Ready.'],
-    ['🔍', '<b>Tap a champion</b> to inspect its stats & ability. Watch the dimmed enemy preview to counter them.'],
-    ['🏆', 'Win <b>10 rounds</b> before losing all <b>5 lives ❤</b>.'],
+    ['coffer', '<b>Buy champions</b> from the shop (bottom) — tap a card. Each costs gold ⛁.'],
+    ['sword', '<b>Drag</b> champions from your bench onto the board to deploy them. Drag to the Sell zone to sell.'],
+    ['gem', '<b>Synergies:</b> matching <b>Origins</b> (Undead, Elf, Dragon…) & <b>Classes</b> (Knight, Mage…) unlock team bonuses — see the bar near the top.'],
+    ['star', '<b>3 copies</b> of the same champion auto-fuse into a stronger ★★ (then ★★★).'],
+    ['shield', '<b>Position matters:</b> tanks in front, fragile carries in back. Then press Ready.'],
+    ['eye', '<b>Tap a champion</b> to inspect its stats & ability. Watch the dimmed enemy preview to counter them.'],
+    ['trophy', 'Win <b>10 rounds</b> before losing all <b>5 lives</b>.'],
   ];
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'How to play'),
     el('.sub', {}, 'Warbound — a fantasy auto-battler'),
-    el('ul', {}, tips.map(([e, t]) => el('li', {}, [el('span.e', {}, e), el('span', { html: t })]))),
-    el('button.btn.primary.go', { onclick: () => { audioResume(); try { localStorage.setItem('warbound_intro', '1'); } catch {} ov.remove(); } }, "Let's go ⚔"),
+    el('ul', {}, tips.map(([e, t]) => el('li', {}, [el('span.e', { html: ic(e) }), el('span', { html: t })]))),
+    el('button.btn.primary.go', { onclick: () => { audioResume(); try { localStorage.setItem('warbound_intro', '1'); } catch {} ov.remove(); } }, "Let's go"),
   ]));
   document.body.append(ov);
 }
@@ -634,8 +640,8 @@ async function startCombat() {
 
   // hide planning-only controls, keep board
   $$('.bench .slot, .shop, .combat-ctl .btn:not(#readyBtn)').forEach(() => {});
-  const ready = $('#readyBtn'); if (ready) { ready.disabled = true; ready.textContent = '⚔ Fighting…'; }
-  setBanner(`⚔ vs ${enemy.name}`);
+  const ready = $('#readyBtn'); if (ready) { ready.disabled = true; ready.textContent = 'Fighting…'; }
+  setBanner(`vs ${enemy.name}`);
 
   player = new CombatPlayer($('.units'), $('.fx-dom'));
   const winner = await player.play(events, { speed: combatSpeed });
@@ -643,7 +649,7 @@ async function startCombat() {
   won ? Sfx.victory() : Sfx.defeat();
   if (won) launchConfetti(2000);
   const sv = result.survivors;
-  setBanner(won ? `🏆 Round won! (${sv.player} survived)` : winner === 'enemy' ? `💀 Round lost — ${sv.enemy} enemies left` : '⚖ Draw — counts as a loss');
+  setBanner(won ? `Round won! (${sv.player} survived)` : winner === 'enemy' ? `Round lost — ${sv.enemy} enemies left` : 'Draw — counts as a loss');
 
   const finishedRound = run.round;
 
@@ -658,8 +664,8 @@ async function startCombat() {
     if (summary.over) clearLobby(); else saveLobby();
     const lost = Math.round(hpBefore - lobby.human.hp);
     const hpMsg = lost > 0 ? ` · −${lost} HP` : won ? ' · unscathed' : '';
-    const koMsg = summary.dead && summary.dead.length ? ` · 💀 ${summary.dead.join(', ')}` : '';
-    setBanner(`${won ? '🏆 Round won!' : winner === 'enemy' ? '💀 Round lost' : '⚖ Draw'}${hpMsg}${koMsg}`);
+    const koMsg = summary.dead && summary.dead.length ? ` · ${summary.dead.join(', ')} fell` : '';
+    setBanner(`${won ? 'Round won!' : winner === 'enemy' ? 'Round lost' : 'Draw'}${hpMsg}${koMsg}`);
     setTimeout(() => {
       if (summary.over) { endScreen(summary); return; }
       const thenUnderdog = () => summary.humanIsUnderdog ? offerUnderdogDraft(renderPlanning) : renderPlanning();
@@ -685,7 +691,7 @@ function offerUnderdogDraft(after) {
   const ids = Run.draftComponents(run);
   const pick = (id) => { Run.addItem(run, id); persist(); Sfx.buy(); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
   const ov = el('.overlay', {}, el('.help-card', {}, [
-    el('h2', {}, '⭐ Underdog Gift'),
+    el('h2', {}, 'Underdog Gift'),
     el('.sub', {}, "You're lowest on health — claim a free component to fight back. Combine two on a champion for a full item."),
     el('.draft-row', {}, ids.map((id) => { const d = COMPONENTS[id]; return el('button.draft-pick', { onclick: () => pick(id) }, [el('span.di', {}, d.icon), el('span.dn', {}, d.name), el('span.dm', {}, Object.entries(d.mods).map(([k, v]) => `+${v < 1 ? Math.round(v * 100) + '%' : v} ${k}`).join(', '))]); })),
   ]));
@@ -699,7 +705,7 @@ function endScreen(ladderSummary) {
     const place = (ladderSummary && ladderSummary.humanPlace) || (lobby && lobby.human.place) || Bots.aliveCount(lobby);
     const first = place === 1;
     if (first) launchConfetti(4000);
-    head = first ? '👑 1st PLACE!' : `#${place} of 8`;
+    head = first ? '1st PLACE!' : `#${place} of 8`;
     sub = first ? 'Last warband standing — you conquered the ladder!' : `Your warband fell in ${place}${['th', 'st', 'nd', 'rd'][place] || 'th'} place. The other warlords were tougher.`;
     stats = [stat('Placement', `#${place} / 8`), stat('Rounds', run.round - 1)];
     // apply the placement to your rank ONCE, and show the result
@@ -720,18 +726,18 @@ function endScreen(ladderSummary) {
   } else {
     const won = run.won;
     if (won) launchConfetti(4000);
-    head = won ? '🏆 VICTORY' : '⚔ RUN OVER';
-    sub = won ? `You won with ${run.lives} ❤ to spare — a true warlord!` : 'A valiant effort. Tune your warband and try again!';
+    head = won ? 'VICTORY' : 'RUN OVER';
+    sub = won ? `You won with ${run.lives} lives to spare — a true warlord!` : 'A valiant effort. Tune your warband and try again!';
     // earn Spoils ONCE (even on a loss) — the meta-progression that eases the climb
     if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
-    stats = [stat('Wins', `${run.wins} / 10`), stat('Spoils', `+${run.spoilsEarned || 0} 🪙`)];
+    stats = [stat('Wins', `${run.wins} / 10`), stat('Spoils', `+${run.spoilsEarned || 0}`)];
   }
   const card = el('.endscreen', {}, [
     el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
     el('p', { style: { color: 'var(--ink-dim)', margin: '0' } }, sub),
     el('.istats', { style: { maxWidth: '280px' } }, stats),
     rankBlock,
-    run.mode !== 'ladder' && run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name }, AUGMENTS[id].icon)))]) : null,
+    run.mode !== 'ladder' && run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name, html: augIcon(AUGMENTS[id]) })))]) : null,
     el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => chooseMode() }, '↻ Main menu'),
   ]);
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', textAlign: 'center', gap: '14px' } }, [card]));
@@ -768,13 +774,13 @@ function startLadder() { chooseWarlord(); }
 function chooseWarlord() {
   Run.clearSave(); clearLobby(); run = Run.freshRun(); run.mode = 'menu'; lobby = null;
   const card = (s) => { const p = Bots.POWERS[s.id]; return el('.warlord-pick', { onclick: () => beginLadder(s.id) }, [
-    el('.wp-emoji', {}, p.icon), el('.wp-name', {}, s.name),
+    el('.wp-emoji', { html: crest(s.color, s.sigil, 28) }), el('.wp-name', {}, s.name),
     el('.wp-power', {}, [el('b', {}, p.name + ': '), el('span', {}, p.desc)]),
   ]); };
   const rk = Rank.currentRank();
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '10px', padding: '14px' } }, [
     el('h1', { style: { fontSize: '26px', margin: '0', textAlign: 'center' } }, 'Choose your Warlord'),
-    el('.rank-pill', { style: { borderColor: rk.color } }, [el('span', { style: { color: rk.color } }, `${rk.icon} ${rk.name}`), rk.nextAt ? el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, `${rk.inTier}/${rk.nextAt} RP`) : el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, `${rk.rp} RP`)]),
+    el('.rank-pill', { style: { borderColor: rk.color } }, [el('span', { html: rankMedal(rk.color, 16) }), el('span', { style: { color: rk.color } }, ` ${rk.name}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, rk.nextAt ? `${rk.inTier}/${rk.nextAt} RP` : `${rk.rp} RP`)]),
     el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-4px' } }, `Your power shapes the run; the other seven are your rivals — playing at ${rk.name} skill.`),
     el('.warlord-grid', {}, Bots.STYLES.map(card)),
     el('button.btn', { style: { marginTop: '4px' }, onclick: () => chooseMode() }, '← Back'),
@@ -795,6 +801,16 @@ function beginLadder(styleId) {
   }
   try { if (localStorage.getItem('warbound_intro_ladder') !== '1') { localStorage.setItem('warbound_intro_ladder', '1'); showHelp(); } } catch {}
 }
+// The Champion portrait's ARMOUR recolours to the equipped Armor (and weapon tints the accent),
+// so swapping gear visibly changes the hero. Rarity drives the colour (steel→blue→purple).
+const RARITY_TINT = { common: '#9aa6b8', rare: '#6fb1ff', epic: '#c79bff' };
+function heroPalette(m) {
+  const pal = {};
+  const arm = Meta.equippedItem(m, 'armor'); if (arm) pal.secondary = RARITY_TINT[arm.rarity];   // plate/helm/shield
+  const wep = Meta.equippedItem(m, 'weapon'); if (wep) pal.accent = RARITY_TINT[wep.rarity];
+  return Object.keys(pal).length ? pal : null;
+}
+
 // ---------- Armory (meta-progression: chests + equipping your Champion) ----------
 function showArmory() {
   audioResume();
@@ -808,42 +824,42 @@ function showArmory() {
         style: it ? { '--rc': rar(it.rarity).color, '--ic': Meta.itemColor(it) } : {},
         title: it ? `${it.name} — ${Meta.effectText(it)} (tap to unequip)` : `${s.name}: empty`,
         onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null,
-      }, [el('.socket-icon', {}, it ? it.icon : s.icon), el('.socket-label', {}, s.name)]);
+      }, [el('.socket-icon', { html: ic(it ? it.icon : s.icon) }), el('.socket-label', {}, s.name)]);
     };
     // a detailed loadout row per slot (name + plain-language effect), rarity-coloured
     const loadoutRow = (s) => {
       const it = Meta.equippedItem(m, s.id);
       return el(`.loadout-row${it ? ' filled' : ' empty'}`, { style: it ? { '--rc': rar(it.rarity).color } : {}, onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null }, [
-        el('.lr-icon', {}, it ? it.icon : s.icon),
+        el('.lr-icon', { html: ic(it ? it.icon : s.icon) }),
         el('.lr-text', {}, [el('.lr-name', {}, it ? it.name : `${s.name} slot`), el('.lr-eff', {}, it ? Meta.effectText(it) : 'empty — equip a piece below')]),
         it ? el('.lr-x', {}, '✕') : null,
       ]);
     };
     const invCell = (it) => el(`.inv-item${m.equipped[it.slot] === it.iid ? ' eq' : ''}`, { style: { '--rc': rar(it.rarity).color, '--ic': Meta.itemColor(it) }, onclick: () => { Meta.equip(it.iid); Sfx.buy(); render(); }, title: `${Meta.effectText(it)} — tap to equip` }, [
       el('.ii-rar', {}, rar(it.rarity).name),
-      el('.ii-icon', {}, it.icon),
+      el('.ii-icon', { html: ic(it.icon) }),
       el('.ii-name', {}, it.name),
       el('.ii-eff', {}, Meta.effectText(it)),
     ]);
     const canBuy = m.spoils >= Meta.CHEST_COST;
     $('#app').replaceChildren(el('.game.armory-screen', { style: { gap: '12px', padding: '14px', minHeight: '85svh' } }, [
       el('.arm-header', {}, [
-        el('button.btn.icon', { onclick: () => chooseMode() }, '←'),
-        el('h1', {}, '🎁 Armory'),
-        el('.spoils-pill', {}, [el('span.sp-ico', {}, '🪙'), el('span', {}, m.spoils)]),
+        el('button.btn.icon', { onclick: () => chooseMode(), html: ic('back') }),
+        el('h1', {}, 'Armory'),
+        el('.spoils-pill', {}, [iconEl('spoils', 'sp-ico'), el('span', {}, m.spoils)]),
       ]),
       el('.arm-tagline', {}, 'Gear your Champion — these boosts apply to your Warpath runs.'),
-      // paper-doll: portrait + the 5 rarity-ringed sockets
+      // paper-doll: portrait (its ARMOUR recolours to your equipped Armor) + rarity-ringed sockets
       el('.champion-panel', {}, [
-        el('.champ-portrait', { html: championSVG(UNITS_BY_ID['knight_captain'], { size: 92 }) }),
+        el('.champ-portrait', { html: championSVG(UNITS_BY_ID['knight_captain'], { size: 92, palette: heroPalette(m) }) }),
         el('.sockets', {}, Meta.SLOTS.map(socket)),
       ]),
       el('.loadout', {}, Meta.SLOTS.map(loadoutRow)),
       // cache CTA
-      el(`.cache-cta${canBuy ? '' : ' dim'}`, { onclick: () => { const r = Meta.openChest(); if (r.ok) revealItem(r.item, render); else modal2('Not enough Spoils', `A War Cache costs ${Meta.CHEST_COST} 🪙. Earn Spoils by playing Warpath — even a loss pays out.`); } }, [
-        el('.cc-chest', {}, '📦'),
+      el(`.cache-cta${canBuy ? '' : ' dim'}`, { onclick: () => { const r = Meta.openChest(); if (r.ok) revealItem(r.item, render); else modal2('Not enough Spoils', `A War Cache costs ${Meta.CHEST_COST} Spoils. Earn Spoils by playing Warpath — even a loss pays out.`); } }, [
+        el('.cc-chest', { html: ic('coffer') }),
         el('.cc-text', {}, [el('.cc-title', {}, 'Open War Cache'), el('.cc-sub', {}, 'a random piece of gear')]),
-        el('.cc-cost', {}, `${Meta.CHEST_COST} 🪙`),
+        el('.cc-cost', {}, [String(Meta.CHEST_COST) + ' ', iconEl('spoils')]),
       ]),
       el('.inv-head', {}, m.inventory.length ? `Inventory · ${m.inventory.length}` : 'No gear yet — open a War Cache'),
       el('.inv-grid', {}, m.inventory.map(invCell)),
@@ -857,7 +873,7 @@ function revealItem(item, after) {
   const ov = el('.overlay', {}, el(`.reveal-card rarity-${item.rarity}`, { style: { '--rc': rar.color, '--ic': Meta.itemColor(item) } }, [
     el('.reveal-burst'),
     el('.reveal-rarity', {}, rar.name + ' find!'),
-    el('.reveal-icon', {}, item.icon),
+    el('.reveal-icon', { html: ic(item.icon) }),
     el('h2', {}, item.name),
     el('.reveal-eff', {}, Meta.effectText(item)),
     el('.reveal-tools', {}, [
@@ -870,21 +886,21 @@ function revealItem(item, after) {
 
 function chooseMode() {
   Run.clearSave(); clearLobby(); run = Run.freshRun(); run.mode = 'menu'; lobby = null;
-  const card = (cls, emoji, title, desc, onclick) => el(`.mode-card${cls}`, { onclick }, [el('.mc-emoji', {}, emoji), el('.mc-title', {}, title), el('.mc-desc', {}, desc)]);
+  const card = (cls, iconName, title, desc, onclick) => el(`.mode-card${cls}`, { onclick }, [el('.mc-emoji', { html: ic(iconName) }), el('.mc-title', {}, title), el('.mc-desc', {}, desc)]);
   const rk = Rank.currentRank();
-  const ladderCard = card(' ladder', '👑', 'Warlord Ladder', 'Auto-Chess: 8 warlords, ONE shared champion pool, last warband standing wins. Climb the ranks — higher rank = smarter rivals.', () => startLadder());
-  ladderCard.append(el('.mc-rank', { style: { color: rk.color } }, `${rk.icon} ${rk.name}${rk.nextAt ? ` · ${rk.inTier}/${rk.nextAt} RP` : ` · ${rk.rp} RP`}`));
+  const ladderCard = card(' ladder', 'crown', 'Warlord Ladder', 'Auto-Chess: 8 warlords, ONE shared champion pool, last warband standing wins. Climb the ranks — higher rank = smarter rivals.', () => startLadder());
+  ladderCard.append(el('.mc-rank', { style: { color: rk.color } }, [el('span', { html: rankMedal(rk.color, 16) }), el('span', {}, ` ${rk.name}${rk.nextAt ? ` · ${rk.inTier}/${rk.nextAt} RP` : ` · ${rk.rp} RP`}`)]));
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '14px' } }, [
     el('h1', { style: { fontSize: '32px', margin: '0', textAlign: 'center' } }, 'Warbound'),
     el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-6px' } }, 'Choose your battle'),
     el('.mode-menu', {}, [
       // Warpath + its Armory are one visual GROUP — gear belongs to Warpath, not the ladder.
       el('.warpath-group', {}, [
-        card('', '🏰', 'Warpath', 'Climb a ladder of authored warbands solo to the boss. Earn Spoils to gear your Champion and make each run easier.', () => startSolo(true)),
+        card('', 'sword', 'Warpath', 'Climb a ladder of authored warbands solo to the boss. Earn Spoils to gear your Champion and make each run easier.', () => startSolo(true)),
         el('.armory-bar', { onclick: () => showArmory() }, [
-          el('span.ab-ico', {}, '🎁'),
+          el('span.ab-ico', { html: ic('coffer') }),
           el('.ab-text', {}, [el('span.ab-label', {}, 'Armory'), el('span.ab-sub', {}, 'gear your Champion — for Warpath')]),
-          el('span.ab-spoils', {}, `${Meta.load().spoils} 🪙`),
+          el('span.ab-spoils', {}, `${Meta.load().spoils} Spoils`),
         ]),
       ]),
       ladderCard,

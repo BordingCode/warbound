@@ -225,7 +225,7 @@
   34% { transform: scale(.88) rotate(3deg); filter: brightness(1); }
   100% { transform: scale(1) rotate(0); }
 }
-.warlord.ko .whp::after { content: ' 💀'; }
+.warlord.ko .whp::after { content: ' \002715'; opacity: .8; }
 .stat-pill.hp-hit { animation: hpHit .55s ease; }
 @keyframes hpHit { 0%,100% { background: var(--bg-2); } 25% { background: #7a2630; box-shadow: 0 0 10px #ff5a4c88; } }
 
@@ -328,3 +328,18 @@
 .reveal-card h2 { margin: 2px 0 4px; font-size: 20px; }
 .reveal-card .reveal-eff { font-size: 13px; color: var(--ink); }
 .reveal-card .reveal-tools { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+
+/* ---- inline SVG icons (replace emoji) ---- */
+.ic { width: 1em; height: 1em; vertical-align: -0.14em; display: inline-block; flex-shrink: 0; }
+.ic-wrap { display: inline-flex; align-items: center; }
+.crest, .rank-medal { vertical-align: middle; display: inline-block; }
+.hp-ic { color: var(--hp); }
+.spoils-pill .ic, .ab-spoils .ic, .cc-cost .ic { color: var(--gold); }
+.lr-icon { color: var(--rc, var(--ink)); }
+.inv-item .ii-icon { color: var(--ic, var(--ink)); }
+.socket.filled .socket-icon .ic { color: #fff; }
+.lobby-chip .lc-ic { display: inline-flex; }
+.wem .crest, .wp-emoji .crest { display: block; }
+.relic .ic { width: 18px; height: 18px; }
+.aug-ic .ic, .draft-pick .di .ic { width: 1.4em; height: 1.4em; }
+.btn .ic { vertical-align: -0.18em; }

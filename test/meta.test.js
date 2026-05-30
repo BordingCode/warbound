@@ -16,11 +16,11 @@ const rng = (seq) => { let i = 0; return () => seq[i++ % seq.length]; };
 {
   ok('slots: 5 themed slots', Meta.SLOTS.length === 5);
   const weapon = Meta.makeItem('weapon', 'epic', rng([0.5]));
-  ok('weapon -> attack damage, ⚔ icon', weapon.eff.type === 'ad' && weapon.icon === '⚔');
+  ok('weapon -> attack damage, ⚔ icon', weapon.eff.type === 'ad' && weapon.icon === 'sword');
   const tome = Meta.makeItem('tome', 'common', rng([0.5]));
-  ok('tome -> XP, 📖 icon', tome.eff.type === 'xp' && tome.icon === '📖');
+  ok('tome -> XP, 📖 icon', tome.eff.type === 'xp' && tome.icon === 'book');
   const coffer = Meta.makeItem('coffer', 'epic', rng([0.5]));
-  ok('coffer -> gold, 💰 icon, scales with rarity', coffer.eff.type === 'gold' && coffer.icon === '💰' && coffer.eff.value > Meta.makeItem('coffer', 'common', rng([0.5])).eff.value);
+  ok('coffer -> gold, 💰 icon, scales with rarity', coffer.eff.type === 'gold' && coffer.icon === 'coffer' && coffer.eff.value > Meta.makeItem('coffer', 'common', rng([0.5])).eff.value);
   const relic = Meta.makeItem('relic', 'common', rng([0.1]));
   ok('relic -> synergy crown, named & coloured for its trait', relic.eff.type === 'synergy' && Object.keys(relic.eff.traitBonus).length >= 1 && /Sigil$/.test(relic.name));
   const epicRelic = Meta.makeItem('relic', 'epic', rng([0.1, 0.9]));

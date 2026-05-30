@@ -10,11 +10,11 @@ import { TRAITS } from '../data/traits.js';
 
 // each slot = one effect family. icon + colour + names all telegraph the effect.
 export const SLOTS = [
-  { id: 'weapon', name: 'Weapon', icon: '⚔', color: '#ff6a4c', eff: 'ad',      vals: [0.06, 0.10, 0.16], names: ['Worn Blade', 'Keen Saber', 'Bloodfang Axe'] },
-  { id: 'armor',  name: 'Armor',  icon: '🛡', color: '#7affa0', eff: 'lives',   vals: [1, 2, 3],          names: ['Padded Vest', 'Iron Cuirass', 'Aegis Plate'] },
-  { id: 'tome',   name: 'Tome',   icon: '📖', color: '#6fb1ff', eff: 'xp',      vals: [5, 10, 18],        names: ['Field Manual', 'War Codex', 'Tome of Mastery'] },
-  { id: 'coffer', name: 'Coffer', icon: '💰', color: '#ffce5c', eff: 'gold',    vals: [4, 8, 14],         names: ['Coin Pouch', "Merchant's Coffer", 'Dragon Hoard'] },
-  { id: 'relic',  name: 'Relic',  icon: '🔮', color: '#c79bff', eff: 'synergy', vals: [1, 1, 1],          names: ['Sigil', 'Idol', 'Totem'] },
+  { id: 'weapon', name: 'Weapon', icon: 'sword',  color: '#ff6a4c', eff: 'ad',      vals: [0.06, 0.10, 0.16], names: ['Worn Blade', 'Keen Saber', 'Bloodfang Axe'] },
+  { id: 'armor',  name: 'Armor',  icon: 'shield', color: '#7affa0', eff: 'lives',   vals: [1, 2, 3],          names: ['Padded Vest', 'Iron Cuirass', 'Aegis Plate'] },
+  { id: 'tome',   name: 'Tome',   icon: 'book',   color: '#6fb1ff', eff: 'xp',      vals: [5, 10, 18],        names: ['Field Manual', 'War Codex', 'Tome of Mastery'] },
+  { id: 'coffer', name: 'Coffer', icon: 'coffer', color: '#ffce5c', eff: 'gold',    vals: [4, 8, 14],         names: ['Coin Pouch', "Merchant's Coffer", 'Dragon Hoard'] },
+  { id: 'relic',  name: 'Relic',  icon: 'gem',    color: '#c79bff', eff: 'synergy', vals: [1, 1, 1],          names: ['Sigil', 'Idol', 'Totem'] },
 ];
 const SLOT_BY_ID = Object.fromEntries(SLOTS.map((s) => [s.id, s]));
 export const RARITIES = [
@@ -34,9 +34,9 @@ const newIid = () => 'g' + (_uid++);
 export function effectText(item) {
   const e = item.eff;
   if (e.type === 'ad') return `+${Math.round(e.value * 100)}% team Attack Damage`;
-  if (e.type === 'lives') return `+${e.value} starting ${e.value > 1 ? 'lives' : 'life'} ❤`;
+  if (e.type === 'lives') return `+${e.value} starting ${e.value > 1 ? 'lives' : 'life'}`;
   if (e.type === 'xp') return `+${e.value} starting XP (a head start)`;
-  if (e.type === 'gold') return `+${e.value} starting gold ⛁`;
+  if (e.type === 'gold') return `+${e.value} starting gold`;
   if (e.type === 'synergy') { const ts = Object.keys(e.traitBonus).map((t) => `+${e.traitBonus[t]} ${TRAITS[t] ? TRAITS[t].name : t}`).join(' & '); return `${ts} synergy`; }
   return '';
 }

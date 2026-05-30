@@ -2,13 +2,14 @@
 // stored in localStorage. Placement in an 8-warband lobby earns/loses Rank Points (RP):
 // top-4 gains, bottom-4 loses (TFT model). Your tier sets the AI DIFFICULTY (0..5) — higher
 // tiers make the warlords make SMARTER DECISIONS (never better stats).
+// no emoji — the UI renders a tinted SVG medallion (icons.rankMedal) in each tier's colour.
 export const TIERS = [
-  { name: 'Bronze',   icon: '🥉', color: '#cd7f32' },
-  { name: 'Silver',   icon: '🥈', color: '#cdd3da' },
-  { name: 'Gold',     icon: '🥇', color: '#ffce5c' },
-  { name: 'Platinum', icon: '💠', color: '#5fd0c8' },
-  { name: 'Diamond',  icon: '💎', color: '#6fb1ff' },
-  { name: 'Master',   icon: '👑', color: '#c79bff' },
+  { name: 'Bronze',   color: '#cd7f32' },
+  { name: 'Silver',   color: '#cdd3da' },
+  { name: 'Gold',     color: '#ffce5c' },
+  { name: 'Platinum', color: '#5fd0c8' },
+  { name: 'Diamond',  color: '#6fb1ff' },
+  { name: 'Master',   color: '#c79bff' },
 ];
 export const RP_PER_TIER = 100;
 const MAX_TIER = TIERS.length - 1;          // Master = 5
@@ -29,7 +30,7 @@ export function rankFromRP(rp) {
   const t = TIERS[tier];
   const inTier = tier >= MAX_TIER ? rp - MAX_TIER * RP_PER_TIER : rp - tier * RP_PER_TIER;
   const nextAt = tier < MAX_TIER ? RP_PER_TIER : null;   // RP within tier needed to promote
-  return { rp, tier, difficulty: tier, name: t.name, icon: t.icon, color: t.color, inTier, nextAt };
+  return { rp, tier, difficulty: tier, name: t.name, color: t.color, inTier, nextAt };
 }
 export function currentRank() { return rankFromRP(loadRP()); }
 
