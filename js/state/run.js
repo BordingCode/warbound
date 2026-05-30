@@ -38,7 +38,7 @@ export function freshRun(seedStr = 'warbound-' + Date.now()) {
   for (const u of UNITS) pool[u.defId] = POOL_COPIES[u.cost];
   const run = {
     v: 1, seedStr, seed,
-    round: 1, gold: 2, lives: START_LIVES, wins: 0, losses: 0,
+    round: 1, gold: 3, lives: START_LIVES, wins: 0, losses: 0,
     level: 2, xp: 0,
     bench: Array(BENCH_SIZE).fill(null),
     board: [],
@@ -52,6 +52,11 @@ export function freshRun(seedStr = 'warbound-' + Date.now()) {
     rngState: null,
     over: false, won: false,
   };
+  // starter hand: a tank + a ranged carry, pre-placed on the board so round 1 is a
+  // gentle, winnable onboarding fight that teaches front/back positioning.
+  run.bench[0] = { uid: newUid(), defId: 'knight_captain', star: 1, items: [] };
+  run.bench[1] = { uid: newUid(), defId: 'skeleton_archer', star: 1, items: [] };
+  for (const id of ['knight_captain', 'skeleton_archer']) run.pool[id] = Math.max(0, run.pool[id] - 1);
   _rng = new RNG(seed);
   rollShop(run);
   saveRngState(run);
