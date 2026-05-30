@@ -5,11 +5,11 @@
 
 // Base 1-star stats per cost tier.
 const COST_BASE = {
-  1: { hp: 550, ad: 45, as: 0.62, armor: 18, mr: 18, mana: 60 },
-  2: { hp: 640, ad: 52, as: 0.65, armor: 22, mr: 22, mana: 70 },
-  3: { hp: 720, ad: 60, as: 0.68, armor: 26, mr: 26, mana: 75 },
-  4: { hp: 820, ad: 70, as: 0.70, armor: 30, mr: 30, mana: 80 },
-  5: { hp: 960, ad: 84, as: 0.72, armor: 36, mr: 36, mana: 90 },
+  1: { hp: 480, ad: 62, as: 0.70, armor: 16, mr: 16, mana: 50 },
+  2: { hp: 560, ad: 72, as: 0.72, armor: 20, mr: 20, mana: 55 },
+  3: { hp: 630, ad: 84, as: 0.75, armor: 24, mr: 24, mana: 60 },
+  4: { hp: 720, ad: 98, as: 0.78, armor: 28, mr: 28, mana: 65 },
+  5: { hp: 850, ad: 118, as: 0.80, armor: 32, mr: 32, mana: 70 },
 };
 
 // Role shapes: how a class bends the base stats + which mana-gen profile it uses.

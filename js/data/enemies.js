@@ -7,8 +7,8 @@
 const E = (defId, star, col, row) => ({ defId, star, col, row });
 
 export const LADDER = [
-  { name: 'Roadside Bandits', traitHint: 'A warm-up', units: [E('bone_guard', 1, 3, 3), E('skeleton_archer', 1, 3, 1)] },
-  { name: 'Skeleton Patrol', traitHint: 'Undead 2', units: [E('bone_guard', 1, 2, 3), E('skeleton_archer', 1, 4, 1), E('skeleton_archer', 1, 2, 1)] },
+  { name: 'Lone Brigand', traitHint: 'A gentle warm-up', units: [E('bone_guard', 1, 3, 3)] },
+  { name: 'Roadside Bandits', traitHint: 'Two scrappers', units: [E('bone_guard', 1, 3, 3), E('skeleton_archer', 1, 3, 1)] },
   { name: 'The Iron Watch', traitHint: 'Knight wall', units: [E('knight_captain', 2, 3, 3), E('bone_guard', 1, 2, 3), E('crossbowman', 1, 3, 0)] },
   { name: 'Hex Coven', traitHint: 'Mage burst', units: [E('court_mage', 2, 4, 1), E('court_mage', 1, 2, 1), E('thornguard', 1, 3, 3), E('field_medic', 1, 5, 0)] },
   { name: 'The Wolf Pack', traitHint: 'Beast ferocity', units: [E('beast_hunter', 2, 4, 1), E('bramble_brute', 1, 3, 3), E('pack_stalker', 1, 6, 3), E('druid_healer', 1, 2, 0)] },
