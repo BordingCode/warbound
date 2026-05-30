@@ -93,6 +93,11 @@
 .draft-pick .dn { font-weight: 700; font-size: 13px; }
 .draft-pick .dm { font-size: 10px; color: var(--ink-dim); text-align: center; }
 
+/* enemy scout */
+.enemy-scout { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: -2px; }
+.enemy-scout .scout-label { font-size: 11px; color: var(--danger); font-weight: 700; }
+.enemy-scout .trait-chip { padding: 2px 6px; font-size: 11px; border-color: #5a2a2a; }
+
 /* relic bar */
 .relic-bar { display: flex; gap: 5px; flex-wrap: wrap; }
 .relic-bar .relic { width: 26px; height: 26px; display: grid; place-items: center; font-size: 15px; background: var(--bg-2); border: 1px solid var(--gold-deep); border-radius: 6px; }

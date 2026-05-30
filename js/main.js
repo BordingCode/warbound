@@ -106,6 +106,22 @@ function buildShopEl() {
   return el('.shop', {}, [controls, row]);
 }
 
+function buildEnemyScout(enemy) {
+  const defs = enemy.units.map((u) => UNITS_BY_ID[u.defId]);
+  const active = Object.entries(activeTraits(defs)).filter(([t, i]) => TRAITS[t] && i.tier > 0)
+    .sort((a, b) => b[1].count - a[1].count).slice(0, 4);
+  const row = el('.enemy-scout');
+  row.append(el('span.scout-label', {}, '👁 Foe:'));
+  if (!active.length) row.append(el('span', { style: { color: 'var(--ink-faint)', fontSize: '11px' } }, 'no synergies'));
+  for (const [t, info] of active) {
+    const def = TRAITS[t];
+    row.append(el('.trait-chip.active', { style: { opacity: .85 }, title: def.bonusText[info.tier] || def.desc }, [
+      el('span.dot', { style: { background: def.color } }), el('span', {}, def.name), el('span.cnt', {}, info.count),
+    ]));
+  }
+  return row;
+}
+
 function buildItemsTray() {
   const tray = el('.items-tray');
   tray.append(el('span.tray-label', {}, '🎒'));
@@ -160,6 +176,7 @@ function renderPlanning() {
     run.relics.length ? el('.relic-bar', {}, run.relics.map((id) => el('span.relic', { title: `${RELICS[id].name}: ${RELICS[id].desc}` }, RELICS[id].icon))) : null,
     buildTraitsEl(),
     el('.phase-banner', {}, `Next: ${enemy.name} — ${enemy.traitHint}`),
+    buildEnemyScout(enemy),
     stage,
     el('.combat-ctl', {}, [
       el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, '⚔ Ready'),
