@@ -129,31 +129,36 @@ function copiesInExistence(lobby) {
   ok('powers: powerFlat merges power + modifier into combat mods', flat && Object.keys(flat).length >= 1 && flat.vamp >= 0.12);
 }
 
-// ---- 11. balance: an augmented (but unskilled) reference player must NOT dominate the lobby ----
-// Guards the augment-asymmetry regression: the player gets augments+power, so the bots must too.
+// ---- 11. difficulty gradient: higher rank => smarter bots => the player places WORSE ----
+// A FIXED-skill reference (skill 3) is run against a lobby at low (Bronze=0) vs high (Master=5)
+// difficulty. Master must be measurably harder — purely from better bot DECISIONS, no stats.
 {
   const PICK = AUGMENT_IDS.filter((id) => AUGMENTS[id].cat !== 'econ');
   const merge = (b, flat) => { const f = { ...(b.flat || {}) }; for (const [k, v] of Object.entries(flat || {})) f[k] = (f[k] || 0) + v; return { ...b, flat: f }; };
-  const places = [];
-  for (let g = 0; g < 10; g++) {
-    const lobby = createLobby('baltest' + g, ['warlord', 'demon', 'mage'][g % 3]);
-    const ref = createLobby('baltestp' + g, 'warlord').bots[0];
-    const augs = []; let over = false, place = null, s = 0;
-    while (!over && s++ < 80) {
-      const round = lobby.round;
-      botTurn(ref, round, lobby);
-      if ([3, 6, 9, 12].includes(round)) augs.push(PICK[(g * 7 + round) % PICK.length]);
-      lobby.human.board = ref.board.map((u) => ({ ...u, row: u.row + 4 }));
-      const ob = (lobby.opponent.board || []).map((u) => ({ ...u, row: u.row <= 3 ? u.row : u.row - 4 }));
-      const res = simulate(lobby.human.board, ob, round * 7 + 3, { aug: { player: merge(augmentBundle(augs), powerFlat(lobby.human, lobby)), enemy: botBundle(lobby.opponent, lobby) } });
-      const r = resolveLadderRound(lobby, lobby.human.board, res, round);
-      over = r.over; place = r.humanPlace;
+  const avgPlaceAt = (diff) => {
+    const places = [];
+    for (let g = 0; g < 16; g++) {
+      const lobby = createLobby('grad' + g + 'd' + diff, ['warlord', 'demon', 'mage', 'knight'][g % 4], diff);
+      const refLobby = createLobby('gradp' + g, 'mage', 3);   // reference plays at FIXED skill 3
+      const ref = refLobby.bots.find((b) => b.id === 'warlord');   // a representative active player (not a hoarder)
+      const augs = []; let over = false, place = null, s = 0;
+      while (!over && s++ < 80) {
+        const round = lobby.round;
+        botTurn(ref, round, refLobby);   // ref's decisions stay at fixed skill, independent of `diff`
+        if ([3, 6, 9, 12].includes(round)) augs.push(PICK[(g * 7 + round) % PICK.length]);
+        lobby.human.board = ref.board.map((u) => ({ ...u, row: u.row + 4 }));
+        const ob = (lobby.opponent.board || []).map((u) => ({ ...u, row: u.row <= 3 ? u.row : u.row - 4 }));
+        const res = simulate(lobby.human.board, ob, round * 7 + 3, { aug: { player: merge(augmentBundle(augs), powerFlat(lobby.human, lobby)), enemy: botBundle(lobby.opponent, lobby) } });
+        const r = resolveLadderRound(lobby, lobby.human.board, res, round);
+        over = r.over; place = r.humanPlace;
+      }
+      places.push(place);
     }
-    places.push(place);
-  }
-  const firsts = places.filter((p) => p === 1).length;
-  const avg = places.reduce((a, b) => a + b, 0) / places.length;
-  ok(`balance: unskilled augmented player doesn't run away (1st ${firsts}/10, avg ${avg.toFixed(1)})`, firsts <= 4 && avg >= 2.3);
+    return places.reduce((a, b) => a + b, 0) / places.length;
+  };
+  const easy = avgPlaceAt(0), hard = avgPlaceAt(5);
+  ok(`gradient: Master is harder than Bronze (Bronze avg ${easy.toFixed(2)} < Master avg ${hard.toFixed(2)})`, hard > easy + 0.4);
+  ok(`gradient: Bronze is winnable (avg ${easy.toFixed(2)} <= 3.4)`, easy <= 3.4);
 }
 
 console.log(`\n\n${pass} passed, ${fail} failed`);

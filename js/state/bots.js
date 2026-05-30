@@ -12,6 +12,7 @@
 // Pure logic, deterministic from one seed (each bot owns a seeded RNG). No DOM.
 import { RNG, seedFromString } from '../rng.js';
 import { UNITS, UNITS_BY_ID, statsForStar } from '../data/units.js';
+import { TRAITS, activeTraits } from '../data/traits.js';
 import { SHOP_ODDS, XP_TO_NEXT, MAX_LEVEL, POOL_COPIES } from './run.js';
 import { simulate, playerDamage } from '../sim/combat.js';
 import { augmentBundle, AUGMENT_IDS, AUGMENTS } from '../data/augments.js';
@@ -27,8 +28,41 @@ const byCost = { 1: [], 2: [], 3: [], 4: [], 5: [] };
 for (const u of UNITS) byCost[u.cost].push(u.defId);
 const costOf = (id) => (UNITS_BY_ID[id] ? UNITS_BY_ID[id].cost : 1);
 const hasTrait = (id, t) => { const d = UNITS_BY_ID[id]; return d && (d.origin === t || d.klass === t); };
-// power proxy for picking the strongest `level` units to field
+// raw stat proxy (the DUMB fielding heuristic — used at low difficulty / on a "blunder")
 const power = (id, star) => { const s = statsForStar(UNITS_BY_ID[id], star); return s.hp * 0.045 + s.ad * 0.55 + costOf(id) * 12; };
+// SMART unit value — credits casters/support for their ability (the dumb proxy ignores AP).
+function unitValue(id, star) {
+  const def = UNITS_BY_ID[id]; const s = statsForStar(def, star);
+  let v = s.hp * 0.04 + s.ad * 0.5 + costOf(id) * 8;
+  const ab = def.ability, m = star === 3 ? 1.7 : star === 2 ? 1.3 : 1;
+  if (ab && (ab.type === 'magic' || ab.type === 'heal' || ab.type === 'shield' || ab.type === 'summon')) v += (ab.ap || ab.summonHp || 200) * 0.10 * m;
+  return v;
+}
+// SMART board score — rewards active SYNERGY breakpoints + a healthy frontline (the genuine
+// power sources the dumb proxy is blind to). units: [{defId, star}]; tb = augment trait crowns.
+function boardScore(units, tb) {
+  let v = 0; for (const u of units) v += unitValue(u.defId, u.star);
+  const active = activeTraits(units.map((u) => UNITS_BY_ID[u.defId]), tb || {});
+  for (const t in active) { const a = active[t]; if (a.tier > 0 && TRAITS[t]) v += (TRAITS[t].breakpoints.indexOf(a.tier) + 1) * 45; }
+  const melee = units.filter((u) => (UNITS_BY_ID[u.defId].range || 1) === 1).length;
+  if (units.length >= 3 && melee === 0) v *= 0.72;   // all-squishy boards fold
+  return v;
+}
+// difficulty (0..5) -> probability a given decision is made SMARTLY (else a plausible 'blunder'
+// reverting to the dumb heuristic). Bronze≈0.10 ... Master=1.0. Skill, never stats.
+function smartProb(difficulty) { return Math.max(0, Math.min(1, 0.10 + (difficulty || 0) * 0.18)); }
+// position a set of units on enemy rows 0-3: melee front (row 3), ranged back; protect the
+// highest-value ranged 'carry' in a back corner.
+function positionBoard(units) {
+  const ranged = units.filter((u) => (UNITS_BY_ID[u.defId].range || 1) > 1).sort((a, b) => unitValue(b.defId, b.star) - unitValue(a.defId, a.star));
+  const melee = units.filter((u) => (UNITS_BY_ID[u.defId].range || 1) === 1);
+  const out = [];
+  let f = 0;
+  for (const u of melee) { out.push({ defId: u.defId, star: u.star, col: 1 + (f % 6), row: 3 }); f++; }
+  const backCols = [0, 6, 2, 4, 1, 5, 3];   // carry first -> corner
+  ranged.forEach((u, i) => out.push({ defId: u.defId, star: u.star, col: backCols[i % backCols.length], row: i % 2 ? 1 : 0 }));
+  return out;
+}
 // trait -> all champion ids carrying it (cross-cost zealotry)
 const traitPool = {};
 for (const u of UNITS) for (const t of [u.origin, u.klass]) (traitPool[t] = traitPool[t] || []).push(u.defId);
@@ -103,15 +137,36 @@ function newBot(style, seed) {
   };
 }
 
-// a bot drafts one augment, biased toward its trait (thematic + effective), else random.
-function botDraftAugment(bot) {
+// how well an augment fits the bot's CURRENT board (active synergies + tier). The 'smart' pick.
+function augValue(id, activeOnBoard, bot) {
+  const a = AUGMENTS[id];
+  let v = a.tier === 'prismatic' ? 3 : a.tier === 'rare' ? 2 : 1;
+  if (a.wantTrait && activeOnBoard[a.wantTrait]) v += 4;
+  if (a.traitBonus) for (const t in a.traitBonus) if (activeOnBoard[t]) v += 2 * a.traitBonus[t];
+  if (a.cond) for (const c of a.cond) { const m = c.match || {}; if ((m.origin && activeOnBoard[m.origin]) || (m.klass && activeOnBoard[m.klass])) v += 2; }
+  return v + bot.rng.next() * 0.5;
+}
+// a bot drafts one augment. DUMB (random, trait-biased) at low difficulty; SMART (best of 3 by
+// how well it fits the bot's current board) at high difficulty. Same COUNT as the player — only
+// the QUALITY of the pick scales. No extra augments, no stats.
+function botDraftAugment(bot, difficulty) {
   const owned = new Set(bot.augments);
-  let pool = BOT_AUGMENTS.filter((id) => !owned.has(id));
+  const pool = BOT_AUGMENTS.filter((id) => !owned.has(id));
   if (!pool.length) return;
-  const pref = bot.style.pref && bot.style.pref !== 'lowcost'
-    ? pool.filter((id) => AUGMENTS[id].wantTrait === bot.style.pref) : [];
-  const from = (pref.length && bot.rng.next() < 0.7) ? pref : pool;
-  bot.augments.push(from[Math.floor(bot.rng.next() * from.length)]);
+  if (bot.rng.next() >= smartProb(difficulty)) {
+    // dumb: trait-biased random (the old behaviour)
+    const pref = bot.style.pref && bot.style.pref !== 'lowcost' ? pool.filter((id) => AUGMENTS[id].wantTrait === bot.style.pref) : [];
+    const from = (pref.length && bot.rng.next() < 0.7) ? pref : pool;
+    bot.augments.push(from[Math.floor(bot.rng.next() * from.length)]);
+    return;
+  }
+  // smart: draw 3, pick the best fit for the board it's actually fielding
+  const active = activeTraits((bot.board || []).map((u) => UNITS_BY_ID[u.defId]));
+  const three = [];
+  const p = pool.slice();
+  for (let i = 0; i < 3 && p.length; i++) three.push(p.splice(Math.floor(bot.rng.next() * p.length), 1)[0]);
+  three.sort((x, y) => augValue(y, active, bot) - augValue(x, active, bot));
+  bot.augments.push(three[0]);
 }
 // the FULL combat aug for a player/bot: their augments + warlord power + lobby modifier.
 export function botBundle(player, lobby) {
@@ -127,7 +182,7 @@ function freshPool() { const p = {}; for (const u of UNITS) p[u.defId] = POOL_CO
 
 // Create the lobby: a human proxy (with the warlord power they chose) + 7 OTHER rival warlords
 // + ONE shared champion pool + one random lobby-wide modifier for the whole match.
-export function createLobby(seedStr, playerStyleId = 'warlord', opponents = 7) {
+export function createLobby(seedStr, playerStyleId = 'warlord', difficulty = 0, opponents = 7) {
   const base = seedFromString(String(seedStr) + '-ladder');
   const pool = freshPool();
   const styles = STYLES.filter((s) => s.id !== playerStyleId).slice(0, opponents);
@@ -136,7 +191,7 @@ export function createLobby(seedStr, playerStyleId = 'warlord', opponents = 7) {
   const human = { id: 'you', name: 'You', emoji: (POWERS[playerStyleId] && POWERS[playerStyleId].icon) || '🧢', warlordName: chosen.name, powerId: playerStyleId, isHuman: true, hp: START_HP, alive: true, place: null, board: [], streakN: 0, lastWon: null, lastStreakWon: null };
   const rng = new RNG(base + 104729);
   const modifier = MODIFIERS[Math.floor(rng.next() * MODIFIERS.length)];
-  const lobby = { rng, human, bots, players: [human, ...bots], pool, round: 1, pairs: [], opponent: null, underdog: null, modifier };
+  const lobby = { rng, human, bots, players: [human, ...bots], pool, round: 1, pairs: [], opponent: null, underdog: null, modifier, difficulty };
   for (const b of bots) botTurn(b, 1, lobby);     // bots shop round 1 (draws from the shared pool)
   matchmake(lobby);
   return lobby;
@@ -180,9 +235,9 @@ export function botTurn(bot, round, lobby) {
     }
     if (bot.gold <= 2) break;
   }
-  if ([3, 6, 9, 12].includes(round)) botDraftAugment(bot);   // match the player's augment power curve
+  if ([3, 6, 9, 12].includes(round)) botDraftAugment(bot, lobby ? lobby.difficulty : 0);   // match the player's augment count
   fuseRoster(bot);
-  buildBotBoard(bot);
+  buildBotBoard(bot, lobby);
   return bot;
 }
 
@@ -229,17 +284,64 @@ function fuseRoster(bot) {
   }
 }
 
-// Build the enemy-side board (rows 0-3): strongest `level` units, melee front (row 3), ranged back.
-export function buildBotBoard(bot) {
-  const picks = [...bot.roster].sort((a, b) => power(b.defId, b.star) - power(a.defId, a.star)).slice(0, bot.level);
-  let f = 0, b = 0; const out = [];
-  for (const u of picks) {
-    const ranged = (UNITS_BY_ID[u.defId].range || 1) > 1;
-    if (ranged) { out.push({ defId: u.defId, star: u.star, col: 1 + (b % 6), row: b % 2 ? 0 : 1 }); b++; }
-    else { out.push({ defId: u.defId, star: u.star, col: 1 + (f % 6), row: 3 }); f++; }
+// candidate fielding sets: top-by-value, plus a set per dominant trait (to hit breakpoints).
+function candidateSets(roster, level) {
+  const byVal = [...roster].sort((a, b) => unitValue(b.defId, b.star) - unitValue(a.defId, a.star));
+  const sets = [byVal.slice(0, level)];
+  const tc = {};
+  for (const u of roster) for (const t of [UNITS_BY_ID[u.defId].origin, UNITS_BY_ID[u.defId].klass]) tc[t] = (tc[t] || 0) + 1;
+  const top = Object.entries(tc).sort((a, b) => b[1] - a[1]).slice(0, 2).map((x) => x[0]);
+  for (const t of top) {
+    const inT = byVal.filter((u) => { const d = UNITS_BY_ID[u.defId]; return d.origin === t || d.klass === t; });
+    const rest = byVal.filter((u) => !inT.includes(u));
+    sets.push(inT.concat(rest).slice(0, level));
   }
-  bot.board = out;
-  return out;
+  return sets;
+}
+const sameSet = (a, b) => a.length === b.length && a.every((u, i) => b[i] && u.defId === b[i].defId && u.star === b[i].star);
+// one-ply lookahead: sim the shortlisted candidate boards head-to-head, pick the one that wins
+// most. The bot literally tests its options in the battle engine. (top tiers only)
+function simBestCandidate(cands) {
+  const uniq = cands.filter((c, i) => cands.findIndex((x) => sameSet(x, c)) === i);
+  if (uniq.length < 2) return uniq[0];
+  const wins = uniq.map(() => 0);
+  for (let i = 0; i < uniq.length; i++) for (let j = 0; j < uniq.length; j++) {
+    if (i === j) continue;
+    const A = positionBoard(uniq[i]).map((u) => ({ ...u, row: 7 - u.row }));
+    const B = positionBoard(uniq[j]);
+    if (simulate(A, B, (i * 7 + j * 13 + 5) >>> 0).result.winner === 'player') wins[i]++;
+  }
+  let best = 0; for (let i = 1; i < uniq.length; i++) if (wins[i] > wins[best]) best = i;
+  return uniq[best];
+}
+
+// crude positioning (a low-tier blunder): ignore roles — scatter units, exposing carries.
+function positionBoardCrude(units, rng) {
+  const cols = shuffled([0, 1, 2, 3, 4, 5, 6], rng);
+  return units.map((u, i) => ({ defId: u.defId, star: u.star, col: cols[i % cols.length], row: i % 4 }));
+}
+// Build the enemy-side board (rows 0-3). Decision QUALITY scales with difficulty; never stats.
+// Low tier: blunders — fields a RANDOM subset and mis-positions. High tier: synergy-aware pick,
+// a sim-tested choice, and protected positioning. Each decision is gated independently.
+export function buildBotBoard(bot, lobby) {
+  const level = bot.level, roster = bot.roster;
+  const sp = smartProb(lobby ? lobby.difficulty : 0);
+  let chosen;
+  if (roster.length <= level) {
+    chosen = roster.slice();
+  } else if (bot.rng.next() >= sp) {
+    // BLUNDER: field a random subset of the roster (leaves synergies/carries on the bench)
+    chosen = shuffled(roster, bot.rng).slice(0, level);
+  } else {
+    const tb = (bot.augments && bot.augments.length) ? augmentBundle(bot.augments).traitBonus : {};
+    const cands = candidateSets(roster, level);
+    let best = cands[0], bs = -1;
+    for (const c of cands) { const sc = boardScore(c, tb); if (sc > bs) { bs = sc; best = c; } }
+    chosen = (lobby && lobby.difficulty >= 4) ? (simBestCandidate(cands) || best) : best;   // top tiers think
+  }
+  // position smartly or crudely (a second, independent skill check)
+  bot.board = (bot.rng.next() < sp) ? positionBoard(chosen) : positionBoardCrude(chosen, bot.rng);
+  return bot.board;
 }
 
 // ---- matchmaking + round resolution ----
@@ -321,7 +423,7 @@ function serializePlayer(p) {
 }
 export function serializeLobby(lobby) {
   const ref = (o) => o ? (o.ghost ? { ghost: true, board: o.board } : (o.isHuman ? 'you' : o.id)) : null;
-  return { rng: lobby.rng.save(), round: lobby.round, pool: lobby.pool, underdog: lobby.underdog, modifier: lobby.modifier, human: serializePlayer(lobby.human), bots: lobby.bots.map(serializePlayer), opponent: ref(lobby.opponent), pairs: lobby.pairs.map(([a, b]) => [ref(a), ref(b)]) };
+  return { rng: lobby.rng.save(), round: lobby.round, pool: lobby.pool, underdog: lobby.underdog, modifier: lobby.modifier, difficulty: lobby.difficulty || 0, human: serializePlayer(lobby.human), bots: lobby.bots.map(serializePlayer), opponent: ref(lobby.opponent), pairs: lobby.pairs.map(([a, b]) => [ref(a), ref(b)]) };
 }
 export function deserializeLobby(obj) {
   if (!obj || !obj.bots) return null;
@@ -329,5 +431,5 @@ export function deserializeLobby(obj) {
   const bots = obj.bots.map((b) => ({ id: b.id, name: b.name, emoji: b.emoji, style: STYLES.find((s) => s.id === b.styleId) || STYLES[0], powerId: b.styleId, rng: new RNG(b.rng.seed).load(b.rng), gold: b.gold, level: b.level, xp: b.xp, hp: b.hp, alive: b.alive, place: b.place, roster: b.roster || [], board: b.board || [], augments: b.augments || [], streakN: b.streakN || 0, lastWon: b.lastWon, lastStreakWon: b.lastStreakWon }));
   const byId = { you: human }; for (const b of bots) byId[b.id] = b;
   const deref = (r) => r == null ? null : (r.ghost ? { ghost: true, board: r.board } : byId[r]);
-  return { rng: new RNG(obj.rng.seed).load(obj.rng), round: obj.round, pool: obj.pool || freshPool(), underdog: obj.underdog || null, modifier: obj.modifier || MODIFIERS[0], human, bots, players: [human, ...bots], opponent: deref(obj.opponent), pairs: (obj.pairs || []).map(([a, b]) => [deref(a), deref(b)]) };
+  return { rng: new RNG(obj.rng.seed).load(obj.rng), round: obj.round, pool: obj.pool || freshPool(), underdog: obj.underdog || null, modifier: obj.modifier || MODIFIERS[0], difficulty: obj.difficulty || 0, human, bots, players: [human, ...bots], opponent: deref(obj.opponent), pairs: (obj.pairs || []).map(([a, b]) => [deref(a), deref(b)]) };
 }

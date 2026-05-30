@@ -13,6 +13,7 @@ import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
 import * as Bots from './state/bots.js';
+import * as Rank from './state/rank.js';
 import { resume as audioResume, Sfx, setEnabled as setSound, isEnabled as soundOn } from './audio/audio.js';
 import { launchConfetti } from './render/fx.js';
 
@@ -687,7 +688,7 @@ function offerUnderdogDraft(after) {
 
 function endScreen(ladderSummary) {
   const stat = (label, val) => el('.istat', { style: { minWidth: '120px' } }, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
-  let head, sub, stats;
+  let head, sub, stats, rankBlock = null;
   if (run.mode === 'ladder') {
     const place = (ladderSummary && ladderSummary.humanPlace) || (lobby && lobby.human.place) || Bots.aliveCount(lobby);
     const first = place === 1;
@@ -695,6 +696,21 @@ function endScreen(ladderSummary) {
     head = first ? '👑 1st PLACE!' : `#${place} of 8`;
     sub = first ? 'Last warband standing — you conquered the ladder!' : `Your warband fell in ${place}${['th', 'st', 'nd', 'rd'][place] || 'th'} place. The other warlords were tougher.`;
     stats = [stat('Placement', `#${place} / 8`), stat('Rounds', run.round - 1)];
+    // apply the placement to your rank ONCE, and show the result
+    if (!run.rankApplied) { run.rankApplied = true; run._rankResult = Rank.applyPlacement(place); Run.save(run); }
+    const rr = run._rankResult;
+    if (rr) {
+      if (rr.promoted) launchConfetti(4000);
+      rankBlock = el('.rank-result', {}, [
+        rr.promoted ? el('.rank-flash.promo', {}, `▲ PROMOTED to ${rr.rank.icon} ${rr.rank.name}!`)
+          : rr.demoted ? el('.rank-flash.demo', {}, `▼ Demoted to ${rr.rank.icon} ${rr.rank.name}`) : null,
+        el('.rank-line', {}, [
+          el('span.rank-badge', { style: { color: rr.rank.color } }, `${rr.rank.icon} ${rr.rank.name}`),
+          el('span.rp-delta', { style: { color: rr.delta >= 0 ? 'var(--hp)' : 'var(--danger)' } }, `${rr.delta >= 0 ? '+' : ''}${rr.delta} RP`),
+        ]),
+        rr.rank.nextAt ? el('.rank-bar', { title: `${rr.rank.inTier}/${rr.rank.nextAt} to next tier` }, el('.fill', { style: { transform: `scaleX(${Math.max(0, Math.min(1, rr.rank.inTier / rr.rank.nextAt))})` } })) : null,
+      ]);
+    }
   } else {
     const won = run.won;
     if (won) launchConfetti(4000);
@@ -706,6 +722,7 @@ function endScreen(ladderSummary) {
     el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
     el('p', { style: { color: 'var(--ink-dim)', margin: '0' } }, sub),
     el('.istats', { style: { maxWidth: '280px' } }, stats),
+    rankBlock,
     run.mode !== 'ladder' && run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name }, AUGMENTS[id].icon)))]) : null,
     el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => chooseMode() }, '↻ Main menu'),
   ]);
@@ -729,9 +746,11 @@ function chooseWarlord() {
     el('.wp-emoji', {}, p.icon), el('.wp-name', {}, s.name),
     el('.wp-power', {}, [el('b', {}, p.name + ': '), el('span', {}, p.desc)]),
   ]); };
+  const rk = Rank.currentRank();
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '10px', padding: '14px' } }, [
     el('h1', { style: { fontSize: '26px', margin: '0', textAlign: 'center' } }, 'Choose your Warlord'),
-    el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-4px' } }, 'Your signature power shapes the whole run. The other seven become your rivals.'),
+    el('.rank-pill', { style: { borderColor: rk.color } }, [el('span', { style: { color: rk.color } }, `${rk.icon} ${rk.name}`), rk.nextAt ? el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, `${rk.inTier}/${rk.nextAt} RP`) : el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, `${rk.rp} RP`)]),
+    el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-4px' } }, `Your power shapes the run; the other seven are your rivals — playing at ${rk.name} skill.`),
     el('.warlord-grid', {}, Bots.STYLES.map(card)),
     el('button.btn', { style: { marginTop: '4px' }, onclick: () => chooseMode() }, '← Back'),
   ]));
@@ -741,7 +760,8 @@ function beginLadder(styleId) {
   const seed = 'ladder-' + Date.now();
   run = Run.freshRun(seed);
   run.mode = 'ladder'; run.hp = Bots.START_HP; run.lives = 999; run.warlordId = styleId;
-  lobby = Bots.createLobby(seed, styleId);
+  const rk = Rank.currentRank();
+  lobby = Bots.createLobby(seed, styleId, rk.difficulty);   // your rank sets how SMART the warlords play
   run.pool = lobby.pool;                  // SHARED POOL: human draws from the same bag as the bots
   persist(); renderPlanning();
   // announce this match's lobby-wide modifier (TFT Encounter / HS Anomaly)
@@ -753,12 +773,15 @@ function beginLadder(styleId) {
 function chooseMode() {
   Run.clearSave(); clearLobby(); run = Run.freshRun(); run.mode = 'menu'; lobby = null;
   const card = (cls, emoji, title, desc, onclick) => el(`.mode-card${cls}`, { onclick }, [el('.mc-emoji', {}, emoji), el('.mc-title', {}, title), el('.mc-desc', {}, desc)]);
+  const rk = Rank.currentRank();
+  const ladderCard = card(' ladder', '👑', 'Warlord Ladder', 'Auto-Chess: 8 warlords, ONE shared champion pool, last warband standing wins. Climb the ranks — higher rank = smarter rivals.', () => startLadder());
+  ladderCard.append(el('.mc-rank', { style: { color: rk.color } }, `${rk.icon} ${rk.name}${rk.nextAt ? ` · ${rk.inTier}/${rk.nextAt} RP` : ` · ${rk.rp} RP`}`));
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '14px' } }, [
     el('h1', { style: { fontSize: '32px', margin: '0', textAlign: 'center' } }, 'Warbound'),
     el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-6px' } }, 'Choose your battle'),
     el('.mode-menu', {}, [
       card('', '🏰', 'Gym Crawl', 'Climb a ladder of authored warbands solo — win 10 before 5 lives run out. Augments & item drafts.', () => startSolo(true)),
-      card(' ladder', '👑', 'Warlord Ladder', 'Auto-Chess: 8 warlords, ONE shared champion pool, last warband standing wins. Comeback gifts when behind.', () => startLadder()),
+      ladderCard,
     ]),
   ]));
 }
