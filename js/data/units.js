@@ -17,7 +17,7 @@ const COST_BASE = {
 const ROLE = {
   knight:   { hpx: 1.40, adx: 0.92, range: 1, manaPer: 6, startMana: 0.0 },
   mage:     { hpx: 0.85, adx: 0.70, range: 3, manaPer: 7, startMana: 0.0 },
-  ranger:   { hpx: 0.85, adx: 1.05, range: 3, manaPer: 10, startMana: 0.0 },
+  ranger:   { hpx: 0.95, adx: 1.10, range: 3, manaPer: 10, startMana: 0.0 },
   assassin: { hpx: 0.90, adx: 1.20, range: 1, manaPer: 10, startMana: 0.0, dive: true },
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 7, startMana: 0.25 },
   summoner: { hpx: 0.95, adx: 0.70, range: 2, manaPer: 7, startMana: 0.15 },
