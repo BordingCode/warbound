@@ -214,3 +214,17 @@
 .mode-card .mc-emoji { font-size: 30px; }
 .mode-card .mc-title { font-size: 18px; font-weight: 800; margin: 4px 0 3px; }
 .mode-card .mc-desc { font-size: 12px; color: var(--ink-dim); line-height: 1.4; }
+
+/* ---- ladder standings juice ---- */
+.warlord.under { box-shadow: 0 0 0 2px var(--gold) inset; animation: underPulse 1.6s ease-in-out infinite; }
+@keyframes underPulse { 0%,100% { box-shadow: 0 0 0 2px var(--gold) inset; } 50% { box-shadow: 0 0 0 2px var(--gold) inset, 0 0 8px var(--gold); } }
+.warlord.ko { animation: koSlam .95s cubic-bezier(.3,1.4,.5,1); z-index: 5; }
+@keyframes koSlam {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.35) rotate(-7deg); filter: brightness(2.4); }
+  34% { transform: scale(.88) rotate(3deg); filter: brightness(1); }
+  100% { transform: scale(1) rotate(0); }
+}
+.warlord.ko .whp::after { content: ' 💀'; }
+.stat-pill.hp-hit { animation: hpHit .55s ease; }
+@keyframes hpHit { 0%,100% { background: var(--bg-2); } 25% { background: #7a2630; box-shadow: 0 0 10px #ff5a4c88; } }

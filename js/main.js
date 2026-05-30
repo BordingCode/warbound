@@ -145,7 +145,7 @@ function buildStandings() {
     const hp = Math.max(0, Math.round(p.hp));
     const isUnder = p.alive && lobby.underdog === p.id;
     row.append(el(`.warlord${p.alive ? '' : ' dead'}${p.isHuman ? ' you' : ''}${p.id === oppId ? ' foe' : ''}${isUnder ? ' under' : ''}`,
-      { title: `${p.name}${p.isHuman ? '' : ' — ' + p.style.desc}${p.alive ? ' · ' + hp + ' HP' : ' · #' + p.place}`, onclick: () => showWarlordInfo(p) }, [
+      { dataset: { id: p.isHuman ? 'you' : p.id }, title: `${p.name}${p.isHuman ? '' : ' — ' + p.style.desc}${p.alive ? ' · ' + hp + ' HP' : ' · #' + p.place}`, onclick: () => showWarlordInfo(p) }, [
         el('span.wem', {}, p.emoji),
         el('.hpbar', {}, el('.hpfill', { style: { transform: `scaleX(${Math.min(1, hp / Bots.START_HP)})` } })),
         el('span.whp', {}, p.alive ? hp : '#' + p.place),
@@ -153,6 +153,57 @@ function buildStandings() {
   }
   return row;
 }
+// Snapshot of the last-rendered standings so we can animate changes (HP drain, FLIP reorder,
+// KO callouts) when the strip is rebuilt after a round.
+let prevWarlord = {};   // id -> { hp, alive }
+let prevHumanHp = null;
+// Capture current chip screen-rects (called BEFORE the DOM is swapped) for FLIP.
+function captureWarlordRects() {
+  const rects = {};
+  document.querySelectorAll('.standings .warlord').forEach((c) => { rects[c.dataset.id] = c.getBoundingClientRect(); });
+  return rects;
+}
+// After the new strip is in the DOM: drain HP bars from their old value, FLIP reorder, KO flash.
+function animateStandings(oldRects) {
+  if (run.mode !== 'ladder' || !lobby) return;
+  const strip = document.querySelector('.standings'); if (!strip) return;
+  strip.querySelectorAll('.warlord').forEach((chip) => {
+    const id = chip.dataset.id;
+    const p = lobby.players.find((x) => (x.isHuman ? 'you' : x.id) === id); if (!p) return;
+    const prev = prevWarlord[id];
+    // HP drain: start the bar at the previous HP, then transition to the current value
+    const fill = chip.querySelector('.hpfill');
+    const cur = Math.max(0, Math.min(1, p.hp / Bots.START_HP));
+    if (fill && prev && prev.hp != null && Math.abs(prev.hp - p.hp) > 0.5) {
+      const pf = Math.max(0, Math.min(1, prev.hp / Bots.START_HP));
+      fill.style.transition = 'none'; fill.style.transform = `scaleX(${pf})`; void fill.offsetWidth;
+      fill.style.transition = 'transform .5s cubic-bezier(.4,0,.2,1)';
+      requestAnimationFrame(() => { fill.style.transform = `scaleX(${cur})`; });
+    }
+    // KO callout: a warlord that just fell (skip FLIP for it so the slam isn't overridden)
+    const justKO = prev && prev.alive && !p.alive;
+    if (justKO) { chip.classList.add('ko'); setTimeout(() => chip.classList.remove('ko'), 1000); return; }
+    // FLIP: slide from its old position to the new one
+    if (oldRects && oldRects[id]) {
+      const nr = chip.getBoundingClientRect();
+      const dx = oldRects[id].left - nr.left, dy = oldRects[id].top - nr.top;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        chip.style.transition = 'none'; chip.style.transform = `translate(${dx}px,${dy}px)`; void chip.offsetWidth;
+        chip.style.transition = 'transform .4s cubic-bezier(.34,1.3,.64,1)';
+        requestAnimationFrame(() => { chip.style.transform = ''; });
+      }
+    }
+  });
+  // "you took damage" flash on the HP pill
+  if (prevHumanHp != null && lobby.human.hp < prevHumanHp - 0.5) {
+    const pill = [...document.querySelectorAll('.stat-pill')].find((p) => /❤/.test(p.textContent));
+    if (pill) { pill.classList.add('hp-hit'); setTimeout(() => pill.classList.remove('hp-hit'), 600); }
+  }
+  // refresh snapshot
+  prevWarlord = {}; lobby.players.forEach((p) => { prevWarlord[p.isHuman ? 'you' : p.id] = { hp: p.hp, alive: p.alive }; });
+  prevHumanHp = lobby.human.hp;
+}
+
 function showWarlordInfo(p) {
   Sfx.click();
   const hp = Math.max(0, Math.round(p.hp));
@@ -279,8 +330,10 @@ function renderPlanning() {
     buildBenchEl(),
     buildShopEl(),
   ]);
+  const oldRects = run.mode === 'ladder' ? captureWarlordRects() : null;   // FLIP: positions before swap
   $('#app').replaceChildren(game);
   highlightSpeed();
+  if (run.mode === 'ladder') animateStandings(oldRects);
 
   // drag wiring
   dragCtl = createDragController({
