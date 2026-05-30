@@ -297,7 +297,9 @@ function buildBenchEl() {
 }
 
 // ---------- actions ----------
-function act(fn) { audioResume(); fn(); Run.save(run); renderPlanning(); }
+// Every shop/bench/board mutation goes through act(). Hard-lock it during combat so you can't
+// buy, reroll, sell, or drag while the fight you already committed to is playing out.
+function act(fn) { if (inCombat) return; audioResume(); fn(); Run.save(run); renderPlanning(); }
 // map uid -> star across board+bench (to detect a fuse/upgrade after a buy)
 function starMap() { const m = {}; for (const u of [...run.board, ...run.bench.filter(Boolean)]) m[u.uid] = u.star; return m; }
 function doBuy(i) {
@@ -318,7 +320,7 @@ function celebrateFuse(uid, star) {
 }
 function doBuyXP() { act(() => Run.buyXP(run)); Sfx.click(); }
 function doReroll() { act(() => Run.reroll(run)); Sfx.click(); }
-function doLock() { run.shopLocked = !run.shopLocked; Run.save(run); Sfx.click(); renderPlanning(); }
+function doLock() { if (inCombat) return; run.shopLocked = !run.shopLocked; Run.save(run); Sfx.click(); renderPlanning(); }
 
 // ---------- planning render ----------
 function renderPlanning() {
@@ -394,7 +396,7 @@ function renderPlanning() {
 // post-round item draft (Underlords-style pick 1 of 3 components)
 function offerDraft(after) {
   const ids = Run.draftComponents(run);
-  const pick = (id) => { Run.addItem(run, id); Run.save(run); Sfx.buy(); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
+  const pick = (id) => { Run.addItem(run, id); Run.save(run); Sfx.buy(); ov.remove(); after ? after() : renderPlanning(); };
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'Choose a component'),
     el('.sub', {}, 'Combine two on a champion to forge a powerful item.'),
@@ -414,9 +416,10 @@ function shouldAugment(finishedRound) { return [3, 6, 9].includes(finishedRound)
 // Augment draft (pick 1 of 3 run-shaping powers), with skip-for-gold, banish, reroll.
 function offerAugment(after) {
   const SKIP_GOLD = 4;
-  const done = () => { Run.save(run); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
+  let curOv = null;     // the augment overlay currently shown (reroll replaces it) — remove THIS one, not whatever overlay happens to be first in the DOM
+  const done = () => { Run.save(run); if (curOv) curOv.remove(); after ? after() : renderPlanning(); };
   const render = () => {
-    const existing = document.querySelector('.overlay'); if (existing) existing.remove();
+    if (curOv) curOv.remove();
     const ids = Run.draftAugments(run);
     if (!ids.length) { done(); return; }
     const pick = (id) => { Run.addAugment(run, id); Sfx.fuse(); done(); };
@@ -439,6 +442,7 @@ function offerAugment(after) {
         (run.banishLeft || 0) > 0 ? el('span', { style: { fontSize: '10px', color: 'var(--ink-faint)', alignSelf: 'center' } }, `${run.banishLeft} banish left`) : null,
       ]),
     ]));
+    curOv = ov;
     document.body.append(ov);
   };
   render();
@@ -639,8 +643,9 @@ async function startCombat() {
   const sim = simulate(playerBoard, enemyBoard, seed, augOpt);
   const { events, result } = sim;
 
-  // hide planning-only controls, keep board
-  $$('.bench .slot, .shop, .combat-ctl .btn:not(#readyBtn)').forEach(() => {});
+  // dim + lock planning-only controls during combat (shop/bench/items/speed-other) — visual cue
+  // that backs up the act() guard; the board stays interactive for inspect.
+  $$('.shop-row, .shop-controls, .bench, .items-tray').forEach((elm) => elm.classList.add('combat-locked'));
   const ready = $('#readyBtn'); if (ready) { ready.disabled = true; ready.textContent = 'Fighting…'; }
   setBanner(`vs ${enemy.name}`);
 
@@ -668,6 +673,7 @@ async function startCombat() {
     const koMsg = summary.dead && summary.dead.length ? ` · ${summary.dead.join(', ')} fell` : '';
     setBanner(`${won ? 'Round won!' : winner === 'enemy' ? 'Round lost' : 'Draw'}${hpMsg}${koMsg}`);
     setTimeout(() => {
+      $$('.overlay').forEach((o) => o.remove());   // clear anything opened mid-fight (codex/inspect) before post-round prompts
       if (summary.over) { endScreen(summary); return; }
       const thenUnderdog = () => summary.humanIsUnderdog ? offerUnderdogDraft(renderPlanning) : renderPlanning();
       if (shouldAugment(finishedRound)) offerAugment(thenUnderdog);   // augments in ladder too (depth)
@@ -679,6 +685,7 @@ async function startCombat() {
   Run.resolveRound(run, won);
   Run.save(run);
   setTimeout(() => {
+    $$('.overlay').forEach((o) => o.remove());   // clear anything opened mid-fight (codex/inspect) before post-round prompts
     if (run.over) endScreen();
     else if (run.actComplete) { run.actComplete = false; Run.save(run); offerPath(renderPlanning); }
     else if (shouldAugment(finishedRound)) offerAugment(renderPlanning);
@@ -719,7 +726,7 @@ function offerPath(after) {
 // an underdog reward so the trailing player gets a free item to stabilise.
 function offerUnderdogDraft(after) {
   const ids = Run.draftComponents(run);
-  const pick = (id) => { Run.addItem(run, id); persist(); Sfx.buy(); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
+  const pick = (id) => { Run.addItem(run, id); persist(); Sfx.buy(); ov.remove(); after ? after() : renderPlanning(); };
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'Underdog Gift'),
     el('.sub', {}, "You're lowest on health — claim a free component to fight back. Combine two on a champion for a full item."),
