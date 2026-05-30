@@ -39,7 +39,9 @@
 .unit .bar.hp .fill { background: var(--hp); }
 .unit .bar.hp .trail { position: absolute; inset: 0; background: var(--hp-trail); opacity: .5; transform-origin: left; transition: transform .4s ease .1s; }
 .unit .bar.mana { height: 2px; }
-.unit .bar.mana .fill { background: var(--mana); }
+.unit .bar.mana .fill { background: var(--mana); transition: transform .12s linear; }
+.unit .bar.mana.full { box-shadow: 0 0 5px var(--mana); }
+.unit .bar.mana.full .fill { background: #cfe6ff; }
 
 .unit .item-dots { position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; }
 .unit .item-dots i { width: 5px; height: 5px; border-radius: 2px; background: var(--gold-deep); box-shadow: 0 0 0 1px #000; }

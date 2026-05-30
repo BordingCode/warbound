@@ -46,6 +46,13 @@ export class CombatPlayer {
     this.nodes.set(e.id, { el: node, maxHp: e.maxHp, hp: e.hp });
   }
 
+  _setMana(id, frac) {
+    const n = this.nodes.get(id); if (!n) return;
+    const f = n.el.querySelector('.bar.mana .fill'); if (f) f.style.transform = `scaleX(${Math.max(0, Math.min(1, frac))})`;
+    if (frac >= 1) { n.el.querySelector('.bar.mana')?.classList.add('full'); } else { n.el.querySelector('.bar.mana')?.classList.remove('full'); }
+  }
+  _bumpMana(id, by) { const n = this.nodes.get(id); if (!n) return; n.mana = Math.min(1, (n.mana || 0) + by); this._setMana(id, n.mana); }
+
   _setHP(id, hp) {
     const n = this.nodes.get(id); if (!n) return;
     n.hp = hp;
@@ -102,6 +109,7 @@ export class CombatPlayer {
         body.classList.remove('attacking'); void body.offsetWidth; body.classList.add('attacking');
         if (e.id % 2 === 0 || !e.ranged) { e.ranged ? Sfx.arrow() : Sfx.sword(); }
         if (e.crit) this.shake.add(0.22);
+        this._bumpMana(e.id, 0.16);     // visual telegraph of the cast bar filling
         break;
       }
       case 'projectile': this._projectile(e.from, e.to, e.kind); break;
@@ -109,13 +117,14 @@ export class CombatPlayer {
         if (n) { n.el.classList.add('flash', 'hit'); setTimeout(() => n.el.classList.remove('flash', 'hit'), 150); }
         this._setHP(e.id, e.hp);
         if (e.amount > 0) this._floatNum(e.id, e.amount, DT_COLORS[e.type] || 'var(--dt-physical)');
+        this._bumpMana(e.id, 0.05);
         break;
       }
       case 'heal': this._setHP(e.id, e.hp); this._floatNum(e.id, '+' + e.amount, DT_COLORS.heal); Sfx.heal(); break;
       case 'shield': if (n) this._floatNum(e.id, '⛨' + e.amount, 'var(--shield)'); break;
       case 'revive': this._setHP(e.id, e.hp); if (n) n.el.classList.add('flash'); break;
       case 'dodge': this._floatNum(e.id, 'dodge', 'var(--ink-dim)'); break;
-      case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); this.shake.add(0.16); } break;
+      case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); this.shake.add(0.16); if (n) { n.mana = 0; this._setMana(e.id, 0); } } break;
       case 'faint': if (n) { n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } Sfx.death(); this.shake.add(0.28); break;
       case 'end': break;
     }
