@@ -45,9 +45,15 @@ function buildBoardEl() {
     tiles.append(el(`.tile.${zone}${(r + c) % 2 ? ' alt' : ''}`, { dataset: { col: c, row: r } }));
   }
   const units = el('.units');
-  if (!inCombat) for (const u of run.board) {
-    const n = unitNode(u, 'player');
-    units.append(n);
+  if (!inCombat) {
+    for (const u of run.board) units.append(unitNode(u, 'player'));
+    // scout: dimmed preview of the upcoming enemy board so the player can counter-position
+    const enemy = getEnemyBoard(run.round, null);
+    for (const e of enemy.units) {
+      const n = unitNode(e, 'enemy');
+      n.classList.add('preview');
+      units.append(n);
+    }
   }
   wrap.append(tiles, el('.midline'), units, el('.fx-dom'));
   stage.append(wrap);

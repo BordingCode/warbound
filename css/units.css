@@ -44,6 +44,11 @@
 .unit .item-dots { position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; }
 .unit .item-dots i { width: 5px; height: 5px; border-radius: 2px; background: var(--gold-deep); box-shadow: 0 0 0 1px #000; }
 
+/* enemy scout preview during planning */
+.unit.preview { opacity: .42; filter: grayscale(.4); pointer-events: none; }
+.unit.preview .bars { display: none; }
+.unit.preview .champ-body { animation: none; }
+
 /* drag state */
 .unit.dragging { opacity: .35; }
 .drag-ghost {
