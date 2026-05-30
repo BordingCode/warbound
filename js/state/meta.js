@@ -1,10 +1,10 @@
 // Warpath meta-progression: a persistent CHAMPION you gear up across runs to make the (hard)
-// solo climb steadily more winnable. Earn Spoils 🪙 every run (even losses), spend them on War
+// solo climb steadily more winnable. Earn Spoils every run (even losses), spend them on War
 // Caches (chests) that drop random EQUIPMENT, equip one piece per slot, each granting a
 // start-of-run boost. Saved in localStorage. SOLO ONLY (the ranked ladder stays pure).
 //
 // COHERENCE: each slot IS one clear theme — the slot name, the icon, the item names and the
-// effect all match, so a "Dragon Hoard 💰" obviously gives gold and a "Tome of Mastery 📖"
+// effect all match, so a "Dragon Hoard" obviously gives gold and a "Tome of Mastery"
 // obviously gives XP. Nothing reads as random.
 import { TRAITS } from '../data/traits.js';
 
@@ -112,4 +112,41 @@ export function gearBonuses(m) {
   }
   return b;
 }
+// ---- combine: fuse 2 of the SAME slot + SAME rarity into ONE of the next rarity up ----
+// "Its own kind": same equipment family (slot) and same tier. common+common -> rare, rare+rare
+// -> epic. Epic is the ceiling. Returns the groups that currently have a valid fusion available.
+const RARITY_ORDER = ['common', 'rare', 'epic'];
+export function nextRarity(rarityId) { const i = RARITY_ORDER.indexOf(rarityId); return i >= 0 && i < RARITY_ORDER.length - 1 ? RARITY_ORDER[i + 1] : null; }
+
+export function combinables(m) {
+  m = m || load();
+  const groups = {};
+  for (const it of m.inventory) {
+    if (!nextRarity(it.rarity)) continue;                 // epic can't be upgraded
+    const k = it.slot + '|' + it.rarity;
+    (groups[k] = groups[k] || { slot: it.slot, rarity: it.rarity, items: [] }).items.push(it);
+  }
+  return Object.values(groups).filter((g) => g.items.length >= 2);
+}
+
+// Fuse two items of (slotId, rarityId) -> one of the next rarity. Consumes two from the
+// inventory (unequipping any that were equipped) and returns the freshly forged item.
+export function combineItems(slotId, rarityId, rng) {
+  const up = nextRarity(rarityId);
+  if (!up) return { ok: false };
+  const m = load();
+  const matches = m.inventory.filter((x) => x.slot === slotId && x.rarity === rarityId);
+  if (matches.length < 2) return { ok: false };
+  // prefer consuming UNEQUIPPED copies first, so we don't needlessly strip the hero
+  matches.sort((a, b) => (m.equipped[a.slot] === a.iid ? 1 : 0) - (m.equipped[b.slot] === b.iid ? 1 : 0));
+  const consume = matches.slice(0, 2);
+  const ids = new Set(consume.map((x) => x.iid));
+  if (ids.has(m.equipped[slotId])) delete m.equipped[slotId];   // unequip if a consumed piece was worn
+  m.inventory = m.inventory.filter((x) => !ids.has(x.iid));
+  const item = makeItem(slotId, up, rng);
+  m.inventory.push(item);
+  save(m);
+  return { ok: true, item };
+}
+
 export function resetMeta() { try { localStorage.removeItem(SAVE_KEY); } catch {} }

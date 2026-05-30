@@ -4,32 +4,32 @@
 // vamp/thorns/crit*/regen are special hooks; revive sets revivePct.
 
 export const COMPONENTS = {
-  sword: { name: 'Sword', icon: '🗡', mods: { ad: 0.18 } },
-  bow:   { name: 'Bow', icon: '🏹', mods: { as: 0.20 } },
-  rod:   { name: 'Rod', icon: '🔮', mods: { ap: 40 } },
-  cloak: { name: 'Cloak', icon: '🛡', mods: { armor: 25, mr: 25 } },
-  belt:  { name: 'Belt', icon: '🧧', mods: { hp: 0.20 } },
+  sword: { name: 'Sword', icon: 'sword', mods: { ad: 0.18 } },
+  bow:   { name: 'Bow', icon: 'bow', mods: { as: 0.20 } },
+  rod:   { name: 'Rod', icon: 'wand', mods: { ap: 40 } },
+  cloak: { name: 'Cloak', icon: 'shield', mods: { armor: 25, mr: 25 } },
+  belt:  { name: 'Belt', icon: 'heart', mods: { hp: 0.20 } },
 };
 export const COMPONENT_IDS = Object.keys(COMPONENTS);
 
 export const ITEMS = {
   // doubles
-  infinity_edge: { name: 'Infinity Edge', icon: '⚔', mods: { ad: 0.10, critChance: 0.35, critDmg: 1.0 } },
-  rageblade:     { name: 'Rageblade', icon: '🌀', mods: { as: 0.45 } },
-  archmage:      { name: 'Archmage Crown', icon: '👑', mods: { ap: 95 } },
-  thornplate:    { name: 'Thornplate', icon: '🩸', mods: { armor: 50, mr: 50, thorns: 0.22 } },
-  warmog:        { name: "Warmog's", icon: '💚', mods: { hp: 0.50, regen: 14 } },
+  infinity_edge: { name: 'Infinity Edge', icon: 'sword', mods: { ad: 0.10, critChance: 0.35, critDmg: 1.0 } },
+  rageblade:     { name: 'Rageblade', icon: 'flame', mods: { as: 0.45 } },
+  archmage:      { name: 'Archmage Crown', icon: 'crown', mods: { ap: 95 } },
+  thornplate:    { name: 'Thornplate', icon: 'shield', mods: { armor: 50, mr: 50, thorns: 0.22 } },
+  warmog:        { name: "Warmog's", icon: 'heart', mods: { hp: 0.50, regen: 14 } },
   // pairs
-  blade_dancer:  { name: 'Blade Dancer', icon: '🌪', mods: { as: 0.25, ad: 0.10 } },
-  spellblade:    { name: 'Spellblade', icon: '🩸', mods: { ad: 0.10, ap: 25, vamp: 0.22 } },
-  guardian:      { name: 'Guardian Angel', icon: '😇', mods: { ad: 0.10, armor: 20, revive: 0.35 } },
-  warlord:       { name: "Warlord's Banner", icon: '🚩', mods: { ad: 0.15, hp: 0.15 } },
-  static_shiv:   { name: 'Static Shiv', icon: '⚡', mods: { as: 0.20, ap: 30 } },
-  bramble:       { name: 'Bramble Vest', icon: '🌵', mods: { armor: 25, as: 0.10, thorns: 0.18 } },
-  titan:         { name: 'Titan Hydra', icon: '🐍', mods: { as: 0.20, hp: 0.20 } },
-  solari:        { name: 'Solari Locket', icon: '🔆', mods: { ap: 20, mr: 20, shield: 260 } },
-  morello:       { name: 'Morellonomicon', icon: '📕', mods: { ap: 45, hp: 0.15 } },
-  redemption:    { name: 'Redemption', icon: '✨', mods: { hp: 0.30, shield: 160, regen: 8 } },
+  blade_dancer:  { name: 'Blade Dancer', icon: 'sword', mods: { as: 0.25, ad: 0.10 } },
+  spellblade:    { name: 'Spellblade', icon: 'wand', mods: { ad: 0.10, ap: 25, vamp: 0.22 } },
+  guardian:      { name: 'Guardian Angel', icon: 'shield', mods: { ad: 0.10, armor: 20, revive: 0.35 } },
+  warlord:       { name: "Warlord's Banner", icon: 'crown', mods: { ad: 0.15, hp: 0.15 } },
+  static_shiv:   { name: 'Static Shiv', icon: 'burst', mods: { as: 0.20, ap: 30 } },
+  bramble:       { name: 'Bramble Vest', icon: 'shield', mods: { armor: 25, as: 0.10, thorns: 0.18 } },
+  titan:         { name: 'Titan Hydra', icon: 'heart', mods: { as: 0.20, hp: 0.20 } },
+  solari:        { name: 'Solari Locket', icon: 'star', mods: { ap: 20, mr: 20, shield: 260 } },
+  morello:       { name: 'Morellonomicon', icon: 'book', mods: { ap: 45, hp: 0.15 } },
+  redemption:    { name: 'Redemption', icon: 'potion', mods: { hp: 0.30, shield: 160, regen: 8 } },
 };
 
 // Combine matrix (order-independent). Key = sorted "a+b".
@@ -43,7 +43,7 @@ const COMBINE = {
 export function combine(a, b) { return COMBINE[[a, b].sort().join('+')] || null; }
 export function isComponent(id) { return !!COMPONENTS[id]; }
 export function itemDef(id) { return COMPONENTS[id] || ITEMS[id] || null; }
-export function itemLabel(id) { const d = itemDef(id); return d ? `${d.icon} ${d.name}` : id; }
+export function itemLabel(id) { const d = itemDef(id); return d ? d.name : id; }
 
 // Aggregate all item mods on a unit into one object the sim applies.
 export function aggregateMods(itemIds = []) {

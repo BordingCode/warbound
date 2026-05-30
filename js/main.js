@@ -9,7 +9,7 @@ import { simulate } from './sim/combat.js';
 import { hashSeed } from './rng.js';
 import { CombatPlayer } from './render/player.js';
 import { createDragController } from './input/drag.js';
-import { getEnemyBoard } from './data/enemies.js';
+import { getEnemyBoard, pathChoices } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
@@ -45,7 +45,8 @@ function getOpponent() {
   // Warpath: the foe is keyed to WINS, not the round — you only advance to the next warband when
   // you beat the current one. A loss replays the SAME foe (while your round/economy keeps growing
   // so you can break the wall), costing a life rather than skipping you past an undefeated enemy.
-  return getEnemyBoard(run.wins + 1, null);
+  // Past act 1 the chosen path adds difficulty + themes the reinforcements.
+  return getEnemyBoard(run.wins + 1, null, { diff: run.pathDiff || 0, pool: run.pathPool, name: (run.act || 1) > 1 ? run.pathName : null });
 }
 
 // ---------- board ----------
@@ -275,7 +276,7 @@ function buildItemsTray() {
   if (!run.items.length) { tray.append(el('span', { style: { color: 'var(--ink-faint)', fontSize: '11px' } }, 'No items — win rounds to earn them. Drag an item onto a champion.')); return tray; }
   for (const it of run.items) {
     const d = itemDef(it.id);
-    tray.append(el('.item-chip', { dataset: { iid: it.iid }, title: d.name }, d.icon));
+    tray.append(el('.item-chip', { dataset: { iid: it.iid }, title: d.name, html: ic(d.icon) }));
   }
   return tray;
 }
@@ -331,7 +332,7 @@ function renderPlanning() {
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       run.mode === 'ladder'
         ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
-        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' } }, `${run.wins}/10`)]),
+        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: `Act ${run.act || 1} · ${run.wins} total wins` }, `Act ${run.act || 1} · ${run.wins % 10}/10`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Codex', onclick: () => showCodex('units'), html: ic('codex') }),
       el(`button.btn#shakeBtn${motionOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Screen shake (turn off if the game feels laggy)', onclick: toggleMotion, html: ic('burst') }),
@@ -386,7 +387,7 @@ function renderPlanning() {
   });
   $$('.items-tray .item-chip').forEach((c) => {
     const iid = c.dataset.iid; const it = run.items.find((x) => x.iid === iid);
-    if (it) dragCtl.makeDraggable(c, iid, 'item', `<div class="item-ghost">${itemDef(it.id).icon}</div>`);
+    if (it) dragCtl.makeDraggable(c, iid, 'item', `<div class="item-ghost">${ic(itemDef(it.id).icon)}</div>`);
   });
 }
 
@@ -400,7 +401,7 @@ function offerDraft(after) {
     el('.draft-row', {}, ids.map((id) => {
       const d = COMPONENTS[id];
       return el('button.draft-pick', { onclick: () => pick(id) }, [
-        el('span.di', {}, d.icon), el('span.dn', {}, d.name),
+        el('span.di', { html: ic(d.icon) }), el('span.dn', {}, d.name),
         el('span.dm', {}, Object.entries(d.mods).map(([k, v]) => `+${v < 1 ? Math.round(v * 100) + '%' : v} ${k}`).join(', ')),
       ]);
     })),
@@ -604,7 +605,7 @@ function showHelp() {
     ['star', '<b>3 copies</b> of the same champion auto-fuse into a stronger ★★ (then ★★★).'],
     ['shield', '<b>Position matters:</b> tanks in front, fragile carries in back. Then press Ready.'],
     ['eye', '<b>Tap a champion</b> to inspect its stats & ability. Watch the dimmed enemy preview to counter them.'],
-    ['trophy', 'Win <b>10 rounds</b> before losing all <b>5 lives</b>.'],
+    ['trophy', 'Beat <b>10 warbands</b> to clear an <b>Act</b>, then choose a harder <b>path</b> to keep climbing. Survive on <b>5 lives</b>.'],
   ];
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'How to play'),
@@ -679,10 +680,39 @@ async function startCombat() {
   Run.save(run);
   setTimeout(() => {
     if (run.over) endScreen();
+    else if (run.actComplete) { run.actComplete = false; Run.save(run); offerPath(renderPlanning); }
     else if (shouldAugment(finishedRound)) offerAugment(renderPlanning);
     else if (shouldDraft(finishedRound)) offerDraft(renderPlanning);
     else renderPlanning();
   }, 1100);
+}
+
+// After clearing an act (every 10 wins) the road FORKS — pick one of three progressively harder,
+// themed paths to keep climbing. Harder roads ramp the enemies faster (more stars + numbers).
+function offerPath(after) {
+  const act = run.act || 1;
+  launchConfetti(2500);
+  const choices = pathChoices(act);
+  const pick = (c) => {
+    run.act = act + 1;
+    run.pathDiff = (run.pathDiff || 0) + c.diffAdd;
+    run.pathName = c.name; run.pathPool = c.pool;
+    Run.save(run); Sfx.buy();
+    ov.remove();
+    after ? after() : renderPlanning();
+  };
+  const ov = el('.overlay', {}, el('.help-card.path-card', {}, [
+    el('.path-trophy', { html: ic('trophy') }),
+    el('h2', {}, `Act ${act} cleared!`),
+    el('.sub', {}, `${run.wins} warbands beaten. The road splits — choose how dangerous the next stretch gets.`),
+    el('.path-row', {}, choices.map((c) => el('button.path-pick', { style: { '--pc': c.color }, onclick: () => pick(c) }, [
+      el('.pp-tier', {}, c.label),
+      el('.pp-name', {}, c.name),
+      el('.pp-hint', {}, c.hint),
+      el('.pp-danger', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Danger '), el('span', {}, '▲'.repeat(Math.min(5, c.diffAdd)))]),
+    ]))),
+  ]));
+  document.body.append(ov);
 }
 
 // Comeback perk (research: lowest-HP gets first pick). Reuses the component draft, framed as
@@ -693,7 +723,7 @@ function offerUnderdogDraft(after) {
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'Underdog Gift'),
     el('.sub', {}, "You're lowest on health — claim a free component to fight back. Combine two on a champion for a full item."),
-    el('.draft-row', {}, ids.map((id) => { const d = COMPONENTS[id]; return el('button.draft-pick', { onclick: () => pick(id) }, [el('span.di', {}, d.icon), el('span.dn', {}, d.name), el('span.dm', {}, Object.entries(d.mods).map(([k, v]) => `+${v < 1 ? Math.round(v * 100) + '%' : v} ${k}`).join(', '))]); })),
+    el('.draft-row', {}, ids.map((id) => { const d = COMPONENTS[id]; return el('button.draft-pick', { onclick: () => pick(id) }, [el('span.di', { html: ic(d.icon) }), el('span.dn', {}, d.name), el('span.dm', {}, Object.entries(d.mods).map(([k, v]) => `+${v < 1 ? Math.round(v * 100) + '%' : v} ${k}`).join(', '))]); })),
   ]));
   document.body.append(ov);
 }
@@ -714,23 +744,25 @@ function endScreen(ladderSummary) {
     if (rr) {
       if (rr.promoted) launchConfetti(4000);
       rankBlock = el('.rank-result', {}, [
-        rr.promoted ? el('.rank-flash.promo', {}, `▲ PROMOTED to ${rr.rank.icon} ${rr.rank.name}!`)
-          : rr.demoted ? el('.rank-flash.demo', {}, `▼ Demoted to ${rr.rank.icon} ${rr.rank.name}`) : null,
+        rr.promoted ? el('.rank-flash.promo', {}, [el('span', { html: ic('crown') }), el('span', {}, ` PROMOTED to ${rr.rank.name}!`)])
+          : rr.demoted ? el('.rank-flash.demo', {}, `▼ Demoted to ${rr.rank.name}`) : null,
         el('.rank-line', {}, [
-          el('span.rank-badge', { style: { color: rr.rank.color } }, `${rr.rank.icon} ${rr.rank.name}`),
+          el('span.rank-badge', { style: { color: rr.rank.color } }, [el('span', { html: rankMedal(rr.rank.color, 18) }), el('span', {}, ` ${rr.rank.name}`)]),
           el('span.rp-delta', { style: { color: rr.delta >= 0 ? 'var(--hp)' : 'var(--danger)' } }, `${rr.delta >= 0 ? '+' : ''}${rr.delta} RP`),
         ]),
         rr.rank.nextAt ? el('.rank-bar', { title: `${rr.rank.inTier}/${rr.rank.nextAt} to next tier` }, el('.fill', { style: { transform: `scaleX(${Math.max(0, Math.min(1, rr.rank.inTier / rr.rank.nextAt))})` } })) : null,
       ]);
     }
   } else {
-    const won = run.won;
-    if (won) launchConfetti(4000);
-    head = won ? 'VICTORY' : 'RUN OVER';
-    sub = won ? `You won with ${run.lives} lives to spare — a true warlord!` : 'A valiant effort. Tune your warband and try again!';
+    const act = run.act || 1;
+    const reachedFar = run.wins >= 10;
+    head = 'RUN OVER';
+    sub = reachedFar
+      ? `Your warband fell on Act ${act}${run.pathName ? ' — ' + run.pathName : ''}, after ${run.wins} victories. The path only gets harder.`
+      : 'A valiant effort. Gear up in the Armory and try again!';
     // earn Spoils ONCE (even on a loss) — the meta-progression that eases the climb
-    if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
-    stats = [stat('Wins', `${run.wins} / 10`), stat('Spoils', `+${run.spoilsEarned || 0}`)];
+    if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, run.won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
+    stats = [stat('Wins', `${run.wins}`), stat('Act reached', `${act}`), stat('Spoils', `+${run.spoilsEarned || 0}`)];
   }
   const card = el('.endscreen', {}, [
     el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
@@ -797,7 +829,7 @@ function beginLadder(styleId) {
   persist(); renderPlanning();
   // announce this match's lobby-wide modifier (TFT Encounter / HS Anomaly)
   if (lobby.modifier && lobby.modifier.id !== 'none') {
-    setBanner(`${lobby.modifier.icon} ${lobby.modifier.name}: ${lobby.modifier.desc}`);
+    setBanner(`${lobby.modifier.name}: ${lobby.modifier.desc}`);
   }
   try { if (localStorage.getItem('warbound_intro_ladder') !== '1') { localStorage.setItem('warbound_intro_ladder', '1'); showHelp(); } } catch {}
 }
@@ -861,11 +893,38 @@ function showArmory() {
         el('.cc-text', {}, [el('.cc-title', {}, 'Open War Cache'), el('.cc-sub', {}, 'a random piece of gear')]),
         el('.cc-cost', {}, [String(Meta.CHEST_COST) + ' ', iconEl('spoils')]),
       ]),
+      // Forge: fuse two of the same slot + rarity into one of the next rarity up
+      forgePanel(m, rar, render),
       el('.inv-head', {}, m.inventory.length ? `Inventory · ${m.inventory.length}` : 'No gear yet — open a War Cache'),
       el('.inv-grid', {}, m.inventory.map(invCell)),
     ]));
   };
   render();
+}
+// The Forge section of the Armory: list every available "fuse 2 same-kind -> 1 higher rarity".
+function forgePanel(m, rar, render) {
+  if (m.inventory.length < 2) return null;
+  const fuses = Meta.combinables(m);
+  const rows = fuses.map((g) => {
+    const s = Meta.SLOTS.find((x) => x.id === g.slot);
+    const up = Meta.nextRarity(g.rarity);
+    return el('.forge-row', {
+      style: { '--rc': rar(g.rarity).color, '--uc': rar(up).color },
+      title: `Consumes two ${rar(g.rarity).name} ${s.name}s`,
+      onclick: () => { const r = Meta.combineItems(g.slot, g.rarity); if (r.ok) revealItem(r.item, render); },
+    }, [
+      el('.fr-icon', { html: ic(s.icon) }),
+      el('.fr-text', {}, [
+        el('.fr-name', {}, `Fuse two ${rar(g.rarity).name} ${s.name}s`),
+        el('.fr-sub', {}, [el('span', {}, '→ one '), el('span.fr-up', {}, `${rar(up).name} ${s.name}`), el('span', {}, `  ·  ${g.items.length} owned`)]),
+      ]),
+      el('.fr-arrow', { html: ic('burst') }),
+    ]);
+  });
+  return el('.forge', {}, [
+    el('.inv-head', {}, 'Forge'),
+    rows.length ? el('.forge-list', {}, rows) : el('.forge-empty', {}, 'Collect two of the same slot AND rarity to fuse them into a higher tier.'),
+  ]);
 }
 function revealItem(item, after) {
   Sfx.fuse();
@@ -896,7 +955,7 @@ function chooseMode() {
     el('.mode-menu', {}, [
       // Warpath + its Armory are one visual GROUP — gear belongs to Warpath, not the ladder.
       el('.warpath-group', {}, [
-        card('', 'sword', 'Warpath', 'Climb a ladder of authored warbands solo to the boss. Earn Spoils to gear your Champion and make each run easier.', () => startSolo(true)),
+        card('', 'sword', 'Warpath', 'Beat 10 warbands to clear an Act, then fork onto harder, themed paths. Earn Spoils to gear your Champion and ease each run.', () => startSolo(true)),
         el('.armory-bar', { onclick: () => showArmory() }, [
           el('span.ab-ico', { html: ic('coffer') }),
           el('.ab-text', {}, [el('span.ab-label', {}, 'Armory'), el('span.ab-sub', {}, 'gear your Champion — for Warpath')]),

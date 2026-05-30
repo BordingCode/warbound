@@ -23,19 +23,47 @@ export const LADDER = [
   { name: 'The Worldwyrm', traitHint: 'FINAL BOSS · Dragons', units: [E('dragon_knight', 3, 3, 3), E('dragon_sage', 3, 4, 0), E('wyrm_archer', 3, 5, 1), E('thornguard', 3, 2, 3), E('moon_priestess', 2, 1, 0), E('grove_healer', 2, 6, 0), E('knight_captain', 2, 0, 3)] },
 ];
 
-// Light deterministic variation + escalation for rounds past the authored ladder.
-export function getEnemyBoard(round, rng) {
+// ---- Warpath PATHS: after clearing 10 warbands you fork onto a themed, harder road. ----
+// Each path themes the reinforcements (so the road FEELS different) and carries a difficulty
+// that bumps enemy stars/numbers. Later acts always offer harder roads (progressive).
+export const PATH_THEMES = [
+  { id: 'wood',    name: 'The Deepwood',     hint: 'Elven ambush — evasive, healing backlines', color: '#54e6c0', pool: ['thornguard', 'wood_ranger', 'moon_priestess', 'grove_healer', 'shadow_dancer'] },
+  { id: 'inferno', name: 'The Inferno',      hint: 'Demon legions — relentless mana-burn',       color: '#ff5a3c', pool: ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'pit_summoner'] },
+  { id: 'bone',    name: 'The Bonelands',    hint: 'Undead horde — they just keep rising',        color: '#8cff9e', pool: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer'] },
+  { id: 'wyrm',    name: 'The Dragonspire',  hint: 'Dragonsworn — overwhelming raw power',         color: '#ffd24a', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'knight_captain'] },
+];
+const PATH_BY_ID = Object.fromEntries(PATH_THEMES.map((p) => [p.id, p]));
+export function pathById(id) { return PATH_BY_ID[id] || null; }
+
+// Three forks to choose after each act. `act` is the act just cleared (1 = first 10 wins).
+// diffAdd grows with the act so every fork is harder than the last act's forks.
+export function pathChoices(act) {
+  const t = (n) => PATH_THEMES[((n % PATH_THEMES.length) + PATH_THEMES.length) % PATH_THEMES.length];
+  return [
+    { ...t(act),     label: 'Steady Road', diffAdd: act + 0 },
+    { ...t(act + 1), label: 'Hard Road',   diffAdd: act + 1 },
+    { ...t(act + 2), label: 'Brutal Road', diffAdd: act + 2 },
+  ];
+}
+
+// Light deterministic variation + escalation. `opts.diff` (from chosen paths) and rounds past
+// the authored ladder both push enemies harder; `opts.pool`/`opts.name` theme the reinforcements.
+export function getEnemyBoard(round, rng, opts = {}) {
+  const diff = Math.max(0, opts.diff || 0);
   const i = Math.min(round - 1, LADDER.length - 1);
   const base = LADDER[i];
-  const extra = round - LADDER.length;            // how far past the ladder
+  const esc = Math.max(0, round - LADDER.length) + diff;     // total escalation steps
   let units = base.units.map((u) => ({ ...u }));
-  if (extra > 0) {
-    // bump stars and add reinforcements for endless escalation
-    units = units.map((u) => ({ ...u, star: Math.min(3, u.star + Math.min(1, Math.floor(extra / 2) + 1)) }));
-    const pool = ['bramble_brute', 'warlock', 'moon_priestess', 'wraith', 'dragon_knight'];
-    for (let k = 0; k < Math.min(2, extra); k++) {
-      units.push(E(pool[(round + k) % pool.length], Math.min(3, 1 + Math.floor(extra / 2)), (k * 3 + 1) % 8, k % 2 === 0 ? 2 : 0));
+  if (esc > 0) {
+    const starBump = Math.min(2, Math.floor(esc / 3) + 1);
+    units = units.map((u) => ({ ...u, star: Math.min(3, u.star + starBump) }));
+    const pool = (opts.pool && opts.pool.length) ? opts.pool : ['bramble_brute', 'warlock', 'moon_priestess', 'wraith', 'dragon_knight'];
+    const adds = Math.min(3, Math.ceil(esc / 2));            // reinforcements, capped so boards stay sane
+    const cols = [1, 6, 4];                                  // spread-out spawn columns
+    for (let k = 0; k < adds; k++) {
+      units.push(E(pool[(round + k) % pool.length], Math.min(3, 1 + Math.floor(esc / 3)), cols[k % cols.length], k % 2 === 0 ? 2 : 0));
     }
   }
-  return { name: extra > 0 ? base.name + ' +' + extra : base.name, traitHint: base.traitHint, units };
+  const name = opts.name ? opts.name : (esc > 0 ? base.name + ' +' + esc : base.name);
+  return { name, traitHint: base.traitHint, units };
 }

@@ -31,6 +31,8 @@ const P = {
   retry:  '<path d="M5 12a7 7 0 1 1 2 5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 17v-4h4"/>',
   flame:  '<path d="M12 2c1 4-3 5-3 9a3 3 0 006 0c0-1.5-1-2-1-3 2 1 4 3 4 6a6 6 0 01-12 0c0-5 5-7 6-12z"/>',
   potion: '<path d="M9 3h6v2l-1 1v3l4 7a3 3 0 01-2.7 4.3H8.7A3 3 0 016 16l4-7V6L9 5z"/>',
+  bow:    '<path d="M5 3 Q19 12 5 21" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 3v18M5 12h15l-3-3M20 12l-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  wand:   '<path d="M4 20L14 10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M17 2l1.2 3L21.5 6l-3.3 1L17 10l-1.2-3L12.5 6l3.3-1z"/>',
 };
 export function ic(name, { size = '1em', cls = '' } = {}) {
   const body = P[name];

@@ -64,5 +64,26 @@ const rng = (seq) => { let i = 0; return () => seq[i++ % seq.length]; };
   ok('gear: relic synergy goes to traitBonus', Object.values(b.traitBonus).reduce((x, y) => x + y, 0) >= 1);
 }
 
+// ---- combine: fuse two of the SAME slot+rarity into ONE of the next rarity (consumes both) ----
+{
+  localStorage.clear();
+  const m = Meta.load();
+  const a = Meta.makeItem('weapon', 'common', rng([0.5]));
+  const b = Meta.makeItem('weapon', 'common', rng([0.5]));
+  const c = Meta.makeItem('armor', 'common', rng([0.5]));
+  m.inventory.push(a, b, c); Meta.save(m);
+  const groups = Meta.combinables(Meta.load());
+  ok('combine: finds a 2x same-slot+rarity group', groups.length === 1 && groups[0].slot === 'weapon' && groups[0].items.length === 2);
+  Meta.equip(a.iid);
+  const r = Meta.combineItems('weapon', 'common');
+  const after = Meta.load();
+  ok('combine: fuses to the next rarity up', r.ok && r.item.rarity === 'rare' && r.item.slot === 'weapon');
+  ok('combine: consumes two, nets one (one weapon left)', after.inventory.filter((x) => x.slot === 'weapon').length === 1);
+  ok('combine: unequips a consumed equipped piece', after.equipped.weapon === undefined);
+  ok('combine: leaves other slots alone', after.inventory.filter((x) => x.slot === 'armor').length === 1);
+  ok('combine: epic is the ceiling', Meta.nextRarity('epic') === null);
+  ok('combine: needs two of a kind', Meta.combineItems('weapon', 'rare').ok === false);
+}
+
 console.log(`\n\n${pass} passed, ${fail} failed`);
 if (fail) { console.log('FAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
