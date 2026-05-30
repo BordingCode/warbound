@@ -16,7 +16,8 @@ export class CombatPlayer {
     this.nodes = new Map();      // id -> { el, maxHp, hp }
     this.speed = 1;
     this.raf = 0;
-    this.shake = new Shake(unitsLayer.closest('.board-wrap') || unitsLayer);
+    // shake the .stage (no overflow/clip/shadow of its own) so it moves as one cheap GPU layer
+    this.shake = new Shake(unitsLayer.closest('.stage') || unitsLayer.closest('.board-wrap') || unitsLayer);
   }
 
   clear() {
@@ -81,14 +82,15 @@ export class CombatPlayer {
     ).finished.then(() => num.remove()).catch(() => {});
   }
 
-  _spark(id, color, n = 4, spread = 22) {
+  _spark(id, color, n = 3, spread = 22) {
     const node = this.nodes.get(id); if (!node) return;
     const m = node.el.style.transform.match(/translate\(([\d.]+)%,\s*([\d.]+)%\)/); if (!m) return;
     const cx = (+m[1]) * 0.125 + 6, cy = (+m[2]) * 0.125 + 6;
+    n = Math.min(n, 4);                          // cap particle count for weak devices
     for (let i = 0; i < n; i++) {
       const ang = (Math.PI * 2 * i) / n + i * 1.1;
       const dx = Math.cos(ang) * spread, dy = Math.sin(ang) * spread - 4;
-      const p = el('.spark', { style: { position: 'absolute', left: `${cx}%`, top: `${cy}%`, width: '5px', height: '5px', borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` } });
+      const p = el('.spark', { style: { position: 'absolute', left: `${cx}%`, top: `${cy}%`, width: '5px', height: '5px', borderRadius: '50%', background: color } });
       this.fxLayer.append(p);
       p.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(0)`, opacity: 0 }],
         { duration: (320 + i * 20) / this.speed, easing: 'cubic-bezier(.2,.6,.3,1)' }).finished.then(() => p.remove()).catch(() => {});
@@ -125,7 +127,7 @@ export class CombatPlayer {
         ring.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.6)', opacity: 0 }], { duration: 460 / sp, easing: 'cubic-bezier(.2,.7,.3,1)' }).finished.then(() => ring.remove()).catch(() => {});
         const flash = this._fx('vfx-burst', p.x, p.y, { background: col });
         flash.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .85 }, { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 0 }], { duration: 320 / sp }).finished.then(() => flash.remove()).catch(() => {});
-        this.shake.add(e.dragon ? 0.32 : 0.22);
+        this.shake.add(e.dragon ? 0.22 : 0.12);
         break;
       }
       case 'bolt': {                      // an orb streaks to the target and bursts
@@ -138,7 +140,6 @@ export class CombatPlayer {
         const p = t || c;
         const arc = this._fx('vfx-slash', p.x, p.y, {});
         arc.animate([{ transform: 'translate(-50%,-50%) rotate(-40deg) scale(.4)', opacity: .95 }, { transform: 'translate(-50%,-50%) rotate(35deg) scale(1.2)', opacity: 0 }], { duration: 240 / sp, easing: 'ease-out' }).finished.then(() => arc.remove()).catch(() => {});
-        this.shake.add(0.2);
         break;
       }
       case 'heal': {                      // green glow + rising plus on the target ally
@@ -202,7 +203,7 @@ export class CombatPlayer {
           }
         }
         if (e.id % 2 === 0 || !e.ranged) { e.ranged ? Sfx.arrow() : Sfx.sword(); }
-        if (e.crit) this.shake.add(0.22);
+        if (e.crit) this.shake.add(0.12);
         this._bumpMana(e.id, 0.16);     // visual telegraph of the cast bar filling
         break;
       }
@@ -219,7 +220,7 @@ export class CombatPlayer {
       case 'revive': this._setHP(e.id, e.hp); if (n) n.el.classList.add('flash'); break;
       case 'dodge': this._floatNum(e.id, 'dodge', 'var(--ink-dim)'); break;
       case 'cast': if (n) { this._floatNum(e.id, e.name, 'var(--gold)'); Sfx.magic(e.id); this._windup(e.id); this._castVfx(e); n.mana = 0; this._setMana(e.id, 0); } break;
-      case 'faint': if (n) { this._spark(e.id, '#ffffff', 8, 30); n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } Sfx.death(); this.shake.add(0.28); break;
+      case 'faint': if (n) { this._spark(e.id, '#ffffff', 8, 30); n.el.classList.add('faint'); setTimeout(() => { n.el.remove(); this.nodes.delete(e.id); }, 360); } Sfx.death(); this.shake.add(0.16); break;
       case 'end': break;
     }
   }

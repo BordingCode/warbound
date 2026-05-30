@@ -177,6 +177,7 @@ function renderPlanning() {
       el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn', { style: { padding: '5px 10px' }, onclick: () => showCodex('units') }, '📖'),
+      el(`button.btn#shakeBtn${motionOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Screen shake (turn off if the game feels laggy)', onclick: toggleMotion }, '💥'),
       el('button.btn#soundBtn', { style: { padding: '5px 10px' }, onclick: toggleSound }, soundOn() ? '🔊' : '🔇'),
       el('button.btn', { style: { padding: '5px 10px' }, onclick: showHelp }, '?'),
     ]),
@@ -359,6 +360,8 @@ function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highligh
 function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
 function setBanner(t) { const b = $('.phase-banner'); if (b) b.textContent = t; }
 function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soundBtn'); if (b) b.textContent = soundOn() ? '🔊' : '🔇'; if (soundOn()) Sfx.click(); }
+function motionOn() { try { return localStorage.getItem('warbound_shake') !== '0'; } catch { return true; } }
+function toggleMotion() { try { localStorage.setItem('warbound_shake', motionOn() ? '0' : '1'); } catch {} Sfx.click(); renderPlanning(); }
 
 // Explain the economy with the player's CURRENT live values.
 function showEconomyInfo() {

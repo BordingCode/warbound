@@ -24,7 +24,9 @@
                              steal taps from the unit that actually lives in that tile.
                              The drag/tap target is the .unit tile box itself. */
 }
-.unit .champ { width: 120%; height: auto; overflow: visible; filter: drop-shadow(0 2px 2px #0008); pointer-events: none; }
+/* No per-unit drop-shadow FILTER — filters are a major per-frame cost when ~16 units
+   move/shake. The team base ring + the sprite's own shadow ellipse provide grounding. */
+.unit .champ { width: 120%; height: auto; overflow: visible; pointer-events: none; }
 .unit .champ-body { transform-origin: 50% 95%; animation: idle 2.6s ease-in-out infinite; }
 @keyframes idle { 50% { transform: translateY(-2.2%) scaleY(1.015); } }
 
@@ -38,7 +40,7 @@
 }
 /* scale the champion (not the box) for star level, so the cell anchor never shifts */
 .unit[data-star="2"] .champ { width: 134%; }
-.unit[data-star="3"] .champ { width: 150%; filter: drop-shadow(0 0 5px var(--gold)) drop-shadow(0 2px 2px #0008); }
+.unit[data-star="3"] .champ { width: 150%; filter: drop-shadow(0 0 4px var(--gold)); }
 
 /* hp + mana bars, ABOVE the unit, team-coloured (green = yours, red = enemy) */
 .unit .bars {
@@ -76,7 +78,7 @@
 @keyframes lunge { 40% { transform: translateY(-12%) scale(1.06); } }
 .unit.hit .champ-body { animation: hitshake 160ms ease; }
 @keyframes hitshake { 25% { transform: translateX(-6%); } 75% { transform: translateX(6%); } }
-.unit.flash .champ { filter: brightness(3.2) drop-shadow(0 2px 2px #0008); }
+.unit.flash .champ { filter: brightness(3.2); }
 .unit.faint { animation: faint 360ms ease-in forwards; }
 @keyframes faint { to { transform: translate(var(--x,0), var(--y,0)) scale(.2); opacity: 0; } }
 

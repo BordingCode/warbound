@@ -2,36 +2,40 @@
 // Shake uses the trauma model (shake = trauma^2, coherent-ish noise), applied as a
 // transform on a wrapper so it composites cheaply. Confetti adapted from gamedev-kb.
 
+// Cheap, GPU-friendly screen shake. Translate-only (no rotate -> no re-clip/repaint of the
+// rounded, shadowed board), promotes its own layer with translate3d + will-change, decays
+// fast, and is fully skippable (reduced-motion or the user's toggle).
+export function shakeEnabled() {
+  try { if (localStorage.getItem('warbound_shake') === '0') return false; } catch {}
+  try { if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false; } catch {}
+  return true;
+}
 export class Shake {
   constructor(targetEl) {
     this.el = targetEl;
-    this.trauma = 0;
-    this.t = 0;
-    this.raf = 0;
-    this.running = false;
+    this.trauma = 0; this.t = 0; this.raf = 0; this.running = false;
+    this.disabled = !shakeEnabled();
   }
   add(amount) {
+    if (this.disabled || !this.el) return;
     this.trauma = Math.min(1, this.trauma + amount);
-    if (!this.running) { this.running = true; this.raf = requestAnimationFrame(() => this._tick()); }
+    if (!this.running) { this.running = true; this.el.style.willChange = 'transform'; this.raf = requestAnimationFrame(() => this._tick()); }
   }
   _tick() {
     this.t += 0.05;
-    const s = this.trauma * this.trauma;          // nonlinear: small traumas barely show
-    if (s < 0.001) {
-      this.el.style.transform = '';
-      this.running = false;
-      return;
+    const s = this.trauma * this.trauma;
+    if (s < 0.0016) {
+      this.el.style.transform = ''; this.el.style.willChange = 'auto';
+      this.running = false; return;
     }
-    // pseudo-noise from layered sines (deterministic-ish, smooth)
-    const nx = Math.sin(this.t * 37.1) * Math.cos(this.t * 13.3);
-    const ny = Math.sin(this.t * 29.7 + 1.3) * Math.cos(this.t * 17.9);
-    const nr = Math.sin(this.t * 23.4 + 2.1);
-    const px = nx * 10 * s, py = ny * 10 * s, rot = nr * 1.4 * s;
-    this.el.style.transform = `translate(${px.toFixed(2)}px, ${py.toFixed(2)}px) rotate(${rot.toFixed(2)}deg)`;
-    this.trauma = Math.max(0, this.trauma - 0.02);  // linear decay (~0.8s from full)
+    const nx = Math.sin(this.t * 31.1) * Math.cos(this.t * 12.7);
+    const ny = Math.sin(this.t * 27.3 + 1.1) * Math.cos(this.t * 16.9);
+    const px = nx * 7 * s, py = ny * 7 * s;       // translate only, modest amplitude
+    this.el.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0)`;
+    this.trauma = Math.max(0, this.trauma - 0.04); // fast decay (~0.4s) so it's a punch, not a rumble
     this.raf = requestAnimationFrame(() => this._tick());
   }
-  stop() { cancelAnimationFrame(this.raf); this.running = false; this.trauma = 0; if (this.el) this.el.style.transform = ''; }
+  stop() { cancelAnimationFrame(this.raf); this.running = false; this.trauma = 0; if (this.el) { this.el.style.transform = ''; this.el.style.willChange = 'auto'; } }
 }
 
 export function launchConfetti(duration = 2400) {
