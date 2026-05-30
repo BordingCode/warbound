@@ -7,6 +7,7 @@ import { UNITS_BY_ID, statsForStar } from '../data/units.js';
 import { activeTraits } from '../data/traits.js';
 import { idx, inBounds, neighbours, stepToward, COLS, ROWS } from '../grid.js';
 import { mitigate, manaFromDamage, nearestEnemy, enemiesNear, lowestHP, inRange } from './rules.js';
+import { aggregateMods } from '../data/items.js';
 
 const DT = 1 / 30;
 const MAX_TICKS = 30 * 45;       // 45s hard cap
@@ -15,20 +16,23 @@ const SUDDEN_DEATH_T = 25;       // after 25s, ramping true damage breaks stalem
 function makeUnit(entry, team, id) {
   const def = UNITS_BY_ID[entry.defId];
   const s = statsForStar(def, entry.star || 1);
+  const im = aggregateMods(entry.items || []);
+  const hp = Math.round(s.hp * (1 + im.hp));
   return {
     id, team, defId: def.defId, name: def.name, star: entry.star || 1,
     origin: def.origin, klass: def.klass,
     col: entry.col, row: entry.row,
-    hp: s.hp, maxHp: s.hp, ad: s.ad, as: s.as,
-    armor: s.armor, mr: s.mr, range: s.range,
+    hp, maxHp: hp, ad: Math.round(s.ad * (1 + im.ad)), as: s.as * (1 + im.as),
+    armor: s.armor + im.armor, mr: s.mr + im.mr, range: s.range,
     mana: s.startMana, maxMana: s.maxMana, manaPer: s.manaPer, manaLockUntil: -1,
-    attackCd: 1 / s.as, ability: def.ability, apBonus: 0,
-    alive: true, shield: 0, stunUntil: -1,
-    // trait-derived (filled by applyTraits)
-    block: 0, critChance: 0, critDmg: 0.4, dodge: 0, healAmp: 0, regen: 0,
-    revivePct: 0, revived: false, burnOnHit: 0, manaBurnOnHit: 0,
+    attackCd: 1 / (s.as * (1 + im.as)), ability: def.ability, apBonus: im.ap,
+    alive: true, shield: im.shield, stunUntil: -1,
+    // trait-derived (filled by applyTraits) + item-derived
+    block: 0, critChance: im.critChance, critDmg: 0.4 + im.critDmg, dodge: 0, healAmp: 0, regen: im.regen,
+    revivePct: im.revive, revived: false, burnOnHit: 0, manaBurnOnHit: 0,
     ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0,
-    isSummon: !!entry.isSummon,
+    vamp: im.vamp, thorns: im.thorns,
+    items: entry.items || [], isSummon: !!entry.isSummon,
   };
 }
 
@@ -47,10 +51,10 @@ function applyTraits(units, board) {
     const beast = get('beast'); if (beast && active.beast.tier >= 6) u.ferocity = Math.max(u.ferocity, beast.ferocity);
     // tagged-only
     if (u.klass === 'mage') { const m = get('mage'); if (m) u.apBonus += m.ap; }
-    if (u.klass === 'assassin') { const a = get('assassin'); if (a) { u.critChance = a.critChance; u.critDmg = a.critDmg; } }
+    if (u.klass === 'assassin') { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; } }
     if (u.klass === 'ranger') { const r = get('ranger'); if (r) u.rangerAS = r.rangerAS; }
     if (u.klass === 'beast' || u.origin === 'beast') { const b = get('beast'); if (b) u.ferocity = Math.max(u.ferocity, b.ferocity); }
-    if (u.origin === 'undead') { const ud = get('undead'); if (ud) u.revivePct = ud.revivePct; }
+    if (u.origin === 'undead') { const ud = get('undead'); if (ud) u.revivePct = Math.max(u.revivePct, ud.revivePct); }
     if (u.origin === 'demon') { const d = get('demon'); if (d) { u.burnOnHit = d.burn; u.manaBurnOnHit = d.manaBurn; } }
     if (u.klass === 'summoner') { const s = get('summoner'); if (s) u.summonPower = s.summonPower; }
   }
@@ -104,6 +108,13 @@ export function simulate(playerBoard, enemyBoard, seed = 1) {
     target.hp -= post;
     gainMana(target, manaFromDamage(raw, post), now);
     ev(now, 'damage', { id: target.id, src: source ? source.id : -1, amount: post, hp: Math.max(0, target.hp), type });
+    // thorns: reflect a fraction of physical damage back as true damage (no loop)
+    if (type === 'physical' && source && target.thorns > 0 && source.alive) {
+      const refl = Math.round(raw * target.thorns);
+      source.hp -= refl;
+      ev(now, 'damage', { id: source.id, src: target.id, amount: refl, hp: Math.max(0, source.hp), type: 'true' });
+      if (source.hp <= 0) die(source, now);
+    }
     if (target.hp <= 0) die(target, now);
     return post;
   }
@@ -178,7 +189,8 @@ export function simulate(playerBoard, enemyBoard, seed = 1) {
     if (crit) dmg *= (1 + u.critDmg);
     ev(now, 'attack', { id: u.id, tgt: target.id, ranged: u.range > 1, crit });
     if (u.range > 1) ev(now, 'projectile', { from: u.id, to: target.id, kind: u.klass === 'mage' ? 'magic' : 'arrow' });
-    applyDamage(target, dmg, 'physical', u, now);
+    const dealt = applyDamage(target, dmg, 'physical', u, now);
+    if (u.vamp > 0 && u.alive) heal(u, dealt * u.vamp, now);
     if (u.burnOnHit) applyDamage(target, u.burnOnHit, 'magic', u, now);
     if (u.manaBurnOnHit && target.alive) target.mana = Math.max(0, target.mana - u.manaBurnOnHit);
     gainMana(u, u.manaPer, now);

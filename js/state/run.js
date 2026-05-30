@@ -2,6 +2,7 @@
 // injected seeded RNG for shop rolls); no DOM. Serialised to localStorage by IDs only.
 import { RNG, seedFromString } from '../rng.js';
 import { UNITS, UNITS_BY_ID } from '../data/units.js';
+import { COMPONENT_IDS, isComponent, combine } from '../data/items.js';
 
 export const SAVE_KEY = 'warbound_run_v1';
 
@@ -40,6 +41,7 @@ export function freshRun(seedStr = 'warbound-' + Date.now()) {
     level: 2, xp: 0,
     bench: Array(BENCH_SIZE).fill(null),
     board: [],
+    items: [],
     shop: Array(SHOP_SIZE).fill(null),
     shopLocked: false,
     streak: { type: null, n: 0 },
@@ -169,6 +171,7 @@ export function sellUid(run, uid) {
   const value = u.star === 1 ? def.cost : def.cost * copies - (copies - 1); // small upgrade premium
   run.gold += value;
   run.pool[u.defId] = (run.pool[u.defId] || 0) + copies;
+  if (u.items && u.items.length) for (const id of u.items) run.items.push({ iid: newUid(), id });  // items returned
   return true;
 }
 
@@ -214,6 +217,23 @@ export function benchUnit(run, uid) { // move a board unit back to bench
   const free = benchFreeIndex(run); if (free === -1) return false;
   const u = run.board.splice(di, 1)[0];
   run.bench[free] = { uid: u.uid, defId: u.defId, star: u.star, items: u.items || [] };
+  return true;
+}
+
+// ---- items ----
+export function addItem(run, id) { run.items.push({ iid: newUid(), id }); }
+export function draftComponents(run) { const ids = _rng.shuffle(COMPONENT_IDS).slice(0, 3); saveRngState(run); return ids; }
+export function equipItem(run, iid, uid) {
+  const it = run.items.find((x) => x.iid === iid); if (!it) return false;
+  const u = run.board.find((b) => b.uid === uid) || run.bench.find((b) => b && b.uid === uid); if (!u) return false;
+  u.items = u.items || [];
+  if (u.items.length >= 3) return false;
+  if (isComponent(it.id)) {
+    const ci = u.items.findIndex(isComponent);
+    if (ci !== -1) { const c = combine(u.items[ci], it.id); if (c) u.items[ci] = c; else u.items.push(it.id); }
+    else u.items.push(it.id);
+  } else u.items.push(it.id);
+  run.items = run.items.filter((x) => x.iid !== iid);
   return true;
 }
 

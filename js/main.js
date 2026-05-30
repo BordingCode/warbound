@@ -9,6 +9,7 @@ import { hashSeed } from './rng.js';
 import { CombatPlayer } from './render/player.js';
 import { createDragController } from './input/drag.js';
 import { getEnemyBoard } from './data/enemies.js';
+import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
 import * as Run from './state/run.js';
 import { resume as audioResume, Sfx, setEnabled as setSound, isEnabled as soundOn } from './audio/audio.js';
 import { launchConfetti } from './render/fx.js';
@@ -104,6 +105,17 @@ function buildShopEl() {
   return el('.shop', {}, [controls, row]);
 }
 
+function buildItemsTray() {
+  const tray = el('.items-tray');
+  tray.append(el('span.tray-label', {}, '🎒'));
+  if (!run.items.length) { tray.append(el('span', { style: { color: 'var(--ink-faint)', fontSize: '11px' } }, 'No items — win rounds to earn them. Drag an item onto a champion.')); return tray; }
+  for (const it of run.items) {
+    const d = itemDef(it.id);
+    tray.append(el('.item-chip', { dataset: { iid: it.iid }, title: d.name }, d.icon));
+  }
+  return tray;
+}
+
 function buildBenchEl() {
   const bench = el('.bench');
   run.bench.forEach((u) => {
@@ -154,6 +166,7 @@ function renderPlanning() {
       el('button.btn#spd4', { onclick: () => setSpeed(4) }, '4×'),
       el('.sell-zone#sellZone', { style: { marginLeft: 'auto' } }, '🗑 Sell'),
     ]),
+    buildItemsTray(),
     buildBenchEl(),
     buildShopEl(),
   ]);
@@ -166,6 +179,7 @@ function renderPlanning() {
     onPlace: (uid, col, row) => act(() => Run.placeOnBoard(run, uid, col, row)),
     onBench: (uid) => act(() => Run.benchUnit(run, uid)),
     onSell: (uid) => { act(() => Run.sellUid(run, uid)); Sfx.sell(); },
+    onEquip: (iid, col, row) => { const u = run.board.find((b) => b.col === col && b.row === row); if (u && Run.equipItem(run, iid, u.uid)) { Sfx.fuse(); act(() => {}); } },
   });
   // make board units + bench units draggable
   units.querySelectorAll('.unit').forEach((n) => {
@@ -176,7 +190,30 @@ function renderPlanning() {
     const uid = s.dataset.uid; const u = run.bench.find((x) => x && x.uid === uid);
     if (u) dragCtl.makeDraggable(s, uid, 'bench', championSVG(UNITS_BY_ID[u.defId], { size: 56 }));
   });
+  $$('.items-tray .item-chip').forEach((c) => {
+    const iid = c.dataset.iid; const it = run.items.find((x) => x.iid === iid);
+    if (it) dragCtl.makeDraggable(c, iid, 'item', `<div class="item-ghost">${itemDef(it.id).icon}</div>`);
+  });
 }
+
+// post-round item draft (Underlords-style pick 1 of 3 components)
+function offerDraft(after) {
+  const ids = Run.draftComponents(run);
+  const pick = (id) => { Run.addItem(run, id); Run.save(run); Sfx.buy(); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
+  const ov = el('.overlay', {}, el('.help-card', {}, [
+    el('h2', {}, 'Choose a component'),
+    el('.sub', {}, 'Combine two on a champion to forge a powerful item.'),
+    el('.draft-row', {}, ids.map((id) => {
+      const d = COMPONENTS[id];
+      return el('button.draft-pick', { onclick: () => pick(id) }, [
+        el('span.di', {}, d.icon), el('span.dn', {}, d.name),
+        el('span.dm', {}, Object.entries(d.mods).map(([k, v]) => `+${v < 1 ? Math.round(v * 100) + '%' : v} ${k}`).join(', ')),
+      ]);
+    })),
+  ]));
+  document.body.append(ov);
+}
+function shouldDraft(finishedRound) { return [1, 2, 4, 6, 8, 10].includes(finishedRound); }
 
 function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highlightSpeed(); }
 function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
@@ -225,10 +262,12 @@ async function startCombat() {
   if (won) launchConfetti(2000);
   setBanner(won ? '🏆 Round won!' : winner === 'enemy' ? '💀 Round lost' : '⚖ Draw — counts as a loss');
 
+  const finishedRound = run.round;
   Run.resolveRound(run, won);
   Run.save(run);
   setTimeout(() => {
     if (run.over) endScreen();
+    else if (shouldDraft(finishedRound)) offerDraft(renderPlanning);
     else renderPlanning();
   }, 1100);
 }

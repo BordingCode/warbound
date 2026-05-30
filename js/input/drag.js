@@ -3,7 +3,7 @@
 // Uses pointer capture + a top-level ghost so it isn't clipped; snaps to tiles.
 import { el } from '../dom.js';
 
-export function createDragController({ boardWrap, sellZone, onPlace, onBench, onSell }) {
+export function createDragController({ boardWrap, sellZone, onPlace, onBench, onSell, onEquip }) {
   const dragLayer = document.getElementById('drag-layer');
   let active = null; // { uid, kind, ghost, pointerId, srcEl }
 
@@ -49,11 +49,16 @@ export function createDragController({ boardWrap, sellZone, onPlace, onBench, on
   }
   function finish(e, cancelled) {
     if (!active || e.pointerId !== active.pointerId) return;
-    const { uid, ghost, srcEl } = active;
+    const { uid, kind, ghost, srcEl } = active;
     ghost.remove(); srcEl.classList.remove('dragging'); clearHighlights();
     const x = e.clientX, y = e.clientY;
     active = null;
     if (cancelled) return;
+    if (kind === 'item') {                       // dropping an item onto a unit
+      const tile = tileAt(x, y);
+      if (tile && onEquip) onEquip(uid, tile.col, tile.row);
+      return;
+    }
     if (sellZone) {
       const sr = sellZone.getBoundingClientRect();
       if (x >= sr.left && x <= sr.right && y >= sr.top && y <= sr.bottom) { onSell(uid); return; }

@@ -80,6 +80,19 @@
 .combat-ctl { display: flex; gap: 8px; align-items: center; justify-content: center; }
 .phase-banner { text-align: center; font-weight: 800; letter-spacing: .5px; color: var(--ink-dim); min-height: 18px; }
 
+/* items tray */
+.items-tray { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 30px; padding: 4px 6px; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.items-tray .tray-label { font-size: 16px; }
+.item-chip { width: 30px; height: 30px; display: grid; place-items: center; font-size: 17px; background: var(--bg-3); border: 1px solid var(--gold-deep); border-radius: 7px; cursor: grab; touch-action: none; }
+.item-chip.dragging { opacity: .4; }
+.item-ghost { width: 44px; height: 44px; display: grid; place-items: center; font-size: 26px; background: var(--bg-3); border: 2px solid var(--gold); border-radius: 9px; }
+.draft-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.draft-pick { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 6px; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.draft-pick:active { transform: scale(.96); }
+.draft-pick .di { font-size: 26px; }
+.draft-pick .dn { font-weight: 700; font-size: 13px; }
+.draft-pick .dm { font-size: 10px; color: var(--ink-dim); text-align: center; }
+
 /* sell zone */
 .sell-zone {
   display: flex; align-items: center; gap: 4px; padding: 8px 12px; font-weight: 700;
