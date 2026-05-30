@@ -315,6 +315,19 @@ Because combat is a **pure deterministic function**, we brute-force balance offl
 
 ---
 
+## 12b. v1 BUILD STATUS (live at bordingcode.github.io/warbound)
+
+Built and verified (browser + headless tests):
+- **Core:** pure deterministic combat sim (event timeline) + renderer; 8×8 grid, BFS movement, mana/abilities, crit/dodge/shield/block/revive/thorns/vamp, %-maxHP sudden-death. `node test/run.js` = 11 invariants green.
+- **Run loop:** economy (TFT odds, pool-weighted shop, buy/sell, 3→2★→3★ fusion, XP/level=board size, interest, streaks), Pointer-Events drag, 5 lives/10 wins, authored 10-board ladder + endless escalation, save/load (+migration).
+- **Depth:** 12 traits (dual origin+class), 5 components→15 items (draft + drag-equip + combine), 12 relics (act-boundary drafts), enemy scout w/ trait readout.
+- **Feel:** procedural Web Audio (pentatonic, mute), trauma shake, confetti, hit-flash, floating numbers, mana-cast telegraph, how-to-play intro.
+- **Tooling:** `js/sim/autobalance.js` (pacing/unit/ladder) + `test/smoke-run.js` (full-run bot).
+
+**Balance findings (2026-05-30):** median fight ~12s; random bot wins 1–3 early rounds then loses (skill matters); a focused 6-unit 2★ comp stomps R5–9 (100%) but loses the R10 Dragonsworn boss (5%); a full 8-unit board w/ 3★ carry + items + 3 relics beats the boss (100%). → winnable with good play, boss is a fair check. Mid-ladder (R5–9) could escalate steeper in a future pass.
+
+**Not yet built:** Spatula/emblems, act-specific bosses beyond R10, ascension tiers, cross-run unlocks, per-comp round-robin balance gradient (autobalance per-unit read is binary — combat is near-deterministic). Mobile drag untested on a real device.
+
 ## 13. Decisions — RESOLVED
 
 1. **Name:** *Warbound*.
