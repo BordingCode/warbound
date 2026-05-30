@@ -27,12 +27,12 @@ export const AUGMENTS = {
   veteran:    { name: "Veteran's Rite", icon: '🎖', tier: 'common', cat: 'econ', desc: '+1 max life (heal 1 now).', once: { lifeMax: 1 } },
 
   // ---------- RARE (build-around: reward a direction) ----------
-  mage_crown:     { name: 'Mage Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 to your Mage synergy.', traitBonus: { mage: 1 }, wantTrait: 'mage' },
-  knight_crown:   { name: 'Knight Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 to your Knight synergy.', traitBonus: { knight: 1 }, wantTrait: 'knight' },
-  undead_crown:   { name: 'Undead Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 to your Undead synergy.', traitBonus: { undead: 1 }, wantTrait: 'undead' },
-  assassin_crown: { name: 'Assassin Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 to your Assassin synergy.', traitBonus: { assassin: 1 }, wantTrait: 'assassin' },
-  ranger_crown:   { name: 'Ranger Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 to your Ranger synergy.', traitBonus: { ranger: 1 }, wantTrait: 'ranger' },
-  demon_crown:    { name: 'Demon Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 to your Demon synergy.', traitBonus: { demon: 1 }, wantTrait: 'demon' },
+  mage_crown:     { name: 'Mage Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 Mage synergy, and your Mages gain +30 Ability Power.', traitBonus: { mage: 1 }, cond: [{ match: { klass: 'mage' }, mods: { ap: 30 } }], wantTrait: 'mage' },
+  knight_crown:   { name: 'Knight Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 Knight synergy, and your Knights gain +20 Armor & MR.', traitBonus: { knight: 1 }, cond: [{ match: { klass: 'knight' }, mods: { armor: 20, mr: 20 } }], wantTrait: 'knight' },
+  undead_crown:   { name: 'Undead Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 Undead synergy, and your Undead gain +14% Health.', traitBonus: { undead: 1 }, cond: [{ match: { origin: 'undead' }, mods: { hp: 0.14 } }], wantTrait: 'undead' },
+  assassin_crown: { name: 'Assassin Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 Assassin synergy, and your Assassins gain +12% crit chance.', traitBonus: { assassin: 1 }, cond: [{ match: { klass: 'assassin' }, mods: { critChance: 0.12, critDmg: 0.3 } }], wantTrait: 'assassin' },
+  ranger_crown:   { name: 'Ranger Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 Ranger synergy, and your Rangers gain +20% Attack Speed.', traitBonus: { ranger: 1 }, cond: [{ match: { klass: 'ranger' }, mods: { as: 0.20 } }], wantTrait: 'ranger' },
+  demon_crown:    { name: 'Demon Crown', icon: '👑', tier: 'rare', cat: 'synergy', desc: '+1 Demon synergy, and your Demons gain +14% Attack Damage.', traitBonus: { demon: 1 }, cond: [{ match: { origin: 'demon' }, mods: { ad: 0.14 } }], wantTrait: 'demon' },
   arcane_focus:   { name: 'Arcane Focus', icon: '🔮', tier: 'rare', cat: 'synergy', desc: 'Your Mages gain +70 Ability Power.', cond: [{ match: { klass: 'mage' }, mods: { ap: 70 } }], wantTrait: 'mage' },
   hunters_mark:   { name: "Hunter's Mark", icon: '🎯', tier: 'rare', cat: 'synergy', desc: 'Your Rangers gain +40% Attack Speed.', cond: [{ match: { klass: 'ranger' }, mods: { as: 0.40 } }], wantTrait: 'ranger' },
   knights_vow:    { name: "Knight's Vow", icon: '🛡️', tier: 'rare', cat: 'synergy', desc: 'Your Knights gain +40 Armor & Magic Resist.', cond: [{ match: { klass: 'knight' }, mods: { armor: 40, mr: 40 } }], wantTrait: 'knight' },
@@ -41,18 +41,18 @@ export const AUGMENTS = {
   backline_barrage:{ name: 'Backline Barrage', icon: '🏹', tier: 'rare', cat: 'combat', desc: 'Back-row champions: +28% Attack Speed and +12% AD.', cond: [{ match: { row: 'back' }, mods: { as: 0.28, ad: 0.12 } }] },
   frontline_wall: { name: 'Frontline Wall', icon: '🧱', tier: 'rare', cat: 'combat', desc: 'Front-row champions: +28% Health and +30 Armor.', cond: [{ match: { row: 'front' }, mods: { hp: 0.28, armor: 30 } }] },
   bloodforge:     { name: 'Bloodforge', icon: '🧛', tier: 'rare', cat: 'combat', desc: 'Your team heals 22% of attack damage dealt.', combat: { vamp: 0.22 } },
-  battle_standard:{ name: 'Battle Standard', icon: '⚔️', tier: 'rare', cat: 'combat', desc: 'Your team: +22% Attack Damage and +10% Attack Speed.', combat: { ad: 0.22, as: 0.10 } },
+  battle_standard:{ name: 'Battle Standard', icon: '⚔️', tier: 'rare', cat: 'combat', desc: 'Your team: +16% Attack Damage and +7% Attack Speed.', combat: { ad: 0.16, as: 0.07 } },
   dragon_hoard:   { name: "Dragon's Hoard", icon: '🐲', tier: 'rare', cat: 'econ', desc: '+4 gold/round and interest cap +2.', econ: { goldPerRound: 4, interestCap: 2 } },
 
   // ---------- PRISMATIC (trade-off / ceiling: define the run) ----------
   glasscannon:    { name: 'Glass Cannon', icon: '💎', tier: 'prismatic', cat: 'build', desc: 'Your team: +35% Attack Damage, but −15% max Health.', combat: { ad: 0.35, hp: -0.15 } },
-  arcane_overflow:{ name: 'Arcane Overflow', icon: '🌌', tier: 'prismatic', cat: 'build', desc: 'Your team: +130 Ability Power, but −15% max Health.', combat: { ap: 130, hp: -0.15 } },
+  arcane_overflow:{ name: 'Arcane Overflow', icon: '🌌', tier: 'prismatic', cat: 'build', desc: 'Your team: +130 Ability Power, but −10% max Health.', combat: { ap: 130, hp: -0.10 } },
   berserkers_pact:{ name: "Berserker's Pact", icon: '🪓', tier: 'prismatic', cat: 'build', desc: '+45% AD and +20% Attack Speed, but −25% max Health.', combat: { ad: 0.45, as: 0.20, hp: -0.25 } },
   titans_resolve: { name: "Titan's Resolve", icon: '🗿', tier: 'prismatic', cat: 'build', desc: '+45% max Health and +30 Armor/MR, but −15% Attack Speed.', combat: { hp: 0.45, armor: 30, mr: 30, as: -0.15 } },
-  warlords_gambit:{ name: "Warlord's Gambit", icon: '🚩', tier: 'prismatic', cat: 'build', desc: '+1 board slot, but your team starts each fight at −12% Health.', econ: { boardPlus: 1 }, combat: { hp: -0.12 } },
-  vampire_lords:  { name: 'Vampire Lords', icon: '🦇', tier: 'prismatic', cat: 'build', desc: 'Your team heals 32% of damage dealt, but −12% Attack Damage.', combat: { vamp: 0.32, ad: -0.12 } },
+  warlords_gambit:{ name: "Warlord's Gambit", icon: '🚩', tier: 'prismatic', cat: 'build', desc: '+1 board slot (field an extra champion), but your team has −6% Health.', econ: { boardPlus: 1 }, combat: { hp: -0.06 } },
+  vampire_lords:  { name: 'Vampire Lords', icon: '🦇', tier: 'prismatic', cat: 'build', desc: 'Your team heals 32% of damage dealt, but −6% Attack Damage.', combat: { vamp: 0.32, ad: -0.06 } },
   undying_legion: { name: 'Undying Legion', icon: '💀', tier: 'prismatic', cat: 'synergy', desc: '+2 to your Undead synergy.', traitBonus: { undead: 2 }, wantTrait: 'undead' },
-  thornmail:      { name: 'Thornmail Aura', icon: '🦔', tier: 'prismatic', cat: 'build', desc: 'Your team reflects 30% of attack damage taken and +25 Armor.', combat: { thorns: 0.30, armor: 25 } },
+  thornmail:      { name: 'Thornmail Aura', icon: '🦔', tier: 'prismatic', cat: 'build', desc: 'Your team reflects 25% of attack damage taken and +25 Armor, but −10% Attack Damage.', combat: { thorns: 0.25, armor: 25, ad: -0.10 } },
 };
 
 export const AUGMENT_IDS = Object.keys(AUGMENTS);

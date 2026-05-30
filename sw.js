@@ -1,6 +1,6 @@
 // Network-first service worker. Fresh code when online, full offline fallback.
 // BUMP CACHE on every shippable change.
-const CACHE = 'warbound-v32';
+const CACHE = 'warbound-v33';
 const SHELL = [
   './', './index.html', './manifest.json', './icons/favicon.svg',
   './css/tokens.css', './css/board.css', './css/units.css', './css/hud.css',
