@@ -20,6 +20,7 @@ let combatSpeed = 1;
 let inCombat = false;
 let dragCtl = null;
 let player = null;
+let prevTraitTiers = {};   // for flashing synergy chips when they level up
 
 // ---------- board ----------
 function unitNode(u, team) {
@@ -69,16 +70,20 @@ function buildTraitsEl() {
   const rail = el('.traits-rail');
   const entries = Object.entries(active).filter(([t]) => TRAITS[t]).sort((a, b) => (b[1].tier - a[1].tier) || (b[1].count - a[1].count));
   if (!entries.length) rail.append(el('.trait-chip', {}, 'Place champions to form synergies'));
+  const tiers = {};
   for (const [t, info] of entries) {
     const def = TRAITS[t];
     const tierIdx = def.breakpoints.indexOf(info.tier) + 1;
     const next = def.breakpoints.find((b) => b > info.count);
-    rail.append(el(`.trait-chip${info.tier ? ' active tier-' + tierIdx : ''}`, { title: def.bonusText[info.tier] || def.desc }, [
+    tiers[t] = info.tier;
+    const leveledUp = info.tier > 0 && info.tier !== (prevTraitTiers[t] || 0);
+    rail.append(el(`.trait-chip${info.tier ? ' active tier-' + tierIdx : ''}${leveledUp ? ' flash' : ''}`, { title: def.bonusText[info.tier] || def.desc }, [
       el('span.dot', { style: { background: def.color } }),
       el('span', {}, def.name),
       el('span.cnt', {}, next ? `${info.count}/${next}` : `${info.count}`),
     ]));
   }
+  prevTraitTiers = tiers;
   return rail;
 }
 
