@@ -15,21 +15,22 @@ const COST_BASE = {
 // Role shapes: how a class bends the base stats + which mana-gen profile it uses.
 // manaPer = mana gained per auto-attack (TFT: carry 10, caster 7, tank 5).
 const ROLE = {
-  knight:   { hpx: 1.40, adx: 0.92, range: 1, manaPer: 7, startMana: 0.20 },
+  knight:   { hpx: 1.40, adx: 1.12, range: 1, manaPer: 7, startMana: 0.20 },
   mage:     { hpx: 0.85, adx: 0.70, range: 3, manaPer: 8, startMana: 0.35 },
   ranger:   { hpx: 0.95, adx: 1.10, range: 3, manaPer: 10, startMana: 0.10 },
   assassin: { hpx: 0.90, adx: 1.20, range: 1, manaPer: 10, startMana: 0.20, dive: true },
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
-  summoner: { hpx: 0.95, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
+  summoner: { hpx: 1.08, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
 };
 
-function mk(defId, name, origin, klass, cost, ability) {
+// `tune` = optional per-unit balance overrides: { hpx, adx } multipliers.
+function mk(defId, name, origin, klass, cost, ability, tune = {}) {
   const b = COST_BASE[cost], r = ROLE[klass];
   return {
     defId, name, origin, klass, cost,
     range: r.range,
-    hp: Math.round(b.hp * r.hpx),
-    ad: Math.round(b.ad * r.adx),
+    hp: Math.round(b.hp * r.hpx * (tune.hpx || 1)),
+    ad: Math.round(b.ad * r.adx * (tune.adx || 1)),
     as: b.as,
     armor: b.armor + (klass === 'knight' ? 20 : 0),
     mr: b.mr + (klass === 'knight' ? 10 : 0),
@@ -51,7 +52,7 @@ const A = {
   volley:  (ad) => ({ name: 'Volley', type: 'physical', target: 'mostEnemies', adRatio: ad }),
   mend:    (ap) => ({ name: 'Mend', type: 'heal', target: 'lowestAllyHP', ap }),
   ward:    (ap) => ({ name: 'Aegis', type: 'shield', target: 'lowestAllyHP', ap }),
-  raise:   (ap) => ({ name: 'Raise Dead', type: 'summon', summonHp: 350, summonAd: 30, ap }),
+  raise:   (ap) => ({ name: 'Raise Dead', type: 'summon', summonHp: 450, summonAd: 66, ap }),
   bash:    (ad) => ({ name: 'Shield Bash', type: 'physical', target: 'current', adRatio: ad + 0.6, stun: 1.0 }),
   breath:  (ap) => ({ name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap }),
 };
@@ -94,9 +95,9 @@ export const UNITS = [
   mk('beastmaster',    'Beastmaster',    'beast', 'summoner', 4, A.raise(280)),
 
   // ---- Dragon (elite, expensive) ----
-  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.breath(280)),
-  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.breath(420)),
-  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.volley(3.0)),
+  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.breath(185), { hpx: 0.80, adx: 0.82 }),
+  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.breath(260), { hpx: 0.80, adx: 0.82 }),
+  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.volley(2.6), { hpx: 0.84, adx: 0.86 }),
 ];
 
 export const UNITS_BY_ID = Object.fromEntries(UNITS.map((u) => [u.defId, u]));

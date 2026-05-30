@@ -220,7 +220,13 @@ export class CombatPlayer {
     const n = this.nodes.get(e.id);
     switch (e.type) {
       case 'spawn': this._spawn(e); break;
-      case 'move': if (n) { n.el.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`; n.el.style.zIndex = e.row + 1; } break;
+      case 'move': if (n) {
+        // glide one cell over the walk time (matches sim MOVE_INTERVAL ~280ms), scaled by playback
+        // speed, with linear easing so a multi-cell march flows smoothly instead of bouncing per cell.
+        n.el.style.transition = `transform ${Math.round(280 / this.speed)}ms linear`;
+        n.el.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`;
+        n.el.style.zIndex = e.row + 1;
+      } break;
       case 'blink': if (n) { n.el.style.transition = 'none'; n.el.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`; n.el.style.zIndex = e.row + 1; requestAnimationFrame(() => (n.el.style.transition = '')); } break;
       case 'attack': {
         const a = this.nodes.get(e.id); if (!a) break;

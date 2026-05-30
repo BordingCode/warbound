@@ -12,6 +12,8 @@ import { aggregateMods } from '../data/items.js';
 const DT = 1 / 30;
 const MAX_TICKS = 30 * 45;       // 45s hard cap
 const SUDDEN_DEATH_T = 25;       // after 25s, ramping true damage breaks stalemates
+const MOVE_INTERVAL = 0.28;      // seconds to walk ONE cell (auto-chess/underlords pace, ~3.5 cells/s)
+                                 // — NOT one-tile-per-tick; melee visibly marches in to engage.
 
 const COMBAT_KEYS = ['ad', 'as', 'hp', 'ap', 'armor', 'mr', 'shield', 'vamp', 'thorns', 'critChance', 'critDmg', 'revive'];
 
@@ -48,7 +50,7 @@ function makeUnit(entry, team, id, aug = null) {
     // trait-derived (filled by applyTraits) + item-derived
     block: 0, critChance: im.critChance, critDmg: 0.4 + im.critDmg, dodge: 0, healAmp: 0, regen: im.regen,
     revivePct: im.revive, revived: false, burnOnHit: 0, manaBurnOnHit: 0,
-    ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0,
+    ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0,
     vamp: im.vamp, thorns: im.thorns,
     items: entry.items || [], isSummon: !!entry.isSummon,
   };
@@ -210,7 +212,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
         ad: Math.round(u.ability.summonAd * mult), as: 0.7, armor: 15, mr: 15, range: 1,
         mana: 0, maxMana: 9999, manaPer: 0, manaLockUntil: Infinity, attackCd: 1 / 0.7, ability: null, apBonus: 0,
         alive: true, shield: 0, stunUntil: -1, block: 0, critChance: 0, critDmg: 0.4, dodge: 0, healAmp: 0, regen: 0,
-        revivePct: 0, revived: true, burnOnHit: 0, manaBurnOnHit: 0, ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, isSummon: true,
+        revivePct: 0, revived: true, burnOnHit: 0, manaBurnOnHit: 0, ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0, isSummon: true,
       };
       units.push(s); occupied.add(idx(s.col, s.row));
       ev(now, 'spawn', { id: s.id, team: s.team, defId: 'summon', star: 1, col: s.col, row: s.row, hp: s.hp, maxHp: s.maxHp, summon: true });
@@ -244,12 +246,17 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       const target = nearestEnemy(u, units);
       if (!target) continue;
       if (inRange(u, target)) {
+        u.moveCd = 0;                                   // ready to chase the instant the target leaves range
         u.attackCd -= DT;
         if (u.attackCd <= 0) { doAttack(u, target, now); u.attackCd = 1 / effAS(u); }
       } else {
-        u.attackCd = Math.min(u.attackCd, 1 / effAS(u)) - DT * 0; // keep ready-ish when arriving
-        const step = stepToward(u, target, occupied);
-        if (step) { occupied.delete(idx(u.col, u.row)); u.col = step.col; u.row = step.row; occupied.add(idx(u.col, u.row)); ev(now, 'move', { id: u.id, col: u.col, row: u.row }); }
+        u.attackCd = Math.min(u.attackCd, 1 / effAS(u));
+        u.moveCd -= DT;
+        if (u.moveCd <= 0) {                            // walk ONE cell per MOVE_INTERVAL, not per tick
+          const step = stepToward(u, target, occupied);
+          if (step) { occupied.delete(idx(u.col, u.row)); u.col = step.col; u.row = step.row; occupied.add(idx(u.col, u.row)); ev(now, 'move', { id: u.id, col: u.col, row: u.row }); }
+          u.moveCd = MOVE_INTERVAL;
+        }
       }
     }
     doSummons();

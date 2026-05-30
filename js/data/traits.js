@@ -44,8 +44,8 @@ export const TRAITS = {
     name: 'Dragon', axis: 'origin', kind: 'behaviour', color: '#ffd24a',
     desc: 'Few but mighty — dragons shrug off magic.',
     breakpoints: [1, 2],
-    bonuses: { 1: { mr: 40 }, 2: { mr: 75, breath: true } },
-    bonusText: { 1: '+40 magic resist', 2: '+75 MR + dragon breath' },
+    bonuses: { 1: { mr: 28 }, 2: { mr: 50, breath: true } },
+    bonusText: { 1: '+28 magic resist', 2: '+50 MR + dragon breath' },
   },
 
   // ---------- CLASSES ----------
@@ -53,7 +53,7 @@ export const TRAITS = {
     name: 'Knight', axis: 'class', kind: 'glue', color: '#b9c4d0',
     desc: 'A wall that ignores a flat chunk of every hit.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { block: 15 }, 4: { block: 30 }, 6: { block: 60 } },
+    bonuses: { 2: { block: 28 }, 4: { block: 50 }, 6: { block: 90 } },
     bonusText: { 2: 'Ignore 15 dmg/hit', 4: 'ignore 30', 6: 'ignore 60' },
   },
   mage: {

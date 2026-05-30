@@ -86,35 +86,39 @@ function ladderCurve() {
 
 // --- 4. Round-robin: archetype comps vs each other -> win-rate gradient (the real
 // balance signal; averaging over many opponents turns binary matchups into a gradient) ---
-function placeComp(defIds) {
+// place a comp on its half: player on rows 5-7, enemy MIRRORED on rows 0-2 so the two teams
+// actually FACE each other across the board (frontline forward, carries back). The old version
+// put both teams on rows 5-7 (piled together) which made positioning/movement meaningless.
+function placeComp(defIds, enemy = false) {
   const front = ['knight', 'assassin'], out = []; let fc = 0, bc = 0;
   for (const id of defIds) {
     const k = UNITS_BY_ID[id].klass;
-    if (front.includes(k)) { out.push({ defId: id, star: 2, col: 1 + (fc % 6), row: fc < 3 ? 6 : 5 }); fc++; }
-    else { out.push({ defId: id, star: 2, col: 1 + (bc % 6), row: bc % 2 ? 7 : 6 }); bc++; }
+    if (front.includes(k)) { out.push({ defId: id, star: 2, col: 1 + (fc % 6), row: enemy ? (fc < 3 ? 1 : 2) : (fc < 3 ? 6 : 5) }); fc++; }
+    else { out.push({ defId: id, star: 2, col: 1 + (bc % 6), row: enemy ? (bc % 2 ? 0 : 1) : (bc % 2 ? 7 : 6) }); bc++; }
   }
   return out;
 }
+// Realistic archetype builds: each = its synergy carries + a real frontline + a healer/support
+// (a mono-class glass cannon with no frontline is a strawman, not a comp).
 const COMPS = {
-  'Knight Wall': ['knight_captain', 'bone_guard', 'thornguard', 'hellguard', 'court_mage', 'field_medic'],
-  'Mage Burst': ['court_mage', 'lich', 'moon_priestess', 'warlock', 'knight_captain', 'field_medic'],
-  'Assassin Dive': ['imp_assassin', 'royal_blade', 'shadow_dancer', 'pack_stalker', 'bone_guard', 'druid_healer'],
-  'Undead': ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer', 'thornguard'],
-  'Demon': ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'pit_summoner', 'bone_guard'],
-  'Beast': ['beast_hunter', 'bramble_brute', 'pack_stalker', 'druid_healer', 'beastmaster', 'knight_captain'],
-  'Elf': ['thornguard', 'moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'spirit_caller'],
-  'Ranger': ['skeleton_archer', 'crossbowman', 'wood_ranger', 'fel_archer', 'beast_hunter', 'knight_captain'],
-  'Summoner': ['necromancer', 'pit_summoner', 'beastmaster', 'spirit_caller', 'bone_guard', 'thornguard'],
-  'Dragonkin': ['dragon_knight', 'dragon_sage', 'knight_captain', 'bone_guard', 'moon_priestess', 'grove_healer'],
+  'Knight': ['knight_captain', 'bone_guard', 'thornguard', 'crossbowman', 'court_mage', 'field_medic'],
+  'Mage': ['court_mage', 'lich', 'warlock', 'bone_guard', 'thornguard', 'field_medic'],
+  'Assassin': ['royal_blade', 'shadow_dancer', 'pack_stalker', 'bone_guard', 'thornguard', 'field_medic'],
+  'Undead': ['bone_guard', 'lich', 'skeleton_archer', 'wraith', 'necromancer', 'thornguard'],
+  'Demon': ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'bone_guard', 'field_medic'],
+  'Beast': ['bramble_brute', 'beast_hunter', 'pack_stalker', 'knight_captain', 'druid_healer', 'beastmaster'],
+  'Elf': ['thornguard', 'moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'bone_guard'],
+  'Ranger': ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'thornguard', 'field_medic'],
+  'Summoner': ['necromancer', 'pit_summoner', 'beastmaster', 'bone_guard', 'thornguard', 'field_medic'],
+  'Dragon': ['dragon_knight', 'dragon_sage', 'knight_captain', 'bone_guard', 'moon_priestess', 'grove_healer'],
 };
 function roundRobin() {
   const names = Object.keys(COMPS);
-  const boards = names.map((n) => placeComp(COMPS[n]));
   const wins = names.map(() => 0), games = names.map(() => 0);
   for (let i = 0; i < names.length; i++) for (let j = 0; j < names.length; j++) {
     if (i === j) continue;
     for (let s = 1; s <= 15; s++) {
-      const w = simulate(boards[i], boards[j], s * 31 + 5).result.winner;
+      const w = simulate(placeComp(COMPS[names[i]], false), placeComp(COMPS[names[j]], true), s * 31 + 5).result.winner;
       games[i]++; if (w === 'player') wins[i]++;
     }
   }
