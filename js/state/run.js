@@ -52,10 +52,10 @@ export function freshRun(seedStr = 'warbound-' + Date.now()) {
     rngState: null,
     over: false, won: false,
   };
-  // starter hand: a tank + a ranged carry, pre-placed on the board so round 1 is a
-  // gentle, winnable onboarding fight that teaches front/back positioning.
-  run.bench[0] = { uid: newUid(), defId: 'knight_captain', star: 1, items: [] };
-  run.bench[1] = { uid: newUid(), defId: 'skeleton_archer', star: 1, items: [] };
+  // starter hand: a tank + a ranged carry, pre-placed (front/back) so a new player's
+  // first Ready is already a proper, winnable fight that demonstrates positioning.
+  run.board.push({ uid: newUid(), defId: 'knight_captain', star: 1, col: 3, row: 5, items: [] });
+  run.board.push({ uid: newUid(), defId: 'skeleton_archer', star: 1, col: 3, row: 7, items: [] });
   for (const id of ['knight_captain', 'skeleton_archer']) run.pool[id] = Math.max(0, run.pool[id] - 1);
   _rng = new RNG(seed);
   rollShop(run);

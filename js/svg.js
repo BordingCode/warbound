@@ -46,7 +46,19 @@ function arms(p, kind) {
           <rect x="69" y="60" width="9" height="30" rx="4.5" fill="${c}"/>`;
 }
 function head(p) {
-  return `<circle cx="50" cy="42" r="14" fill="${p.skin}"/>`;
+  return `<circle cx="50" cy="42" r="14" fill="${p.skin}"/>
+          <circle cx="45" cy="43" r="2.1" fill="#14161e"/><circle cx="55" cy="43" r="2.1" fill="#14161e"/>`;
+}
+// origin-specific head features for instant silhouette identity
+function originAccent(p, origin) {
+  switch (origin) {
+    case 'elf':    return `<path d="M37 40 L31 30 L41 41 Z" fill="${p.skin}"/><path d="M63 40 L69 30 L59 41 Z" fill="${p.skin}"/>`;
+    case 'beast':  return `<path d="M39 33 q-5 -11 1 -13 q4 6 7 9 Z" fill="${p.skin}"/><path d="M61 33 q5 -11 -1 -13 q-4 6 -7 9 Z" fill="${p.skin}"/>`;
+    case 'demon':  return `<path d="M41 31 q-6 -8 -2 -13 q5 5 7 10 Z" fill="#241010"/><path d="M59 31 q6 -8 2 -13 q-5 5 -7 10 Z" fill="#241010"/>`;
+    case 'undead': return `<circle cx="45" cy="43" r="3.2" fill="#070707"/><circle cx="55" cy="43" r="3.2" fill="#070707"/><circle cx="45" cy="43" r="1.5" fill="${p.accent}"/><circle cx="55" cy="43" r="1.5" fill="${p.accent}"/>`;
+    case 'dragon': return `<path d="M50 49 q-8 3 0 9 q8 -6 0 -9 Z" fill="${p.skin}"/><circle cx="46" cy="51" r="1" fill="#000"/>`;
+    default:       return '';
+  }
 }
 
 // ----- per-class headgear + weapon (the silhouette signal) ---------------------
@@ -113,6 +125,7 @@ export function championInner(def) {
     arms(p, kind),
     torso(p, kind),
     head(p),
+    originAccent(p, def.origin),
     gear(p, def.klass),
   ].join('');
 }
