@@ -106,9 +106,10 @@ function buildShopEl() {
   const controls = el('.shop-controls', {}, [
     el('button.btn.primary', { onclick: doBuyXP }, [el('span', {}, 'Buy XP'), el('span', { style: { opacity: .7 } }, '4⛁')]),
     el('button.btn.reroll', { onclick: doReroll }, [el('span', {}, '⟳'), el('span', { style: { opacity: .7 } }, Run.freeRerollsLeft(run) > 0 ? 'FREE' : '2⛁')]),
+    el(`button.btn${run.shopLocked ? ' primary' : ''}`, { title: 'Freeze the shop so it keeps these champions next round', onclick: doLock }, run.shopLocked ? '🔒' : '🔓'),
     el('span', { style: { marginLeft: 'auto', fontSize: '11px', color: 'var(--ink-dim)' } }, `+${inc.total}/turn (⛁${inc.interest} int${inc.streakBonus ? ' +' + inc.streakBonus + ' streak' : ''})`),
   ]);
-  return el('.shop', {}, [controls, row]);
+  return el(`.shop${run.shopLocked ? ' locked' : ''}`, {}, [controls, row]);
 }
 
 function buildEnemyScout(enemy) {
@@ -158,6 +159,7 @@ function act(fn) { audioResume(); fn(); Run.save(run); renderPlanning(); }
 function doBuy(i) { act(() => Run.buy(run, i)); Sfx.buy(); }
 function doBuyXP() { act(() => Run.buyXP(run)); Sfx.click(); }
 function doReroll() { act(() => Run.reroll(run)); Sfx.click(); }
+function doLock() { run.shopLocked = !run.shopLocked; Run.save(run); Sfx.click(); renderPlanning(); }
 
 // ---------- planning render ----------
 function renderPlanning() {

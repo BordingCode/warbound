@@ -60,6 +60,7 @@
 .btn.primary { background: linear-gradient(180deg, #3a6ea5, #2c5688); border-color: #4d86c4; }
 .btn.reroll { color: var(--gold); }
 .shop-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.shop.locked .shop-row { outline: 2px solid var(--mana); outline-offset: 2px; border-radius: var(--radius-sm); }
 .shop-card {
   position: relative; background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   border: 1px solid var(--line); border-top-width: 3px; border-radius: var(--radius-sm);

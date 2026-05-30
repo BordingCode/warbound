@@ -291,7 +291,8 @@ export function resolveRound(run, won) {
   if (run.wins >= WIN_TARGET) { run.over = true; run.won = true; }
   if (run.lives <= 0) { run.over = true; run.won = false; }
   ensureRng(run);
-  rollShop(run);
+  rollShop(run);                   // respects shopLocked (frozen shop persists)
+  run.shopLocked = false;          // freeze lasts one round (TFT-style auto-unfreeze)
   return run;
 }
 
