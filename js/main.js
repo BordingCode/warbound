@@ -8,7 +8,7 @@ import { ic, iconEl, crest, rankMedal } from './icons.js';
 import { gearArt } from './gear-art.js';
 import { simulate } from './sim/combat.js';
 import { hashSeed } from './rng.js';
-import { CombatPlayer } from './render/player.js';
+import { CombatPlayer, unitStatsPanel } from './render/player.js';
 import { createDragController } from './input/drag.js';
 import { getEnemyBoard, REALMS, realmAt } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
@@ -25,6 +25,7 @@ let lobby = null;          // ladder-mode warlord lobby
 let combatSpeed = 1;
 let inCombat = false;
 let dragCtl = null;
+let lastBattleStats = null;   // per-unit stats from the last fight; shown in planning until the next battle
 let player = null;
 let prevTraitTiers = {};   // for flashing synergy chips when they level up
 
@@ -329,6 +330,7 @@ function renderPlanning() {
   const enemy = getOpponent();
   const boardLimitTxt = `${run.board.length}/${Run.boardLimit(run)}`;
   const { stage, wrap, units } = buildBoardEl();
+  const lastPanel = unitStatsPanel(lastBattleStats); if (lastPanel) wrap.append(lastPanel);   // last battle's per-unit stats, until next fight
 
   const game = el('.game', {}, [
     el('.topbar', {}, [
@@ -657,6 +659,7 @@ async function startCombat() {
   if (inCombat) return;
   audioResume();
   inCombat = true;
+  lastBattleStats = null;   // a new battle clears the previous battle's per-unit stats
   const enemy = getOpponent();
   const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
@@ -682,6 +685,7 @@ async function startCombat() {
 
   player = new CombatPlayer($('.units'), $('.fx-dom'));
   const winner = await player.play(events, { speed: combatSpeed });
+  lastBattleStats = player.playerStats();   // keep per-unit stats visible through planning until next fight
   const won = winner === 'player';
   won ? Sfx.victory() : Sfx.defeat();
   if (won) launchConfetti(2000);

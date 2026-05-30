@@ -19,8 +19,8 @@ export class CombatPlayer {
     this.raf = 0;
     this.critPending = new Set();   // attacker ids whose next hit lands a crit
     this.pauseFor = 0;              // remaining hit-stop in *combat ms* (frozen clock)
-    this.dmgTo = { player: 0, enemy: 0 };  // running damage absorbed by each team (for live DPS/tanked)
-    this.fightMs = 0; this.statsEl = null; this._statsDirty = false;
+    this.unitStats = new Map();   // combat id -> { defId, team, dealt, tanked } (per-unit live stats)
+    this.fightMs = 0; this.statsEl = null; this._statsDirty = false; this._statRows = null;
     this.stageEl = unitsLayer.closest('.stage') || unitsLayer.closest('.board-wrap') || unitsLayer;
     // shake the .stage (no overflow/clip/shadow of its own) so it moves as one cheap GPU layer
     this.shake = new Shake(this.stageEl);
@@ -34,32 +34,30 @@ export class CombatPlayer {
     this.unitsLayer.replaceChildren();
     this.fxLayer.replaceChildren();
     this.nodes.clear();
-    this.dmgTo = { player: 0, enemy: 0 }; this.fightMs = 0;
+    this.unitStats.clear(); this.fightMs = 0; this._statRows = null;
     if (this.statsEl) { this.statsEl.remove(); this.statsEl = null; }
   }
 
-  // Live combat stats panel: per-team DPS dealt + total damage tanked (damage to enemy = your
-  // DPS; damage to you = your tanked). Built once; updates only touch the number text nodes.
-  _ensureStats() {
-    if (this.statsEl) return;
-    const mkRow = (cls, label) => el(`.cs-row.${cls}`, {}, [
-      el('span.cs-lbl', {}, label),
-      el('span.cs-ic', { html: ic('sword') }), el('span.cs-dps', {}, '0/s'),
-      el('span.cs-ic', { html: ic('shield') }), el('span.cs-tank', {}, '0'),
-    ]);
-    this.statsEl = el('.combat-stats', {}, [mkRow('you', 'You'), mkRow('foe', 'Foe')]);
-    (this.unitsLayer.closest('.board-wrap') || this.stageEl).appendChild(this.statsEl);
-  }
+  // ordered per-unit stats for YOUR warband (spawn order = board order) — for planning persistence.
+  playerStats() { return [...this.unitStats.values()].filter((s) => s.team === 'player').map((s) => ({ defId: s.defId, dealt: Math.round(s.dealt), tanked: Math.round(s.tanked) })); }
+
+  // Live per-unit stats panel: one row per YOUR champion (dmg dealt + dmg tanked). Champion icons
+  // are built ONCE (keyed by combat id); per-frame updates only touch the two number text nodes.
   _updateStats() {
-    if (!this.statsEl) this._ensureStats();
-    const secs = Math.max(0.3, this.fightMs / 1000);
-    const set = (sel, dealt, tank) => {
-      const r = this.statsEl.querySelector(sel);
-      r.querySelector('.cs-dps').textContent = Math.round(dealt / secs) + '/s';
-      r.querySelector('.cs-tank').textContent = tank;
-    };
-    set('.you', this.dmgTo.enemy, this.dmgTo.player);   // you dealt = damage to enemy; you tanked = damage to you
-    set('.foe', this.dmgTo.player, this.dmgTo.enemy);
+    const mine = [...this.unitStats.entries()].filter(([, s]) => s.team === 'player');
+    if (!this.statsEl || !this._statRows || this._statRows.size !== mine.length) {
+      if (this.statsEl) this.statsEl.remove();
+      this._statRows = new Map();
+      const rows = mine.map(([id, s]) => {
+        const def = UNITS_BY_ID[s.defId];
+        const dealtEl = el('span.cs-dealt', {}, '0'), tankEl = el('span.cs-tank', {}, '0');
+        this._statRows.set(id, { dealtEl, tankEl });
+        return el('.cs-row', {}, [el('span.cs-champ', { html: def ? championSVG(def, { size: 16 }) : '' }), el('span.cs-ic', { html: ic('sword') }), dealtEl, el('span.cs-ic', { html: ic('shield') }), tankEl]);
+      });
+      this.statsEl = el('.combat-stats', {}, [el('.cs-head', {}, 'Your warband'), ...rows]);
+      (this.unitsLayer.closest('.board-wrap') || this.stageEl).appendChild(this.statsEl);
+    }
+    for (const [id, s] of mine) { const r = this._statRows.get(id); if (r) { r.dealtEl.textContent = Math.round(s.dealt); r.tankEl.textContent = Math.round(s.tanked); } }
   }
 
   _spawn(e) {
@@ -86,6 +84,7 @@ export class CombatPlayer {
     node.querySelector('.frame').append(el('.hitflash'));
     this.unitsLayer.append(node);
     this.nodes.set(e.id, { el: node, maxHp: e.maxHp, hp: e.hp, team: e.team });
+    if (e.defId !== 'summon') { this.unitStats.set(e.id, { defId: e.defId, team: e.team, dealt: 0, tanked: 0 }); if (e.team === 'player') this._statsDirty = true; }
     // spawn pop-in (0 -> 1.15 -> 1, ease-out-back) on the body so the cell anchor never shifts
     const body = node.querySelector('.champ-body');
     if (body) body.animate(
@@ -289,7 +288,11 @@ export class CombatPlayer {
           this._spark(e.id, col, e.dmgType === 'magic' ? 5 : crit ? 5 : 3);
         }
         this._bumpMana(e.id, 0.05);
-        if (e.amount > 0) { const tt = n && n.team; if (tt) { this.dmgTo[tt] += e.amount; this._statsDirty = true; } }
+        if (e.amount > 0) {   // per-unit: credit damage dealt to the source, tanked to the target
+          const src = this.unitStats.get(e.src); if (src) src.dealt += e.amount;
+          const tgt = this.unitStats.get(e.id); if (tgt) tgt.tanked += e.amount;
+          this._statsDirty = true;
+        }
         break;
       }
       case 'heal': this._setHP(e.id, e.hp); this._floatNum(e.id, '+' + e.amount, DT_COLORS.heal); if (n) this._flash(n.el, 0.5, 160); Sfx.heal(); break;
@@ -317,7 +320,6 @@ export class CombatPlayer {
     this.speed = speed;
     this.pauseFor = 0;
     if (this.stageEl) this.stageEl.style.setProperty('--spd', String(speed));
-    this._ensureStats(); this._updateStats();
     return new Promise((resolve) => {
       let i = 0;
       let clock = 0;                 // combat ms elapsed
@@ -347,4 +349,15 @@ export class CombatPlayer {
   setSpeed(s) { this.speed = s; if (this.stageEl) this.stageEl.style.setProperty('--spd', String(s)); }
   skip() { /* fast path: jump remaining; handled by caller re-play at high speed or instant */ }
   stop() { cancelAnimationFrame(this.raf); }
+}
+
+// Static per-unit stats panel for the planning phase — shows the LAST battle's per-champion
+// numbers and persists until the next fight starts (mirrors the live panel above).
+export function unitStatsPanel(stats) {
+  if (!stats || !stats.length) return null;
+  const rows = stats.map((s) => {
+    const def = UNITS_BY_ID[s.defId];
+    return el('.cs-row', {}, [el('span.cs-champ', { html: def ? championSVG(def, { size: 16 }) : '' }), el('span.cs-ic', { html: ic('sword') }), el('span.cs-dealt', {}, String(s.dealt)), el('span.cs-ic', { html: ic('shield') }), el('span.cs-tank', {}, String(s.tanked))]);
+  });
+  return el('.combat-stats.last-battle', {}, [el('.cs-head', {}, 'Last battle'), ...rows]);
 }
