@@ -109,6 +109,12 @@
 .draft-row.relics .draft-pick .dn { min-width: 96px; }
 .draft-row.relics .draft-pick .dm { flex: 1; }
 
+/* champion inspect */
+.istats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 10px 0; font-size: 13px; }
+.istat { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.iability { font-size: 12.5px; line-height: 1.4; background: var(--bg-1); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; margin-bottom: 8px; }
+.iitems { font-size: 12px; color: var(--ink-dim); margin-bottom: 12px; }
+
 /* sell zone */
 .sell-zone {
   display: flex; align-items: center; gap: 4px; padding: 8px 12px; font-weight: 700;

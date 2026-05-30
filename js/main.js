@@ -1,7 +1,7 @@
 // Warbound — game loop. Planning phase (interactive shop/bench/board + drag) → combat
 // (sim + timeline playback) → resolve → next round, until 10 wins or 0 lives.
 import { el, $, $$ } from './dom.js';
-import { UNITS_BY_ID } from './data/units.js';
+import { UNITS_BY_ID, statsForStar } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG } from './svg.js';
 import { simulate } from './sim/combat.js';
@@ -204,6 +204,7 @@ function renderPlanning() {
     onBench: (uid) => act(() => Run.benchUnit(run, uid)),
     onSell: (uid) => { act(() => Run.sellUid(run, uid)); Sfx.sell(); },
     onEquip: (iid, col, row) => { const u = run.board.find((b) => b.col === col && b.row === row); if (u && Run.equipItem(run, iid, u.uid)) { Sfx.fuse(); act(() => {}); } },
+    onInspect: (uid) => showInspect(uid),
   });
   // make board units + bench units draggable
   units.querySelectorAll('.unit').forEach((n) => {
@@ -254,6 +255,36 @@ function offerRelic(after) {
     })),
   ]));
   document.body.append(ov);
+}
+
+function showInspect(uid) {
+  const u = run.board.find((b) => b.uid === uid) || run.bench.find((b) => b && b.uid === uid);
+  if (!u) return;
+  const def = UNITS_BY_ID[u.defId];
+  const s = statsForStar(def, u.star);
+  Sfx.click();
+  const row = (label, val) => el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
+    el('.help-card', { style: { maxWidth: '320px' } }, [
+      el('h2', { style: { fontSize: '19px' } }, `${def.name} ${'★'.repeat(u.star)}`),
+      el('.sub', {}, `${TRAITS[def.origin].name} · ${TRAITS[def.klass].name}  ·  ${def.cost}⛁`),
+      el('.istats', {}, [
+        row('Health', s.hp), row('Attack', s.ad), row('Atk speed', s.as.toFixed(2)),
+        row('Armor', s.armor), row('Magic res', s.mr), row('Range', s.range === 1 ? 'melee' : s.range),
+      ]),
+      el('.iability', {}, [el('b', {}, `✦ ${def.ability.name} `), el('span', { style: { color: 'var(--ink-dim)' } }, abilityText(def.ability))]),
+      (u.items && u.items.length) ? el('.iitems', {}, ['Items: ', ...u.items.map((id) => itemLabel(id)).join(', ')]) : null,
+      el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
+    ]));
+  document.body.append(ov);
+}
+function abilityText(a) {
+  if (a.type === 'magic') return `deals magic damage${a.target === 'cluster' ? ' in an area' : ''} (scales with Ability Power).`;
+  if (a.type === 'physical') return a.target === 'lowestEnemyHP' ? 'executes the weakest enemy.' : a.target === 'mostEnemies' ? 'strikes several foes.' : a.stun ? 'smashes and stuns its target.' : 'cleaves nearby foes.';
+  if (a.type === 'heal') return 'heals the most wounded ally.';
+  if (a.type === 'shield') return 'shields the most wounded ally.';
+  if (a.type === 'summon') return 'raises a creature to fight for you.';
+  return '';
 }
 
 function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highlightSpeed(); }
@@ -333,5 +364,6 @@ window.__wb = {
   render: renderPlanning, fight: startCombat,
   place: (uid, c, r) => act(() => Run.placeOnBoard(run, uid, c, r)),
   giveGold: (n) => act(() => (run.gold += n)),
+  inspect: (uid) => showInspect(uid),
 };
 console.log('[warbound] game loop ready. Round', run.round, '| board limit', Run.boardLimit(run));

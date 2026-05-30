@@ -3,9 +3,9 @@
 // Uses pointer capture + a top-level ghost so it isn't clipped; snaps to tiles.
 import { el } from '../dom.js';
 
-export function createDragController({ boardWrap, sellZone, onPlace, onBench, onSell, onEquip }) {
+export function createDragController({ boardWrap, sellZone, onPlace, onBench, onSell, onEquip, onInspect }) {
   const dragLayer = document.getElementById('drag-layer');
-  let active = null; // { uid, kind, ghost, pointerId, srcEl }
+  let active = null; // { uid, kind, ghost, pointerId, srcEl, startX, startY, startT }
 
   function tileAt(clientX, clientY) {
     const r = boardWrap.getBoundingClientRect();
@@ -38,7 +38,7 @@ export function createDragController({ boardWrap, sellZone, onPlace, onBench, on
     dragLayer.append(ghost);
     moveGhost(ghost, e.clientX, e.clientY);
     srcEl.classList.add('dragging');
-    active = { uid, kind, ghost, pointerId: e.pointerId, srcEl };
+    active = { uid, kind, ghost, pointerId: e.pointerId, srcEl, startX: e.clientX, startY: e.clientY, startT: performance.now() };
   }
   function moveGhost(ghost, x, y) { ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
 
@@ -49,11 +49,14 @@ export function createDragController({ boardWrap, sellZone, onPlace, onBench, on
   }
   function finish(e, cancelled) {
     if (!active || e.pointerId !== active.pointerId) return;
-    const { uid, kind, ghost, srcEl } = active;
+    const { uid, kind, ghost, srcEl, startX, startY, startT } = active;
     ghost.remove(); srcEl.classList.remove('dragging'); clearHighlights();
     const x = e.clientX, y = e.clientY;
     active = null;
     if (cancelled) return;
+    // tap (little movement, short hold) on a champion -> inspect, not drop
+    const moved = Math.hypot(x - startX, y - startY);
+    if (kind !== 'item' && moved < 9 && performance.now() - startT < 280) { if (onInspect) onInspect(uid, kind); return; }
     if (kind === 'item') {                       // dropping an item onto a unit
       const tile = tileAt(x, y);
       if (tile && onEquip) onEquip(uid, tile.col, tile.row);
