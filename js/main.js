@@ -1,7 +1,7 @@
 // Warbound — game loop. Planning phase (interactive shop/bench/board + drag) → combat
 // (sim + timeline playback) → resolve → next round, until 10 wins or 0 lives.
 import { el, $, $$ } from './dom.js';
-import { UNITS_BY_ID, statsForStar } from './data/units.js';
+import { UNITS, UNITS_BY_ID, statsForStar } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG } from './svg.js';
 import { simulate } from './sim/combat.js';
@@ -79,7 +79,7 @@ function buildTraitsEl() {
     const next = def.breakpoints.find((b) => b > info.count);
     tiers[t] = info.tier;
     const leveledUp = info.tier > 0 && info.tier !== (prevTraitTiers[t] || 0);
-    rail.append(el(`.trait-chip${info.tier ? ' active tier-' + tierIdx : ''}${leveledUp ? ' flash' : ''}`, { title: def.bonusText[info.tier] || def.desc }, [
+    rail.append(el(`.trait-chip${info.tier ? ' active tier-' + tierIdx : ''}${leveledUp ? ' flash' : ''}`, { onclick: () => showTraitInfo(t) }, [
       el('span.dot', { style: { background: def.color } }),
       el('span', {}, def.name),
       el('span.cnt', {}, next ? `${info.count}/${next}` : `${info.count}`),
@@ -98,6 +98,7 @@ function buildShopEl() {
     const owned = [...run.board, ...run.bench.filter(Boolean)].some((u) => u.defId === id);
     const card = el(`.shop-card.cost-${def.cost}${owned ? ' owned' : ''}`, { onclick: () => doBuy(i) }, [
       el('span.price', {}, `${def.cost}⛁`),
+      el('button.card-info', { onclick: (e) => { e.stopPropagation(); showUnitInfo(def, 1, []); } }, 'ⓘ'),
       el('.art', { html: championSVG(def, { size: 46 }) }),
       el('.nm', {}, def.name),
       el('.tags', {}, `${TRAITS[def.origin].name} · ${TRAITS[def.klass].name}`),
@@ -123,7 +124,7 @@ function buildEnemyScout(enemy) {
   if (!active.length) row.append(el('span', { style: { color: 'var(--ink-faint)', fontSize: '11px' } }, 'no synergies'));
   for (const [t, info] of active) {
     const def = TRAITS[t];
-    row.append(el('.trait-chip.active', { style: { opacity: .85 }, title: def.bonusText[info.tier] || def.desc }, [
+    row.append(el('.trait-chip.active', { style: { opacity: .85 }, onclick: () => showTraitInfo(t) }, [
       el('span.dot', { style: { background: def.color } }), el('span', {}, def.name), el('span.cnt', {}, info.count),
     ]));
   }
@@ -175,6 +176,7 @@ function renderPlanning() {
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
+      el('button.btn', { style: { padding: '5px 10px' }, onclick: () => showCodex('units') }, '📖'),
       el('button.btn#soundBtn', { style: { padding: '5px 10px' }, onclick: toggleSound }, soundOn() ? '🔊' : '🔇'),
       el('button.btn', { style: { padding: '5px 10px' }, onclick: showHelp }, '?'),
     ]),
@@ -263,25 +265,86 @@ function offerRelic(after) {
 
 function showInspect(uid) {
   const u = run.board.find((b) => b.uid === uid) || run.bench.find((b) => b && b.uid === uid);
-  if (!u) return;
-  const def = UNITS_BY_ID[u.defId];
-  const s = statsForStar(def, u.star);
+  if (u) showUnitInfo(UNITS_BY_ID[u.defId], u.star, u.items);
+}
+// Reusable champion detail sheet (used by inspect, shop (i), and the codex).
+function showUnitInfo(def, star = 1, items = []) {
+  const s = statsForStar(def, star);
   Sfx.click();
   const row = (label, val) => el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
     el('.help-card', { style: { maxWidth: '320px' } }, [
-      el('h2', { style: { fontSize: '19px' } }, `${def.name} ${'★'.repeat(u.star)}`),
-      el('.sub', {}, `${TRAITS[def.origin].name} · ${TRAITS[def.klass].name}  ·  ${def.cost}⛁`),
+      el('h2', { style: { fontSize: '19px' } }, `${def.name} ${star > 1 ? '★'.repeat(star) : ''}`),
+      el('.unit-traits', {}, [TRAITS[def.origin], TRAITS[def.klass]].map((t) => el('.trait-chip.active', { onclick: () => showTraitInfo(t === TRAITS[def.origin] ? def.origin : def.klass) }, [el('span.dot', { style: { background: t.color } }), el('span', {}, t.name)]))),
+      el('.sub', {}, `Cost ${def.cost}⛁ · ${def.range === 1 ? 'melee' : 'ranged ' + def.range}`),
       el('.istats', {}, [
         row('Health', s.hp), row('Attack', s.ad), row('Atk speed', s.as.toFixed(2)),
-        row('Armor', s.armor), row('Magic res', s.mr), row('Range', s.range === 1 ? 'melee' : s.range),
+        row('Armor', s.armor), row('Magic res', s.mr), row('Mana', def.maxMana),
       ]),
       el('.iability', {}, [el('b', {}, `✦ ${def.ability.name} `), el('span', { style: { color: 'var(--ink-dim)' } }, abilityText(def.ability))]),
-      (u.items && u.items.length) ? el('.iitems', {}, ['Items: ', ...u.items.map((id) => itemLabel(id)).join(', ')]) : null,
+      (items && items.length) ? el('.iitems', {}, ['Items: ', items.map((id) => itemLabel(id)).join(', ')]) : null,
       el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
     ]));
   document.body.append(ov);
 }
+// Trait detail: every breakpoint's effect (active one highlighted) + which champions have it.
+function showTraitInfo(traitId) {
+  const def = TRAITS[traitId]; if (!def) return;
+  Sfx.click();
+  const owned = new Set(run.board.map((u) => u.defId).concat(run.bench.filter(Boolean).map((u) => u.defId)));
+  const playerDefs = run.board.map((u) => UNITS_BY_ID[u.defId]);
+  const active = activeTraits(playerDefs)[traitId];
+  const curTier = active ? active.tier : 0;
+  const members = UNITS.filter((u) => u.origin === traitId || u.klass === traitId);
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
+    el('.help-card', { style: { maxWidth: '330px' } }, [
+      el('h2', { style: { fontSize: '19px', color: def.color } }, `${def.name}`),
+      el('.sub', {}, `${def.axis === 'origin' ? 'Origin' : 'Class'} · ${def.desc}`),
+      el('.tiers', {}, def.breakpoints.map((bp) => el(`.tier-row${bp === curTier ? ' on' : ''}`, {}, [
+        el('span.tier-n', {}, `${bp}`), el('span', {}, def.bonusText[bp] || ''),
+      ]))),
+      el('.sub', { style: { marginTop: '8px' } }, `Champions (${active ? active.count : 0} on your board):`),
+      el('.trait-members', {}, members.map((m) => el(`.tmem${owned.has(m.defId) ? ' owned' : ''}`, { onclick: () => showUnitInfo(m, 1, []) }, [el('.tmem-art', { html: championSVG(m, { size: 30 }) }), el('span', {}, m.name)]))),
+      el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
+    ]));
+  document.body.append(ov);
+}
+// Codex: browse all champions + traits anytime. Reuses showUnitInfo / showTraitInfo.
+function showCodex(tab = 'units') {
+  Sfx.click();
+  const body = el('.codex-body');
+  const render = (which) => {
+    body.replaceChildren();
+    if (which === 'units') {
+      const grid = el('.codex-grid');
+      [...UNITS].sort((a, b) => a.cost - b.cost).forEach((u) => grid.append(
+        el(`.codex-cell.cost-${u.cost}`, { onclick: () => showUnitInfo(u, 1, []) }, [
+          el('.art', { html: championSVG(u, { size: 40 }) }), el('.nm', {}, u.name),
+        ])));
+      body.append(grid);
+    } else {
+      const list = el('.codex-list');
+      for (const [id, t] of Object.entries(TRAITS)) list.append(
+        el('.trait-chip.active', { style: { justifyContent: 'flex-start' }, onclick: () => showTraitInfo(id) }, [
+          el('span.dot', { style: { background: t.color } }), el('span', {}, t.name),
+          el('span', { style: { color: 'var(--ink-faint)', fontSize: '10px', marginLeft: 'auto' } }, t.axis),
+        ]));
+      body.append(list);
+    }
+  };
+  const mkTab = (key, label) => el(`button.btn${tab === key ? ' primary' : ''}`, { onclick: () => { tab = key; [...tabs.children].forEach((c, i) => c.classList.toggle('primary', (key === 'units') === (i === 0))); render(key); } }, label);
+  const tabs = el('.codex-tabs');
+  tabs.append(mkTab('units', `Champions (${UNITS.length})`), mkTab('traits', `Synergies (${Object.keys(TRAITS).length})`));
+  render(tab);
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
+    el('.help-card', { style: { maxWidth: '360px', width: '92%' } }, [
+      el('h2', { style: { fontSize: '20px' } }, '📖 Codex'),
+      tabs, body,
+      el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
+    ]));
+  document.body.append(ov);
+}
+
 function abilityText(a) {
   if (a.type === 'magic') return `deals magic damage${a.target === 'cluster' ? ' in an area' : ''} (scales with Ability Power).`;
   if (a.type === 'physical') return a.target === 'lowestEnemyHP' ? 'executes the weakest enemy.' : a.target === 'mostEnemies' ? 'strikes several foes.' : a.stun ? 'smashes and stuns its target.' : 'cleaves nearby foes.';
