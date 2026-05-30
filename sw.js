@@ -1,11 +1,12 @@
 // Network-first service worker. Fresh code when online, full offline fallback.
 // BUMP CACHE on every shippable change.
-const CACHE = 'warbound-v1';
+const CACHE = 'warbound-v2';
 const SHELL = [
   './', './index.html', './manifest.json', './icons/favicon.svg',
   './css/tokens.css', './css/board.css', './css/units.css', './css/hud.css',
   './js/main.js', './js/dom.js', './js/rng.js', './js/grid.js', './js/svg.js',
   './js/data/units.js', './js/data/traits.js',
+  './js/sim/rules.js', './js/sim/combat.js', './js/render/player.js',
 ];
 
 self.addEventListener('install', (e) => {

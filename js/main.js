@@ -5,6 +5,12 @@ import { el, $ } from './dom.js';
 import { UNITS, UNITS_BY_ID, statsForStar } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG } from './svg.js';
+import { simulate } from './sim/combat.js';
+import { CombatPlayer } from './render/player.js';
+
+let player = null;        // CombatPlayer instance
+let combatSpeed = 1;
+let inCombat = false;
 
 // ---- sample state (placeholder until economy/run state exists) ----
 const sample = {
@@ -125,13 +131,45 @@ function render() {
     el('.phase-banner', {}, 'PLANNING — arrange your warband'),
     buildBoard(),
     el('.combat-ctl', {}, [
-      el('button.btn.primary', { style: { fontSize: '15px', padding: '10px 24px' } }, '⚔ Ready'),
+      el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 24px' } }, '⚔ Ready'),
+      el('button.btn#spd1', { onclick: () => setSpeed(1) }, '1×'),
+      el('button.btn#spd2', { onclick: () => setSpeed(2) }, '2×'),
+      el('button.btn#spd4', { onclick: () => setSpeed(4) }, '4×'),
     ]),
     buildBench(),
     buildShop(),
   ]);
   $('#app').replaceChildren(game);
+
+  // wire combat
+  const unitsLayer = $('.units'), fxLayer = $('.fx-dom');
+  player = new CombatPlayer(unitsLayer, fxLayer);
+  $('#readyBtn').addEventListener('click', startCombat);
+  highlightSpeed();
+}
+
+function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highlightSpeed(); }
+function highlightSpeed() {
+  for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); }
+}
+
+function setBanner(text) { const b = $('.phase-banner'); if (b) b.textContent = text; }
+
+async function startCombat() {
+  if (inCombat) return;
+  inCombat = true;
+  const ready = $('#readyBtn'); if (ready) ready.disabled = true;
+  const playerBoard = sample.board.filter((u) => u.team === 'player').map(({ defId, star, col, row }) => ({ defId, star, col, row }));
+  const enemyBoard = sample.board.filter((u) => u.team === 'enemy').map(({ defId, star, col, row }) => ({ defId, star, col, row }));
+  const seed = 20260530;
+  const { events, result } = simulate(playerBoard, enemyBoard, seed);
+  setBanner('⚔ BATTLE');
+  const winner = await player.play(events, { speed: combatSpeed });
+  setBanner(winner === 'player' ? '🏆 VICTORY' : winner === 'enemy' ? '💀 DEFEAT' : '⚖ DRAW');
+  inCombat = false;
+  if (ready) { ready.disabled = false; ready.textContent = '↻ Replay'; }
+  console.log('[warbound] combat result:', result);
 }
 
 render();
-console.log('[warbound] M0 shell rendered.', UNITS.length, 'units in roster');
+console.log('[warbound] M3 shell + combat renderer ready.', UNITS.length, 'units in roster');
