@@ -192,3 +192,25 @@
   position: absolute; font-family: var(--font-num); font-weight: 800; font-size: 14px;
   text-shadow: 0 2px 3px #000, 0 0 2px #000; pointer-events: none; will-change: transform, opacity;
 }
+
+/* ---- ladder standings strip ---- */
+.standings { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; padding: 2px 4px; }
+.warlord { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 40px; padding: 3px 2px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
+.warlord.you { border-color: var(--gold); }
+.warlord.foe { border-color: var(--hp); background: rgba(79,208,122,0.10); }
+.warlord.under { box-shadow: 0 0 0 2px var(--gold) inset; }
+.warlord.dead { opacity: 0.32; filter: grayscale(1); }
+.warlord .wem { font-size: 16px; line-height: 1; }
+.warlord .hpbar { width: 100%; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.warlord .hpbar .hpfill { height: 100%; transform-origin: left; background: linear-gradient(90deg, var(--hp), #9be86a); transition: transform .3s; }
+.warlord.you .hpbar .hpfill { background: linear-gradient(90deg, var(--gold), #ffe9a8); }
+.warlord .whp { font-size: 9px; color: var(--ink-dim); }
+
+/* ---- mode select ---- */
+.mode-menu { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 360px; }
+.mode-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: transform .12s, border-color .12s, background .12s; }
+.mode-card:hover { transform: translateY(-3px); border-color: var(--gold); background: var(--bg-3); }
+.mode-card.ladder:hover { border-color: var(--hp); }
+.mode-card .mc-emoji { font-size: 30px; }
+.mode-card .mc-title { font-size: 18px; font-weight: 800; margin: 4px 0 3px; }
+.mode-card .mc-desc { font-size: 12px; color: var(--ink-dim); line-height: 1.4; }

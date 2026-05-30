@@ -12,15 +12,35 @@ import { getEnemyBoard } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
+import * as Bots from './state/bots.js';
 import { resume as audioResume, Sfx, setEnabled as setSound, isEnabled as soundOn } from './audio/audio.js';
 import { launchConfetti } from './render/fx.js';
 
-let run = Run.load() || Run.freshRun();
+let run = null;            // set by boot (solo resume) or a mode start
+let lobby = null;          // ladder-mode warlord lobby
 let combatSpeed = 1;
 let inCombat = false;
 let dragCtl = null;
 let player = null;
 let prevTraitTiers = {};   // for flashing synergy chips when they level up
+
+const LOBBY_KEY = 'warbound_lobby_v1';
+function saveLobby() { try { if (lobby) localStorage.setItem(LOBBY_KEY, JSON.stringify(Bots.serializeLobby(lobby))); } catch {} }
+function clearLobby() { try { localStorage.removeItem(LOBBY_KEY); } catch {} }
+function persist() { Run.save(run); if (run.mode === 'ladder') saveLobby(); }
+
+// Who am I fighting this round: the matched warlord (ladder) or the authored gym ladder (solo).
+function getOpponent() {
+  if (run.mode === 'ladder' && lobby && lobby.opponent) {
+    const o = lobby.opponent;
+    return {
+      name: o.ghost ? '👁 Battle Echo' : `${o.emoji} ${o.name}`,
+      traitHint: o.ghost ? 'a mirror of a rival warband' : o.style.desc,
+      units: (o.board || []).map((u) => ({ ...u })),
+    };
+  }
+  return getEnemyBoard(run.round, null);
+}
 
 // ---------- board ----------
 function unitNode(u, team) {
@@ -53,7 +73,7 @@ function buildBoardEl() {
   if (!inCombat) {
     for (const u of run.board) units.append(unitNode(u, 'player'));
     // scout: dimmed preview of the upcoming enemy board so the player can counter-position
-    const enemy = getEnemyBoard(run.round, null);
+    const enemy = getOpponent();
     for (const e of enemy.units) {
       const n = unitNode(e, 'enemy');
       n.classList.add('preview');
@@ -115,6 +135,43 @@ function buildShopEl() {
   return el(`.shop${run.shopLocked ? ' locked' : ''}`, {}, [controls, row]);
 }
 
+// ---------- ladder standings (warlord HP roster) ----------
+function buildStandings() {
+  if (!lobby) return null;
+  const oppId = lobby.opponent && !lobby.opponent.ghost ? lobby.opponent.id : null;
+  const sorted = [...lobby.players].sort((a, b) => (b.alive - a.alive) || (b.hp - a.hp));
+  const row = el('.standings');
+  for (const p of sorted) {
+    const hp = Math.max(0, Math.round(p.hp));
+    const isUnder = p.alive && lobby.underdog === p.id;
+    row.append(el(`.warlord${p.alive ? '' : ' dead'}${p.isHuman ? ' you' : ''}${p.id === oppId ? ' foe' : ''}${isUnder ? ' under' : ''}`,
+      { title: `${p.name}${p.isHuman ? '' : ' — ' + p.style.desc}${p.alive ? ' · ' + hp + ' HP' : ' · #' + p.place}`, onclick: () => showWarlordInfo(p) }, [
+        el('span.wem', {}, p.emoji),
+        el('.hpbar', {}, el('.hpfill', { style: { transform: `scaleX(${Math.min(1, hp / Bots.START_HP)})` } })),
+        el('span.whp', {}, p.alive ? hp : '#' + p.place),
+      ]));
+  }
+  return row;
+}
+function showWarlordInfo(p) {
+  Sfx.click();
+  const hp = Math.max(0, Math.round(p.hp));
+  const isFoe = lobby && lobby.opponent && !lobby.opponent.ghost && lobby.opponent.id === p.id;
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
+    el('.help-card', { style: { maxWidth: '300px' } }, [
+      el('h2', { style: { fontSize: '19px' } }, `${p.emoji} ${p.name}`),
+      el('.sub', {}, p.isHuman ? "That's your warband." : p.style.desc),
+      el('.istats', {}, [
+        el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Status'), el('span', {}, p.alive ? `${hp} HP` : `Fallen · #${p.place}`)]),
+        el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Level'), el('span', {}, p.isHuman ? run.level : (p.level || '?'))]),
+      ]),
+      (lobby.underdog === p.id && p.alive) ? el('.sub', { style: { color: 'var(--gold)', marginTop: '8px' } }, '⭐ Underdog — lowest HP gets a free item each round.') : null,
+      isFoe ? el('.sub', { style: { color: 'var(--hp)', marginTop: '6px' } }, '⚔ Your foe this round — scout their warband on the dimmed board.') : null,
+      el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
+    ]));
+  document.body.append(ov);
+}
+
 function buildEnemyScout(enemy) {
   const defs = enemy.units.map((u) => UNITS_BY_ID[u.defId]);
   const active = Object.entries(activeTraits(defs)).filter(([t, i]) => TRAITS[t] && i.tier > 0)
@@ -167,14 +224,16 @@ function doLock() { run.shopLocked = !run.shopLocked; Run.save(run); Sfx.click()
 // ---------- planning render ----------
 function renderPlanning() {
   inCombat = false;
-  const enemy = getEnemyBoard(run.round, null);
+  const enemy = getOpponent();
   const boardLimitTxt = `${run.board.length}/${Run.boardLimit(run)}`;
   const { stage, wrap, units } = buildBoardEl();
 
   const game = el('.game', {}, [
     el('.topbar', {}, [
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
-      el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
+      run.mode === 'ladder'
+        ? el(`.stat-pill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [el('span', { style: { color: 'var(--hp)' } }, `❤ ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
+        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [el('span.lives', {}, '❤'.repeat(run.lives)), el('span', { style: { color: 'var(--hp)', marginLeft: '4px' } }, `${run.wins}/10`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn', { style: { padding: '5px 10px' }, onclick: () => showCodex('units') }, '📖'),
       el(`button.btn#shakeBtn${motionOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Screen shake (turn off if the game feels laggy)', onclick: toggleMotion }, '💥'),
@@ -188,7 +247,8 @@ function renderPlanning() {
     ]),
     run.augments.length ? el('.relic-bar', {}, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: `${AUGMENTS[id].name}: ${AUGMENTS[id].desc}`, onclick: () => showAugmentInfo(id) }, AUGMENTS[id].icon))) : null,
     buildTraitsEl(),
-    el('.phase-banner', {}, `Next: ${enemy.name} — ${enemy.traitHint}`),
+    run.mode === 'ladder' ? buildStandings() : null,
+    el('.phase-banner', {}, `${run.mode === 'ladder' ? 'Versus' : 'Next'}: ${enemy.name} — ${enemy.traitHint}`),
     buildEnemyScout(enemy),
     stage,
     el('.combat-ctl', {}, [
@@ -460,11 +520,12 @@ async function startCombat() {
   if (inCombat) return;
   audioResume();
   inCombat = true;
-  const enemy = getEnemyBoard(run.round, null);
+  const enemy = getOpponent();
   const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const seed = hashSeed(run.seed, run.round);
-  const { events, result } = simulate(playerBoard, enemyBoard, seed, { aug: { player: augmentBundle(run.augments) } });
+  const sim = simulate(playerBoard, enemyBoard, seed, { aug: { player: augmentBundle(run.augments) } });
+  const { events, result } = sim;
 
   // hide planning-only controls, keep board
   $$('.bench .slot, .shop, .combat-ctl .btn:not(#readyBtn)').forEach(() => {});
@@ -480,6 +541,28 @@ async function startCombat() {
   setBanner(won ? `🏆 Round won! (${sv.player} survived)` : winner === 'enemy' ? `💀 Round lost — ${sv.enemy} enemies left` : '⚖ Draw — counts as a loss');
 
   const finishedRound = run.round;
+
+  if (run.mode === 'ladder') {
+    const hpBefore = lobby.human.hp;
+    run.lives = 999;                       // ladder uses the HP pool, not lives
+    Run.resolveRound(run, won);            // income / passive xp / shop roll / round++
+    run.over = false; run.won = false;
+    const summary = Bots.resolveLadderRound(lobby, playerBoard, sim, finishedRound);
+    run.hp = lobby.human.hp;
+    persist();
+    if (summary.over) clearLobby(); else saveLobby();
+    const lost = Math.round(hpBefore - lobby.human.hp);
+    const hpMsg = lost > 0 ? ` · −${lost} HP` : won ? ' · unscathed' : '';
+    const koMsg = summary.dead && summary.dead.length ? ` · 💀 ${summary.dead.join(', ')}` : '';
+    setBanner(`${won ? '🏆 Round won!' : winner === 'enemy' ? '💀 Round lost' : '⚖ Draw'}${hpMsg}${koMsg}`);
+    setTimeout(() => {
+      if (summary.over) endScreen(summary);
+      else if (summary.humanIsUnderdog) offerUnderdogDraft(renderPlanning);   // comeback: free item
+      else renderPlanning();
+    }, summary.dead && summary.dead.length ? 2000 : 1200);
+    return;
+  }
+
   Run.resolveRound(run, won);
   Run.save(run);
   setTimeout(() => {
@@ -490,25 +573,95 @@ async function startCombat() {
   }, 1100);
 }
 
-function endScreen() {
-  const won = run.won;
-  if (won) launchConfetti(4000);
+// Comeback perk (research: lowest-HP gets first pick). Reuses the component draft, framed as
+// an underdog reward so the trailing player gets a free item to stabilise.
+function offerUnderdogDraft(after) {
+  const ids = Run.draftComponents(run);
+  const pick = (id) => { Run.addItem(run, id); persist(); Sfx.buy(); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
+  const ov = el('.overlay', {}, el('.help-card', {}, [
+    el('h2', {}, '⭐ Underdog Gift'),
+    el('.sub', {}, "You're lowest on health — claim a free component to fight back. Combine two on a champion for a full item."),
+    el('.draft-row', {}, ids.map((id) => { const d = COMPONENTS[id]; return el('button.draft-pick', { onclick: () => pick(id) }, [el('span.di', {}, d.icon), el('span.dn', {}, d.name), el('span.dm', {}, Object.entries(d.mods).map(([k, v]) => `+${v < 1 ? Math.round(v * 100) + '%' : v} ${k}`).join(', '))]); })),
+  ]));
+  document.body.append(ov);
+}
+
+function endScreen(ladderSummary) {
   const stat = (label, val) => el('.istat', { style: { minWidth: '120px' } }, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
+  let head, sub, stats;
+  if (run.mode === 'ladder') {
+    const place = (ladderSummary && ladderSummary.humanPlace) || (lobby && lobby.human.place) || Bots.aliveCount(lobby);
+    const first = place === 1;
+    if (first) launchConfetti(4000);
+    head = first ? '👑 1st PLACE!' : `#${place} of 8`;
+    sub = first ? 'Last warband standing — you conquered the ladder!' : `Your warband fell in ${place}${['th', 'st', 'nd', 'rd'][place] || 'th'} place. The other warlords were tougher.`;
+    stats = [stat('Placement', `#${place} / 8`), stat('Rounds', run.round - 1)];
+  } else {
+    const won = run.won;
+    if (won) launchConfetti(4000);
+    head = won ? '🏆 VICTORY' : '⚔ RUN OVER';
+    sub = won ? `You won with ${run.lives} ❤ to spare — a true warlord!` : 'A valiant effort. Tune your warband and try again!';
+    stats = [stat('Wins', `${run.wins} / 10`), stat('Rounds', run.round - 1)];
+  }
   const card = el('.endscreen', {}, [
-    el('h1', { style: { fontSize: '34px', margin: '0' } }, won ? '🏆 VICTORY' : '⚔ RUN OVER'),
-    el('p', { style: { color: 'var(--ink-dim)', margin: '0' } }, won ? `You won with ${run.lives} ❤ to spare — a true warlord!` : `A valiant effort. Tune your warband and try again!`),
-    el('.istats', { style: { maxWidth: '280px' } }, [stat('Wins', `${run.wins} / 10`), stat('Rounds', run.round - 1)]),
-    run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name }, AUGMENTS[id].icon)))]) : null,
-    el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => { run = Run.freshRun(); Run.save(run); renderPlanning(); } }, '↻ New Run'),
+    el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
+    el('p', { style: { color: 'var(--ink-dim)', margin: '0' } }, sub),
+    el('.istats', { style: { maxWidth: '280px' } }, stats),
+    run.mode !== 'ladder' && run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name }, AUGMENTS[id].icon)))]) : null,
+    el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => chooseMode() }, '↻ Main menu'),
   ]);
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', textAlign: 'center', gap: '14px' } }, [card]));
 }
 
-renderPlanning();
-if (!seenIntro()) showHelp();
+// ---------- mode select ----------
+function startSolo(fresh) {
+  if (fresh) Run.clearSave();
+  clearLobby();
+  run = (!fresh && Run.load()) || Run.freshRun();
+  run.mode = 'solo'; lobby = null;
+  Run.save(run); renderPlanning();
+  if (!seenIntro()) showHelp();
+}
+function startLadder() {
+  clearLobby();
+  const seed = 'ladder-' + Date.now();
+  run = Run.freshRun(seed);
+  run.mode = 'ladder'; run.hp = Bots.START_HP; run.lives = 999;
+  lobby = Bots.createLobby(seed);
+  run.pool = lobby.pool;                  // SHARED POOL: human draws from the same bag as the bots
+  persist(); renderPlanning();
+  try { if (localStorage.getItem('warbound_intro_ladder') !== '1') { localStorage.setItem('warbound_intro_ladder', '1'); showHelp(); } } catch {}
+}
+function chooseMode() {
+  Run.clearSave(); clearLobby(); run = Run.freshRun(); run.mode = 'menu'; lobby = null;
+  const card = (cls, emoji, title, desc, onclick) => el(`.mode-card${cls}`, { onclick }, [el('.mc-emoji', {}, emoji), el('.mc-title', {}, title), el('.mc-desc', {}, desc)]);
+  $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '14px' } }, [
+    el('h1', { style: { fontSize: '32px', margin: '0', textAlign: 'center' } }, 'Warbound'),
+    el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-6px' } }, 'Choose your battle'),
+    el('.mode-menu', {}, [
+      card('', '🏰', 'Gym Crawl', 'Climb a ladder of authored warbands solo — win 10 before 5 lives run out. Augments & item drafts.', () => startSolo(true)),
+      card(' ladder', '👑', 'Warlord Ladder', 'Auto-Chess: 8 warlords, ONE shared champion pool, last warband standing wins. Comeback gifts when behind.', () => startLadder()),
+    ]),
+  ]));
+}
+
+// ---------- boot ----------
+{
+  const saved = Run.load();
+  if (saved && saved.mode === 'ladder') {
+    try { lobby = Bots.deserializeLobby(JSON.parse(localStorage.getItem(LOBBY_KEY) || 'null')); } catch { lobby = null; }
+    if (lobby && lobby.human && lobby.human.alive) { run = saved; run.pool = lobby.pool; renderPlanning(); } else { clearLobby(); chooseMode(); }
+  } else if (saved && saved.round > 1) {
+    run = saved; run.mode = saved.mode || 'solo'; lobby = null; renderPlanning();
+    if (!seenIntro()) showHelp();
+  } else {
+    chooseMode();
+  }
+}
 // Debug hook (also the seed of a future debug menu): inspect/drive state from console.
 window.__wb = {
-  get run() { return run; }, Run,
+  get run() { return run; }, get lobby() { return lobby; }, Run, Bots,
+  ladder: () => startLadder(), menu: () => chooseMode(),
   render: renderPlanning, fight: startCombat,
   place: (uid, c, r) => act(() => Run.placeOnBoard(run, uid, c, r)),
   giveGold: (n) => act(() => (run.gold += n)),
