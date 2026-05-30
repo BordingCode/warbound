@@ -326,7 +326,9 @@ Built and verified (browser + headless tests):
 
 **Balance findings (2026-05-30):** median fight ~12s; random bot wins 1–3 early rounds then loses (skill matters); a focused 6-unit 2★ comp stomps R5–9 (100%) but loses the R10 Dragonsworn boss (5%); a full 8-unit board w/ 3★ carry + items + 3 relics beats the boss (100%). → winnable with good play, boss is a fair check. Mid-ladder (R5–9) could escalate steeper in a future pass.
 
-**Not yet built:** Spatula/emblems, act-specific bosses beyond R10, ascension tiers, cross-run unlocks, per-comp round-robin balance gradient (autobalance per-unit read is binary — combat is near-deterministic). Mobile drag untested on a real device.
+**Also shipped:** tap-to-inspect champions (stats/ability/traits), shop freeze (one-round, TFT-style), enemy-synergy scout, survivor-count result banner, encouraging end screen w/ run stats, low-lives danger pulse, 4 authored late boards (R11–R14 incl. a final boss), comp round-robin balance tool.
+
+**Not yet built:** Spatula/emblems, ascension tiers, cross-run unlocks. Mobile drag untested on a *real* device (verified at 375/390px viewports + via synthetic pointer events only).
 
 ## 13. Decisions — RESOLVED
 
