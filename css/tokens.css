@@ -1,0 +1,62 @@
+/* Design tokens — gritty heroic-dark-fantasy palette. */
+:root {
+  --bg-0: #0c0f17;          /* deepest */
+  --bg-1: #131826;
+  --bg-2: #1b2336;
+  --bg-3: #26314a;
+  --ink: #e8edf7;
+  --ink-dim: #9fb0cc;
+  --ink-faint: #5d6b87;
+  --gold: #ffce5c;
+  --gold-deep: #c9962f;
+  --hp: #4fd07a;
+  --hp-trail: #ffffff;
+  --mana: #5aa6ff;
+  --danger: #ff5a4d;
+  --shield: #ffe08a;
+  --line: #2c3a57;
+
+  /* board */
+  --tile: #1a2236;
+  --tile-alt: #18203250;
+  --tile-edge: #2e3a57;
+  --player-tint: #2a6cff;
+  --enemy-tint: #ff4d4d;
+
+  /* damage-type palette (used everywhere: numbers, projectiles, particles) */
+  --dt-physical: #ffd089;
+  --dt-magic: #b98cff;
+  --dt-fire: #ff7a3c;
+  --dt-frost: #6fe0ff;
+  --dt-true: #ff6bd6;
+  --dt-heal: #74ffb0;
+
+  /* trait tier chips */
+  --tier-bronze: #b87333;
+  --tier-silver: #c8d2e0;
+  --tier-gold: #ffce5c;
+
+  --radius: 12px;
+  --radius-sm: 7px;
+  --shadow-1: 0 2px 8px rgba(0,0,0,.4);
+  --shadow-2: 0 6px 24px rgba(0,0,0,.55);
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-num: 'SF Mono', ui-monospace, 'Roboto Mono', monospace;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #1d2740 0%, var(--bg-0) 60%),
+    var(--bg-0);
+  min-height: 100svh;
+  overscroll-behavior: none;
+}
+button { font-family: inherit; color: inherit; cursor: pointer; }
+.hidden { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}

@@ -1,0 +1,50 @@
+/* The battle arena: a square stack of (tiles grid) + (absolute unit overlay) + (fx canvas). */
+.stage {
+  position: relative;
+  width: min(96vw, 56svh, 520px);
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  touch-action: none;            /* drag surface: never scroll the page from here */
+}
+.board-wrap {
+  position: absolute; inset: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-2), inset 0 0 0 1px var(--tile-edge);
+  background: var(--bg-1);
+}
+.tiles {
+  position: absolute; inset: 0;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(8, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+}
+.tile {
+  min-width: 0; min-height: 0;
+  background: var(--tile);
+  position: relative;
+}
+.tile.alt { background: #18223a; }
+.tile.enemy-zone { background: #2017204d; box-shadow: inset 0 0 0 1px #50202a40; }
+.tile.player-zone { background: #141f3a; box-shadow: inset 0 0 0 1px #1f3a6640; }
+.tile.drop-ok::after {
+  content: ''; position: absolute; inset: 8%;
+  border: 2px dashed var(--player-tint);
+  border-radius: 6px; opacity: .9;
+}
+.tile.drop-bad::after {
+  content: ''; position: absolute; inset: 8%;
+  border: 2px dashed var(--danger); border-radius: 6px; opacity: .6;
+}
+
+/* Unit overlay: 0x0 origin at top-left of board, units placed by translate(). */
+.units, .fx-dom { position: absolute; inset: 0; pointer-events: none; }
+.fx-canvas { position: absolute; inset: 0; pointer-events: none; }
+
+.midline {
+  position: absolute; left: 4%; right: 4%; top: 50%; height: 2px;
+  background: linear-gradient(90deg, transparent, #ffffff22 20%, #ffffff22 80%, transparent);
+  transform: translateY(-1px);
+}

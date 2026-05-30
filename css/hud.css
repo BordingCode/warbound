@@ -1,0 +1,87 @@
+/* App layout: top bar, stage, traits rail, bench, shop. Phone-first column. */
+#app { min-height: 100svh; display: flex; flex-direction: column; }
+.game {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+  max-width: 600px; margin: 0 auto; width: 100%;
+}
+
+/* top bar */
+.topbar { display: flex; align-items: center; gap: 8px; }
+.stat-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-1);
+}
+.stat-pill .ico { font-size: 14px; }
+.stat-pill.gold { color: var(--gold); }
+.stat-pill.hp { color: var(--hp); }
+.stat-pill .lives { letter-spacing: 1px; color: var(--danger); }
+.stat-pill.round { color: var(--ink-dim); margin-left: auto; }
+.xpbar { flex: 1; height: 8px; background: var(--bg-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+.xpbar .fill { height: 100%; background: linear-gradient(90deg, var(--mana), #7ad0ff); transform-origin: left; }
+
+/* traits rail */
+.traits-rail { display: flex; flex-wrap: wrap; gap: 5px; min-height: 30px; }
+.trait-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 7px;
+  padding: 3px 8px; font-size: 12px; font-weight: 600; opacity: .5;
+}
+.trait-chip.active { opacity: 1; }
+.trait-chip .dot { width: 10px; height: 10px; border-radius: 3px; }
+.trait-chip .cnt { font-variant-numeric: tabular-nums; color: var(--ink-dim); }
+.trait-chip.tier-1 { border-color: var(--tier-bronze); }
+.trait-chip.tier-2 { border-color: var(--tier-silver); }
+.trait-chip.tier-3 { border-color: var(--tier-gold); box-shadow: 0 0 8px #ffce5c40; }
+.trait-chip.flash { animation: chipflash .4s ease; }
+@keyframes chipflash { 0% { transform: scale(1); } 40% { transform: scale(1.18); box-shadow: 0 0 14px currentColor; } }
+
+/* bench */
+.bench { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
+.bench .slot {
+  aspect-ratio: 1; background: var(--bg-1); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); position: relative; touch-action: none;
+}
+.bench .slot.filled { background: var(--bg-2); }
+
+/* shop */
+.shop { display: flex; flex-direction: column; gap: 6px; }
+.shop-controls { display: flex; align-items: center; gap: 8px; }
+.btn {
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 8px 12px; font-weight: 700; display: flex; align-items: center; gap: 6px;
+  touch-action: manipulation; transition: transform .08s, background .15s;
+}
+.btn:active { transform: scale(.95); }
+.btn.primary { background: linear-gradient(180deg, #3a6ea5, #2c5688); border-color: #4d86c4; }
+.btn.reroll { color: var(--gold); }
+.shop-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.shop-card {
+  position: relative; background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--line); border-top-width: 3px; border-radius: var(--radius-sm);
+  padding: 4px; min-height: 96px; display: flex; flex-direction: column; align-items: center;
+  touch-action: manipulation; overflow: hidden;
+}
+.shop-card.cost-1 { border-top-color: #9aa6b8; }
+.shop-card.cost-2 { border-top-color: #5fd07a; }
+.shop-card.cost-3 { border-top-color: #5aa6ff; }
+.shop-card.cost-4 { border-top-color: #c79bff; }
+.shop-card.cost-5 { border-top-color: var(--gold); }
+.shop-card.owned { box-shadow: inset 0 0 0 2px var(--gold); }
+.shop-card.empty { opacity: .3; }
+.shop-card .nm { font-size: 10px; font-weight: 700; text-align: center; line-height: 1.05; margin-top: 2px; }
+.shop-card .tags { font-size: 8px; color: var(--ink-dim); text-align: center; }
+.shop-card .price { position: absolute; top: 2px; right: 4px; font-size: 10px; font-weight: 800; color: var(--gold); }
+.shop-card .art { width: 46px; height: 55px; }
+
+/* combat overlay controls */
+.combat-ctl { display: flex; gap: 8px; align-items: center; justify-content: center; }
+.phase-banner { text-align: center; font-weight: 800; letter-spacing: .5px; color: var(--ink-dim); min-height: 18px; }
+
+/* floating damage numbers */
+.dmg-num {
+  position: absolute; font-family: var(--font-num); font-weight: 800; font-size: 14px;
+  text-shadow: 0 2px 3px #000, 0 0 2px #000; pointer-events: none; will-change: transform, opacity;
+}
