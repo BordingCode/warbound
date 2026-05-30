@@ -3,7 +3,7 @@
 // No DOM, no wall-clock, no Math.random — the renderer just plays back `events`.
 // This purity is what gives us replays, speed controls, headless tests AND balancing.
 import { RNG } from '../rng.js';
-import { UNITS_BY_ID, statsForStar } from '../data/units.js';
+import { UNITS_BY_ID, statsForStar, STAR_MULT } from '../data/units.js';
 import { activeTraits } from '../data/traits.js';
 import { idx, inBounds, neighbours, stepToward, COLS, ROWS } from '../grid.js';
 import { mitigate, manaFromDamage, nearestEnemy, enemiesNear, lowestHP, inRange } from './rules.js';
@@ -172,7 +172,10 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     else if (ab.type === 'magic') shape = ab.target === 'cluster' ? 'aoe' : 'bolt';
     else if (ab.type === 'physical') shape = ab.target === 'cluster' ? 'cleave' : 'strike';
     ev(now, 'cast', { id: u.id, name: ab.name, atype: ab.type, shape, tgt: target ? target.id : -1, dragon: u.origin === 'dragon' });
-    const ap = (ab.ap || 0) + u.apBonus;
+    // Ability base power scales with STAR like HP/AD do (TFT convention: a 3★ caster's spell
+    // is its headline spike). Item/trait AP (apBonus) is flat and does NOT star-scale.
+    const starM = STAR_MULT[u.star] || 1;
+    const ap = (ab.ap || 0) * starM + u.apBonus;
     switch (ab.type) {
       case 'magic':
         if (ab.target === 'cluster' && target) {
@@ -200,7 +203,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     for (const { u, now } of pendingSummons.splice(0)) {
       const free = neighbours(u.col, u.row).find((n) => !occupied.has(idx(n.col, n.row)));
       if (!free) continue;
-      const mult = 1 + (u.summonPower || 0);
+      const mult = (1 + (u.summonPower || 0)) * (STAR_MULT[u.star] || 1);   // summon strength scales with the summoner's star, too
       const s = {
         id: nextId++, team: u.team, defId: 'summon', name: 'Risen', star: 1, origin: '_', klass: '_',
         col: free.col, row: free.row, hp: Math.round(u.ability.summonHp * mult), maxHp: Math.round(u.ability.summonHp * mult),
