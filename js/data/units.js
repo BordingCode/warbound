@@ -15,7 +15,7 @@ const COST_BASE = {
 // Role shapes: how a class bends the base stats + which mana-gen profile it uses.
 // manaPer = mana gained per auto-attack (TFT: carry 10, caster 7, tank 5).
 const ROLE = {
-  knight:   { hpx: 1.45, adx: 0.78, range: 1, manaPer: 5, startMana: 0.0 },
+  knight:   { hpx: 1.40, adx: 0.92, range: 1, manaPer: 6, startMana: 0.0 },
   mage:     { hpx: 0.85, adx: 0.70, range: 3, manaPer: 7, startMana: 0.0 },
   ranger:   { hpx: 0.85, adx: 1.05, range: 3, manaPer: 10, startMana: 0.0 },
   assassin: { hpx: 0.90, adx: 1.20, range: 1, manaPer: 10, startMana: 0.0, dive: true },
@@ -52,7 +52,7 @@ const A = {
   mend:    (ap) => ({ name: 'Mend', type: 'heal', target: 'lowestAllyHP', ap }),
   ward:    (ap) => ({ name: 'Aegis', type: 'shield', target: 'lowestAllyHP', ap }),
   raise:   (ap) => ({ name: 'Raise Dead', type: 'summon', summonHp: 350, summonAd: 30, ap }),
-  bash:    (ad) => ({ name: 'Shield Bash', type: 'physical', target: 'current', adRatio: ad, stun: 1.0 }),
+  bash:    (ad) => ({ name: 'Shield Bash', type: 'physical', target: 'current', adRatio: ad + 0.6, stun: 1.0 }),
   breath:  (ap) => ({ name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap }),
 };
 
