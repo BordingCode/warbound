@@ -925,7 +925,7 @@ function showArmory() {
   audioResume();
   let invSort = 'slot';            // how the inventory grid is ordered (persists across re-renders)
   const SLOT_ORDER = Object.fromEntries(Meta.SLOTS.map((s, i) => [s.id, i]));
-  const RAR_ORDER = { common: 0, rare: 1, epic: 2 };
+  const RAR_ORDER = Object.fromEntries(Meta.RARITIES.map((r, i) => [r.id, i]));   // incl. legendary/mythic
   const iidNum = (it) => parseInt(String(it.iid).replace(/\D/g, ''), 10) || 0;
   const sortInv = (items, m) => {
     const a = [...items];
@@ -938,22 +938,17 @@ function showArmory() {
   const render = () => {
     const m = Meta.load();
     const rar = (id) => Meta.RARITIES.find((r) => r.id === id);
-    // a socket on the paper-doll: equipped item icon in a rarity ring, or a dim slot ghost
-    const socket = (s) => {
-      const it = Meta.equippedItem(m, s.id);
-      return el(`.socket${it ? ' filled' : ''}`, {
-        style: it ? { '--rc': rar(it.rarity).color, '--ic': Meta.itemColor(it) } : {},
-        title: it ? `${it.name} — ${Meta.effectText(it)} (tap to unequip)` : `${s.name}: empty`,
-        onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null,
-      }, [el('.socket-icon', { html: it ? gearArt(it.slot, it.rarity, 34) : ic(s.icon) }), el('.socket-label', {}, s.name)]);
-    };
-    // a detailed loadout row per slot (name + plain-language effect), rarity-coloured
+    // one clean equipped-slot row per slot: rarity-tinted gear art + name + plain effect (tap to unequip).
     const loadoutRow = (s) => {
       const it = Meta.equippedItem(m, s.id);
       return el(`.loadout-row${it ? ' filled' : ' empty'}`, { style: it ? { '--rc': rar(it.rarity).color } : {}, onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null }, [
-        el('.lr-icon', { html: it ? gearArt(it.slot, it.rarity, 30) : ic(s.icon) }),
-        el('.lr-text', {}, [el('.lr-name', {}, it ? it.name : `${s.name} slot`), el('.lr-eff', {}, it ? Meta.effectText(it) : 'empty — equip a piece below')]),
-        it ? el('.lr-x', {}, '✕') : null,
+        el('.lr-icon', { html: it ? gearArt(it.slot, it.rarity, 32) : ic(s.icon) }),
+        el('.lr-text', {}, [
+          el('.lr-name', {}, it ? it.name : s.name),
+          el('.lr-eff', {}, it ? Meta.effectText(it) : 'Empty'),
+        ]),
+        it ? el('.lr-rar', { style: { color: rar(it.rarity).color } }, rar(it.rarity).name) : el('.lr-rar.dim', {}, 'slot'),
+        it ? el('.lr-x', { html: ic('ban') }) : null,
       ]);
     };
     const invCell = (it) => el(`.inv-item${m.equipped[it.slot] === it.iid ? ' eq' : ''}`, { style: { '--rc': rar(it.rarity).color, '--ic': Meta.itemColor(it) }, onclick: () => { Meta.equip(it.iid); Sfx.buy(); render(); }, title: `${Meta.effectText(it)} — tap to equip` }, [
@@ -962,37 +957,43 @@ function showArmory() {
       el('.ii-name', {}, it.name),
       el('.ii-eff', {}, Meta.effectText(it)),
     ]);
+    const sectionHead = (title, note) => el('.arm-section', {}, [el('span.as-title', {}, title), note ? el('span.as-note', {}, note) : null]);
     const canBuy = m.spoils >= Meta.CHEST_COST;
-    $('#app').replaceChildren(el('.game.armory-screen', { style: { gap: '12px', padding: '14px', minHeight: '85svh' } }, [
+    const equippedCount = Meta.SLOTS.filter((s) => Meta.equippedItem(m, s.id)).length;
+    $('#app').replaceChildren(el('.game.armory-screen', { style: { gap: '14px', padding: '14px', minHeight: '85svh' } }, [
       el('.arm-header', {}, [
         el('button.btn.icon', { onclick: () => chooseMode(), html: ic('back') }),
         el('h1', {}, 'Armory'),
         el('.spoils-pill', {}, [iconEl('spoils', 'sp-ico'), el('span', {}, m.spoils)]),
       ]),
-      el('.arm-tagline', {}, 'Gear your Champion — these boosts apply to your Warpath runs.'),
-      // paper-doll: portrait (its ARMOUR recolours to your equipped Armor) + rarity-ringed sockets
-      el('.champion-panel', {}, [
-        el('.champ-portrait', { html: championSVG(UNITS_BY_ID['knight_captain'], { size: 92, palette: heroPalette(m) }) }),
-        el('.sockets', {}, Meta.SLOTS.map(socket)),
+      // ── Champion: portrait (armour recolours to equipped) + the 5 equipped slots, one clean card ──
+      el('.champ-card', {}, [
+        el('.champ-hero', {}, [
+          el('.champ-portrait', { html: championSVG(UNITS_BY_ID['knight_captain'], { size: 96, palette: heroPalette(m) }) }),
+          el('.champ-cap', {}, [el('.cc-title2', {}, 'Your Champion'), el('.cc-sub2', {}, `${equippedCount}/5 slots geared`)]),
+        ]),
+        el('.loadout', {}, Meta.SLOTS.map(loadoutRow)),
       ]),
-      el('.loadout', {}, Meta.SLOTS.map(loadoutRow)),
-      // cache CTA
+      // ── Acquire: open caches, forge duplicates ──
+      sectionHead('Get gear', 'boosts apply to your Warpath runs'),
       el(`.cache-cta${canBuy ? '' : ' dim'}`, { onclick: () => { const r = Meta.openChest(); if (r.ok) revealItem(r.item, render); else modal2('Not enough Spoils', `A War Cache costs ${Meta.CHEST_COST} Spoils. Earn Spoils by playing Warpath — even a loss pays out.`); } }, [
         el('.cc-chest', { html: ic('coffer') }),
         el('.cc-text', {}, [el('.cc-title', {}, 'Open War Cache'), el('.cc-sub', {}, 'a random piece of gear')]),
         el('.cc-cost', {}, [String(Meta.CHEST_COST) + ' ', iconEl('spoils')]),
       ]),
-      // Forge: fuse two of the same slot + rarity into one of the next rarity up
       forgePanel(m, rar, render),
+      // ── Inventory ──
       el('.inv-bar', {}, [
-        el('.inv-head', {}, m.inventory.length ? `Inventory · ${m.inventory.length}` : 'No gear yet — open a War Cache'),
+        sectionHead('Inventory', m.inventory.length ? `${m.inventory.length} pieces` : 'empty'),
         m.inventory.length > 1 ? el('.inv-sort', {}, [
           el('span.is-label', {}, 'Sort'),
-          ...[['slot', 'Slot'], ['rarity', 'Rarity'], ['recent', 'Newest']].map(([k, lbl]) =>
+          ...[['slot', 'Slot'], ['rarity', 'Rarity'], ['recent', 'New']].map(([k, lbl]) =>
             el(`button.is-btn${invSort === k ? ' on' : ''}`, { onclick: () => { invSort = k; Sfx.click(); render(); } }, lbl)),
         ]) : null,
       ]),
-      el('.inv-grid', {}, sortInv(m.inventory, m).map(invCell)),
+      m.inventory.length
+        ? el('.inv-grid', {}, sortInv(m.inventory, m).map(invCell))
+        : el('.inv-empty', {}, 'No gear yet — open a War Cache above.'),
     ]));
   };
   render();

@@ -275,27 +275,34 @@
 .arm-header h1 { font-size: 22px; margin: 0; flex: 1; }
 .btn.icon { padding: 6px 12px; font-size: 16px; }
 .spoils-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--gold-deep); color: var(--gold); font-weight: 800; }
-.arm-tagline { font-size: 12px; color: var(--ink-dim); text-align: center; margin-top: -4px; }
+/* section header — quiet label + note, used to break the Armory into clear blocks */
+.arm-section { display: flex; align-items: baseline; gap: 8px; margin: 2px 2px -2px; }
+.arm-section .as-title { font-size: 13px; font-weight: 800; letter-spacing: .3px; }
+.arm-section .as-note { font-size: 11px; color: var(--ink-faint); }
 
-/* paper-doll: portrait + rarity-ringed sockets */
-.champion-panel { display: flex; align-items: center; gap: 14px; background: radial-gradient(120% 100% at 50% 0%, #1d2740, var(--bg-1)); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
-.champ-portrait { width: 92px; height: 92px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 4px 8px #0008); }
+/* Champion card: hero portrait + caption, then the five equipped-slot rows (one clean source of truth) */
+.champ-card { background: radial-gradient(130% 100% at 50% 0%, #1d2740, var(--bg-1)); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.champ-hero { display: flex; align-items: center; gap: 14px; }
+.champ-portrait { width: 96px; height: 96px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 4px 8px #0008); }
 .champ-portrait .champ { width: 100%; height: auto; }
-.sockets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; flex: 1; }
-.socket { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.socket .socket-icon { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #0c1119; border: 2px dashed #38455f; color: #4a566e; }
-.socket.filled .socket-icon { border: 2px solid var(--rc); background: radial-gradient(closest-side, color-mix(in srgb, var(--ic) 30%, #0c1119), #0c1119); color: #fff; box-shadow: 0 0 8px color-mix(in srgb, var(--rc) 60%, transparent); cursor: pointer; }
-.socket .socket-label { font-size: 8.5px; color: var(--ink-dim); }
+.champ-cap .cc-title2 { font-size: 17px; font-weight: 800; }
+.champ-cap .cc-sub2 { font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
 
-/* loadout readout: one row per slot, plain-language effect */
+/* loadout: one row per slot — gear art + name + effect + rarity tag (tap to unequip) */
 .loadout { display: flex; flex-direction: column; gap: 5px; }
-.loadout-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+.loadout-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
 .loadout-row.filled { border-left: 3px solid var(--rc); cursor: pointer; }
-.loadout-row.empty { opacity: .6; }
-.loadout-row .lr-icon { font-size: 18px; width: 24px; text-align: center; }
-.loadout-row .lr-name { font-size: 13px; font-weight: 800; }
+.loadout-row.empty { opacity: .5; }
+.loadout-row .lr-icon { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.loadout-row.empty .lr-icon { color: #4a566e; }
+.loadout-row .lr-icon .ic { width: 22px; height: 22px; }
+.loadout-row .lr-text { flex: 1; min-width: 0; }
+.loadout-row .lr-name { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .loadout-row .lr-eff { font-size: 11px; color: var(--ink-dim); }
-.loadout-row .lr-x { margin-left: auto; color: var(--ink-faint); font-size: 12px; }
+.loadout-row .lr-rar { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+.loadout-row .lr-rar.dim { color: var(--ink-faint); }
+.loadout-row .lr-x { display: inline-flex; color: var(--ink-faint); }
+.loadout-row .lr-x .ic { width: 15px; height: 15px; }
 .loadout-row.filled:hover .lr-x { color: var(--danger); }
 
 /* War Cache call-to-action */
@@ -344,7 +351,6 @@
 .spoils-pill .ic, .ab-spoils .ic, .cc-cost .ic { color: var(--gold); }
 .lr-icon { color: var(--rc, var(--ink)); }
 .inv-item .ii-icon { color: var(--ic, var(--ink)); }
-.socket.filled .socket-icon .ic { color: #fff; }
 .lobby-chip .lc-ic { display: inline-flex; }
 .wem .crest, .wp-emoji .crest { display: block; }
 .relic .ic { width: 18px; height: 18px; }
@@ -387,9 +393,9 @@
 
 /* Rich gear illustrations (Armory) — explicit-sized SVGs; let containers fit them. */
 .gear-art { display: block; }
-.socket .socket-icon, .inv-item .ii-icon, .loadout-row .lr-icon { line-height: 0; }
-.loadout-row .lr-icon { width: auto; }
+.inv-item .ii-icon { line-height: 0; }
 .reveal-card .reveal-icon { display: flex; justify-content: center; }
+.inv-empty { font-size: 12px; color: var(--ink-faint); text-align: center; padding: 16px 0; }
 
 /* Per-star upgrade scaling table in the champion detail sheet */
 .star-scaling { display: flex; flex-direction: column; gap: 2px; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 6px 8px; margin: 8px 0; }
