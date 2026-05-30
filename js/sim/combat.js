@@ -13,10 +13,12 @@ const DT = 1 / 30;
 const MAX_TICKS = 30 * 45;       // 45s hard cap
 const SUDDEN_DEATH_T = 25;       // after 25s, ramping true damage breaks stalemates
 
-function makeUnit(entry, team, id) {
+function makeUnit(entry, team, id, mods = {}) {
   const def = UNITS_BY_ID[entry.defId];
   const s = statsForStar(def, entry.star || 1);
   const im = aggregateMods(entry.items || []);
+  // fold relic/team combat mods into the item-mod object (additive)
+  for (const k of ['ad', 'as', 'hp', 'ap', 'armor', 'mr', 'shield', 'vamp', 'thorns', 'critChance', 'critDmg', 'revive']) im[k] = (im[k] || 0) + (mods[k] || 0);
   const hp = Math.round(s.hp * (1 + im.hp));
   return {
     id, team, defId: def.defId, name: def.name, star: entry.star || 1,
@@ -60,16 +62,17 @@ function applyTraits(units, board) {
   }
 }
 
-export function simulate(playerBoard, enemyBoard, seed = 1) {
+export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
   const rng = new RNG(seed >>> 0);
   const events = [];
   const ev = (t, type, data) => events.push({ t: Math.round(t * 1000), type, ...data });
+  const tm = opts.teamMods || {};
 
   // build units, stable ids: player 0..n, enemy continuing
   let nextId = 0;
   const units = [];
-  for (const e of playerBoard) units.push(makeUnit(e, 'player', nextId++));
-  for (const e of enemyBoard) units.push(makeUnit(e, 'enemy', nextId++));
+  for (const e of playerBoard) units.push(makeUnit(e, 'player', nextId++, tm.player));
+  for (const e of enemyBoard) units.push(makeUnit(e, 'enemy', nextId++, tm.enemy));
   applyTraits(units.filter((u) => u.team === 'player'), playerBoard);
   applyTraits(units.filter((u) => u.team === 'enemy'), enemyBoard);
   for (const u of units) ev(0, 'spawn', { id: u.id, team: u.team, defId: u.defId, star: u.star, col: u.col, row: u.row, hp: u.hp, maxHp: u.maxHp, shield: u.shield });

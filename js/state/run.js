@@ -3,6 +3,7 @@
 import { RNG, seedFromString } from '../rng.js';
 import { UNITS, UNITS_BY_ID } from '../data/units.js';
 import { COMPONENT_IDS, isComponent, combine } from '../data/items.js';
+import { RELICS, RELIC_IDS, relicEcon } from '../data/relics.js';
 
 export const SAVE_KEY = 'warbound_run_v1';
 
@@ -42,6 +43,8 @@ export function freshRun(seedStr = 'warbound-' + Date.now()) {
     bench: Array(BENCH_SIZE).fill(null),
     board: [],
     items: [],
+    relics: [],
+    freeRerollsUsed: 0,
     shop: Array(SHOP_SIZE).fill(null),
     shopLocked: false,
     streak: { type: null, n: 0 },
@@ -85,12 +88,28 @@ export function rollShop(run) {
   saveRngState(run);
 }
 export function reroll(run) {
-  if (run.gold < REROLL_COST) return false;
-  run.gold -= REROLL_COST;
+  const econ = relicEcon(run.relics);
+  const free = (econ.freeRerolls || 0) - (run.freeRerollsUsed || 0) > 0;
+  if (!free && run.gold < REROLL_COST) return false;
+  if (free) run.freeRerollsUsed = (run.freeRerollsUsed || 0) + 1;
+  else run.gold -= REROLL_COST;
   const wasLocked = run.shopLocked; run.shopLocked = false;
   rollShop(run); run.shopLocked = wasLocked;
   return true;
 }
+
+// ---- relics ----
+export function addRelic(run, id) {
+  if (run.relics.includes(id)) return;
+  run.relics.push(id);
+  const r = RELICS[id];
+  if (r && r.once && r.once.lifeMax) run.lives += r.once.lifeMax;
+}
+export function draftRelics(run) {
+  const avail = RELIC_IDS.filter((id) => !run.relics.includes(id));
+  const ids = _rng.shuffle(avail).slice(0, 3); saveRngState(run); return ids;
+}
+export function freeRerollsLeft(run) { const econ = relicEcon(run.relics); return Math.max(0, (econ.freeRerolls || 0) - (run.freeRerollsUsed || 0)); }
 
 // ---- buy / sell / fuse ----
 function allUnits(run) { return [...run.board, ...run.bench.filter(Boolean)]; }
@@ -183,7 +202,7 @@ export function buyXP(run) {
   return true;
 }
 export function xpNeeded(run) { return XP_TO_NEXT[run.level] || 0; }
-export function boardLimit(run) { return run.level; }
+export function boardLimit(run) { return run.level + (relicEcon(run.relics).boardPlus || 0); }
 
 // ---- placement (drag results) ----
 export function placeOnBoard(run, uid, col, row) {
@@ -239,8 +258,9 @@ export function equipItem(run, iid, uid) {
 
 // ---- round resolution ----
 export function income(run) {
-  const interest = Math.min(5, Math.floor(run.gold / 10));
-  const base = run.round <= 4 ? 2 : run.round <= 11 ? 4 : 5;
+  const econ = relicEcon(run.relics);
+  const interest = Math.min(5 + (econ.interestCap || 0), Math.floor(run.gold / 10));
+  const base = (run.round <= 4 ? 2 : run.round <= 11 ? 4 : 5) + (econ.goldPerRound || 0);
   const streakBonus = run.streak.n >= 5 ? 3 : run.streak.n >= 4 ? 2 : run.streak.n >= 2 ? 1 : 0;
   return { base, interest, streakBonus, total: base + interest + streakBonus };
 }
@@ -256,8 +276,10 @@ export function resolveRound(run, won) {
   // payout (win bonus +1)
   const inc = income(run);
   run.gold += inc.total + (won ? 1 : 0);
-  // free xp from round 5+
-  if (run.round >= 5 && run.level < MAX_LEVEL) { run.xp += 2; while (run.level < MAX_LEVEL && run.xp >= XP_TO_NEXT[run.level]) { run.xp -= XP_TO_NEXT[run.level]; run.level++; } }
+  // free xp from round 5+ (plus any relic xp)
+  const bonusXp = (run.round >= 5 ? 2 : 0) + (relicEcon(run.relics).xpPerRound || 0);
+  if (bonusXp && run.level < MAX_LEVEL) { run.xp += bonusXp; while (run.level < MAX_LEVEL && run.xp >= XP_TO_NEXT[run.level]) { run.xp -= XP_TO_NEXT[run.level]; run.level++; } }
+  run.freeRerollsUsed = 0;
   // life back at round 3 if hurt (anti-stomp floor)
   if (run.round === 3 && run.lives < START_LIVES) run.lives++;
   run.round++;
@@ -276,6 +298,10 @@ export function load() {
     if (!raw) return null;
     const run = JSON.parse(raw);
     if (run.v !== 1) return null;
+    // backfill fields added after a save was written (forward-compatible migration)
+    run.relics = run.relics || [];
+    run.items = run.items || [];
+    run.freeRerollsUsed = run.freeRerollsUsed || 0;
     ensureRng(run);
     return run;
   } catch { return null; }

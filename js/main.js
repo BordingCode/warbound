@@ -10,6 +10,7 @@ import { CombatPlayer } from './render/player.js';
 import { createDragController } from './input/drag.js';
 import { getEnemyBoard } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
+import { RELICS, relicCombatMods } from './data/relics.js';
 import * as Run from './state/run.js';
 import { resume as audioResume, Sfx, setEnabled as setSound, isEnabled as soundOn } from './audio/audio.js';
 import { launchConfetti } from './render/fx.js';
@@ -156,6 +157,7 @@ function renderPlanning() {
       el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt}`)]),
       el('.xpbar', {}, el('.fill', { style: { transform: `scaleX(${Run.xpNeeded(run) ? run.xp / Run.xpNeeded(run) : 1})` } })),
     ]),
+    run.relics.length ? el('.relic-bar', {}, run.relics.map((id) => el('span.relic', { title: `${RELICS[id].name}: ${RELICS[id].desc}` }, RELICS[id].icon))) : null,
     buildTraitsEl(),
     el('.phase-banner', {}, `Next: ${enemy.name} — ${enemy.traitHint}`),
     stage,
@@ -213,7 +215,24 @@ function offerDraft(after) {
   ]));
   document.body.append(ov);
 }
-function shouldDraft(finishedRound) { return [1, 2, 4, 6, 8, 10].includes(finishedRound); }
+function shouldDraft(finishedRound) { return [1, 2, 5, 7, 10].includes(finishedRound); }
+function shouldRelic(finishedRound) { return [3, 6, 9].includes(finishedRound); }
+
+// relic draft at act boundaries (pick 1 of 3 run-long blessings)
+function offerRelic(after) {
+  const ids = Run.draftRelics(run);
+  if (!ids.length) { after ? after() : renderPlanning(); return; }
+  const pick = (id) => { Run.addRelic(run, id); Run.save(run); Sfx.fuse(); document.querySelector('.overlay')?.remove(); after ? after() : renderPlanning(); };
+  const ov = el('.overlay', {}, el('.help-card', {}, [
+    el('h2', {}, '✦ Choose a Relic'),
+    el('.sub', {}, 'A permanent blessing for the rest of your run.'),
+    el('.draft-row.relics', {}, ids.map((id) => {
+      const r = RELICS[id];
+      return el('button.draft-pick', { onclick: () => pick(id) }, [el('span.di', {}, r.icon), el('span.dn', {}, r.name), el('span.dm', {}, r.desc)]);
+    })),
+  ]));
+  document.body.append(ov);
+}
 
 function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highlightSpeed(); }
 function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
@@ -248,7 +267,7 @@ async function startCombat() {
   const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const seed = hashSeed(run.seed, run.round);
-  const { events } = simulate(playerBoard, enemyBoard, seed);
+  const { events } = simulate(playerBoard, enemyBoard, seed, { teamMods: { player: relicCombatMods(run.relics) } });
 
   // hide planning-only controls, keep board
   $$('.bench .slot, .shop, .combat-ctl .btn:not(#readyBtn)').forEach(() => {});
@@ -267,6 +286,7 @@ async function startCombat() {
   Run.save(run);
   setTimeout(() => {
     if (run.over) endScreen();
+    else if (shouldRelic(finishedRound)) offerRelic(renderPlanning);
     else if (shouldDraft(finishedRound)) offerDraft(renderPlanning);
     else renderPlanning();
   }, 1100);

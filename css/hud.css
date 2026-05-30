@@ -93,6 +93,15 @@
 .draft-pick .dn { font-weight: 700; font-size: 13px; }
 .draft-pick .dm { font-size: 10px; color: var(--ink-dim); text-align: center; }
 
+/* relic bar */
+.relic-bar { display: flex; gap: 5px; flex-wrap: wrap; }
+.relic-bar .relic { width: 26px; height: 26px; display: grid; place-items: center; font-size: 15px; background: var(--bg-2); border: 1px solid var(--gold-deep); border-radius: 6px; }
+.draft-row.relics { flex-direction: column; }
+.draft-row.relics .draft-pick { flex-direction: row; align-items: center; gap: 10px; text-align: left; }
+.draft-row.relics .draft-pick .di { font-size: 22px; }
+.draft-row.relics .draft-pick .dn { min-width: 96px; }
+.draft-row.relics .draft-pick .dm { flex: 1; }
+
 /* sell zone */
 .sell-zone {
   display: flex; align-items: center; gap: 4px; padding: 8px 12px; font-weight: 700;
