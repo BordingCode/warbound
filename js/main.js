@@ -10,7 +10,7 @@ import { simulate } from './sim/combat.js';
 import { hashSeed } from './rng.js';
 import { CombatPlayer } from './render/player.js';
 import { createDragController } from './input/drag.js';
-import { getEnemyBoard, pathChoices } from './data/enemies.js';
+import { getEnemyBoard, REALMS, realmAt } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
@@ -45,9 +45,9 @@ function getOpponent() {
   }
   // Warpath: the foe is keyed to WINS, not the round — you only advance to the next warband when
   // you beat the current one. A loss replays the SAME foe (while your round/economy keeps growing
-  // so you can break the wall), costing a life rather than skipping you past an undefeated enemy.
-  // Past act 1 the chosen path adds difficulty + themes the reinforcements.
-  return getEnemyBoard(run.wins + 1, null, { diff: run.pathDiff || 0, pool: run.pathPool, name: (run.act || 1) > 1 ? run.pathName : null });
+  // so you can break the wall). The current REALM sets the difficulty + themes the reinforcements.
+  const realm = realmAt(run.realm || 0);
+  return getEnemyBoard(run.wins + 1, null, { diff: realm.diff, pool: realm.pool });
 }
 
 // ---------- board ----------
@@ -335,7 +335,7 @@ function renderPlanning() {
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       run.mode === 'ladder'
         ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
-        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: `Act ${run.act || 1} · ${run.wins} total wins` }, `Act ${run.act || 1} · ${run.wins % 10}/10`)]),
+        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: `${realmAt(run.realm || 0).name} · conquer all 10` }, `${run.wins}/10`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Codex', onclick: () => showCodex('units'), html: ic('codex') }),
       el(`button.btn#shakeBtn${motionOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Screen shake (turn off if the game feels laggy)', onclick: toggleMotion, html: ic('burst') }),
@@ -640,7 +640,7 @@ function showHelp() {
     ['star', '<b>3 copies</b> of the same champion auto-fuse into a stronger ★★ (then ★★★).'],
     ['shield', '<b>Position matters:</b> tanks in front, fragile carries in back. Then press Ready.'],
     ['eye', '<b>Tap a champion</b> to inspect its stats & ability. Watch the dimmed enemy preview to counter them.'],
-    ['trophy', 'Beat <b>10 warbands</b> to clear an <b>Act</b>, then choose a harder <b>path</b> to keep climbing. Survive on <b>5 lives</b>.'],
+    ['trophy', 'Beat all <b>10 warbands</b> to <b>conquer the realm</b> (survive on <b>5 lives</b>). Each realm conquered unlocks the next, harder one.'],
   ];
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'How to play'),
@@ -718,39 +718,47 @@ async function startCombat() {
   setTimeout(() => {
     $$('.overlay').forEach((o) => o.remove());   // clear anything opened mid-fight (codex/inspect) before post-round prompts
     if (run.over) endScreen();
-    else if (run.actComplete) { run.actComplete = false; Run.save(run); offerPath(renderPlanning); }
     else if (shouldAugment(finishedRound)) offerAugment(renderPlanning);
     else if (shouldDraft(finishedRound)) offerDraft(renderPlanning);
     else renderPlanning();
   }, 1100);
 }
 
-// After clearing an act (every 10 wins) the road FORKS — pick one of three progressively harder,
-// themed paths to keep climbing. Harder roads ramp the enemies faster (more stars + numbers).
-function offerPath(after) {
-  const act = run.act || 1;
-  launchConfetti(2500);
-  const choices = pathChoices(act);
-  const pick = (c) => {
-    run.act = act + 1;
-    run.pathDiff = (run.pathDiff || 0) + c.diffAdd;
-    run.pathName = c.name; run.pathPool = c.pool;
-    Run.save(run); Sfx.buy();
-    ov.remove();
-    after ? after() : renderPlanning();
-  };
-  const ov = el('.overlay', {}, el('.help-card.path-card', {}, [
-    el('.path-trophy', { html: ic('trophy') }),
-    el('h2', {}, `Act ${act} cleared!`),
-    el('.sub', {}, `${run.wins} warbands beaten. The road splits — choose how dangerous the next stretch gets.`),
-    el('.path-row', {}, choices.map((c) => el('button.path-pick', { style: { '--pc': c.color }, onclick: () => pick(c) }, [
-      el('.pp-tier', {}, c.label),
-      el('.pp-name', {}, c.name),
-      el('.pp-hint', {}, c.hint),
-      el('.pp-danger', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Danger '), el('span', {}, '▲'.repeat(Math.min(5, c.diffAdd)))]),
-    ]))),
+// Realm select — "Conquer the Realms". Conquered realms are permanent (replay to farm gold);
+// the frontier realm is the next to claim; later realms stay locked until you reach them.
+function showRealms() {
+  audioResume();
+  const cleared = Meta.realmsCleared();
+  const count = Math.max(REALMS.length, cleared + 1);
+  const danger = (d) => '▲'.repeat(Math.max(1, Math.min(6, Math.round(d / 2) + 1)));
+  const cards = [];
+  for (let i = 0; i < count; i++) {
+    const r = realmAt(i);
+    const status = i < cleared ? 'conquered' : i === cleared ? 'frontier' : 'locked';
+    cards.push(el(`.realm-card ${status}`, {
+      style: { '--rc': r.color },
+      onclick: status === 'locked' ? null : () => startSolo(true, i),
+    }, [
+      el('.rc-side', {}, [el('.rc-num', {}, 'Realm ' + r.num), status === 'conquered' ? el('.rc-mark', { html: ic('trophy') }) : status === 'locked' ? el('.rc-mark', { html: ic('lock') }) : null]),
+      el('.rc-body', {}, [
+        el('.rc-name', {}, r.name),
+        el('.rc-hint', {}, r.hint),
+        el('.rc-foot', {}, [
+          el('span.rc-danger', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Danger '), el('span', {}, danger(r.diff))]),
+          el('span.rc-badge', {}, status === 'conquered' ? 'Conquered · replay' : status === 'frontier' ? 'Conquer ▶' : 'Locked'),
+        ]),
+      ]),
+    ]));
+  }
+  $('#app').replaceChildren(el('.game', { style: { gap: '12px', padding: '14px', minHeight: '85svh' } }, [
+    el('.arm-header', {}, [
+      el('button.btn.icon', { onclick: () => chooseMode(), html: ic('back') }),
+      el('h1', {}, 'Conquer the Realms'),
+      el('.spoils-pill', { onclick: () => showArmory(), style: { cursor: 'pointer' } }, [iconEl('coffer'), el('span', {}, 'Armory')]),
+    ]),
+    el('.arm-tagline', {}, `${cleared} of ${REALMS.length} realms conquered. Beat all 10 warbands of a realm to claim it for good — then march on the next.`),
+    el('.realm-list', {}, cards),
   ]));
-  document.body.append(ov);
 }
 
 // Comeback perk (research: lowest-HP gets first pick). Reuses the component draft, framed as
@@ -768,7 +776,7 @@ function offerUnderdogDraft(after) {
 
 function endScreen(ladderSummary) {
   const stat = (label, val) => el('.istat', { style: { minWidth: '120px' } }, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
-  let head, sub, stats, rankBlock = null;
+  let head, sub, stats, rankBlock = null, extraBtn = null;
   if (run.mode === 'ladder') {
     const place = (ladderSummary && ladderSummary.humanPlace) || (lobby && lobby.human.place) || Bots.aliveCount(lobby);
     const first = place === 1;
@@ -792,15 +800,23 @@ function endScreen(ladderSummary) {
       ]);
     }
   } else {
-    const act = run.act || 1;
-    const reachedFar = run.wins >= 10;
-    head = 'RUN OVER';
-    sub = reachedFar
-      ? `Your warband fell on Act ${act}${run.pathName ? ' — ' + run.pathName : ''}, after ${run.wins} victories. The path only gets harder.`
-      : 'A valiant effort. Gear up in the Armory and try again!';
+    const realm = realmAt(run.realm || 0);
+    const won = run.won;   // conquered all 10 warbands
+    if (won) {
+      const newConquest = Meta.conquerRealm(realm.index);   // permanent; true only if the frontier advanced
+      launchConfetti(newConquest ? 4500 : 2200);
+      head = 'REALM CONQUERED';
+      sub = newConquest ? `${realm.name} is yours for good — the next realm beckons.` : `${realm.name} cleared again. Spoils farmed; conquest already secured.`;
+    } else {
+      head = 'DEFEATED';
+      sub = `${realm.name} held your warband off (${run.wins}/10). Gear up in the Armory and march again.`;
+    }
     // earn Spoils ONCE (even on a loss) — the meta-progression that eases the climb
-    if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, run.won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
-    stats = [stat('Wins', `${run.wins}`), stat('Act reached', `${act}`), stat('Spoils', `+${run.spoilsEarned || 0}`)];
+    if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
+    stats = [stat('Realm', realm.name), stat('Warbands', `${run.wins}/10`), stat('Spoils', `+${run.spoilsEarned || 0}`)];
+    extraBtn = won
+      ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realm.index + 1) }, `Next Realm ▶`)
+      : el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realm.index) }, `↻ Retry realm`);
   }
   const card = el('.endscreen', {}, [
     el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
@@ -808,19 +824,23 @@ function endScreen(ladderSummary) {
     el('.istats', { style: { maxWidth: '280px' } }, stats),
     rankBlock,
     run.mode !== 'ladder' && run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name, html: augIcon(AUGMENTS[id]) })))]) : null,
-    el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => chooseMode() }, '↻ Main menu'),
+    el('.end-btns', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } }, [
+      extraBtn,
+      el(`button.btn${extraBtn ? '' : '.primary'}`, { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => (run.mode === 'ladder' ? chooseMode() : showRealms()) }, run.mode === 'ladder' ? '↻ Main menu' : 'Realms'),
+    ]),
   ]);
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', textAlign: 'center', gap: '14px' } }, [card]));
 }
 
 // ---------- mode select ----------
-function startSolo(fresh) {
+// Start (or resume) a Warpath run. `realm` = which realm to attempt (fresh runs reset everything).
+function startSolo(fresh, realm = 0) {
   if (fresh) Run.clearSave();
   clearLobby();
   const resumed = !fresh && Run.load();
   run = resumed || Run.freshRun();
   run.mode = 'solo'; lobby = null;
-  if (!resumed) applyGear(run);          // a NEW Warpath run starts with your equipped gear's boosts
+  if (!resumed) { run.realm = realm; applyGear(run); }   // a NEW realm run resets + starts with your gear boosts
   Run.save(run); renderPlanning();
   if (!seenIntro()) showHelp();
 }
@@ -1012,7 +1032,7 @@ function chooseMode() {
     el('.mode-menu', {}, [
       // Warpath + its Armory are one visual GROUP — gear belongs to Warpath, not the ladder.
       el('.warpath-group', {}, [
-        card('', 'sword', 'Warpath', 'Beat 10 warbands to clear an Act, then fork onto harder, themed paths. Earn Spoils to gear your Champion and ease each run.', () => startSolo(true)),
+        card('', 'sword', 'Warpath', 'Conquer the realms: beat all 10 warbands of a realm to claim it for good, then march on the next, harder one. Earn Spoils to gear your Champion.', () => showRealms()),
         el('.armory-bar', { onclick: () => showArmory() }, [
           el('span.ab-ico', { html: ic('coffer') }),
           el('.ab-text', {}, [el('span.ab-label', {}, 'Armory'), el('span.ab-sub', {}, 'gear your Champion — for Warpath')]),

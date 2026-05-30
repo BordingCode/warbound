@@ -55,12 +55,18 @@ export function load() {
       const old = JSON.parse(localStorage.getItem(OLD_KEY) || 'null');   // carry over Spoils only
       m = { spoils: old && old.spoils ? old.spoils : 0, inventory: [], equipped: {} };
     }
-    m.spoils = m.spoils || 0; m.inventory = m.inventory || []; m.equipped = m.equipped || {};
+    m.spoils = m.spoils || 0; m.inventory = m.inventory || []; m.equipped = m.equipped || {}; m.realmsCleared = m.realmsCleared || 0;
     for (const it of m.inventory) { const n = parseInt(String(it.iid).replace(/\D/g, ''), 10); if (n >= _uid) _uid = n + 1; }
     return m;
-  } catch { return { spoils: 0, inventory: [], equipped: {} }; }
+  } catch { return { spoils: 0, inventory: [], equipped: {}, realmsCleared: 0 }; }
 }
 export function save(m) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(m)); } catch {} }
+
+// ---- realm conquest (permanent Warpath progress) ----
+// realmsCleared = how many realms beaten = index of the next realm to conquer (the "frontier").
+export function realmsCleared() { return load().realmsCleared || 0; }
+// mark realm index `idx` conquered; returns true only if this ADVANCED the frontier (a new conquest).
+export function conquerRealm(idx) { const m = load(); if (idx + 1 > (m.realmsCleared || 0)) { m.realmsCleared = idx + 1; save(m); return true; } return false; }
 export function addSpoils(n) { const m = load(); m.spoils = Math.max(0, m.spoils + Math.round(n)); save(m); return m.spoils; }
 
 // Spoils from a finished solo run — even a loss pays, so the loop bootstraps the hard climb.

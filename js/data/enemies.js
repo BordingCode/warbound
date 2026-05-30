@@ -23,27 +23,23 @@ export const LADDER = [
   { name: 'The Worldwyrm', traitHint: 'FINAL BOSS · Dragons', units: [E('dragon_knight', 3, 3, 3), E('dragon_sage', 3, 4, 0), E('wyrm_archer', 3, 5, 1), E('thornguard', 3, 2, 3), E('moon_priestess', 2, 1, 0), E('grove_healer', 2, 6, 0), E('knight_captain', 2, 0, 3)] },
 ];
 
-// ---- Warpath PATHS: after clearing 10 warbands you fork onto a themed, harder road. ----
-// Each path themes the reinforcements (so the road FEELS different) and carries a difficulty
-// that bumps enemy stars/numbers. Later acts always offer harder roads (progressive).
-export const PATH_THEMES = [
-  { id: 'wood',    name: 'The Deepwood',     hint: 'Elven ambush — evasive, healing backlines', color: '#54e6c0', pool: ['thornguard', 'wood_ranger', 'moon_priestess', 'grove_healer', 'shadow_dancer'] },
-  { id: 'inferno', name: 'The Inferno',      hint: 'Demon legions — relentless mana-burn',       color: '#ff5a3c', pool: ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'pit_summoner'] },
-  { id: 'bone',    name: 'The Bonelands',    hint: 'Undead horde — they just keep rising',        color: '#8cff9e', pool: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer'] },
-  { id: 'wyrm',    name: 'The Dragonspire',  hint: 'Dragonsworn — overwhelming raw power',         color: '#ffd24a', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'knight_captain'] },
+// ---- Warpath REALMS: conquer each realm by beating its 10 warbands. Each realm is a themed,
+// progressively harder region; conquering one (10 wins) is permanent and unlocks the next. You
+// start fresh each realm (board/economy reset). `diff` bumps enemy stars/numbers; `pool` themes
+// the reinforcements so each realm FEELS distinct.
+export const REALMS = [
+  { name: 'The Marches',     hint: 'Border skirmishers — a fair first test',  color: '#9aa6b8', pool: null,                                                                       diff: 0 },
+  { name: 'The Deepwood',    hint: 'Elven ambush — evasive, healing lines',   color: '#54e6c0', pool: ['thornguard', 'wood_ranger', 'moon_priestess', 'grove_healer', 'shadow_dancer'], diff: 2 },
+  { name: 'The Bonelands',   hint: 'Undead horde — the dead keep rising',     color: '#8cff9e', pool: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer'],               diff: 4 },
+  { name: 'The Inferno',     hint: 'Demon legions — relentless mana-burn',    color: '#ff5a3c', pool: ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'pit_summoner'],            diff: 6 },
+  { name: 'The Dragonspire', hint: 'Dragonsworn — overwhelming raw power',    color: '#ffd24a', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'knight_captain'],                 diff: 9 },
+  { name: 'The Voidreach',   hint: 'Every horror at its fiercest',            color: '#c79bff', pool: ['dragon_knight', 'warlock', 'lich', 'wraith', 'pit_summoner', 'moon_priestess'],   diff: 13 },
 ];
-const PATH_BY_ID = Object.fromEntries(PATH_THEMES.map((p) => [p.id, p]));
-export function pathById(id) { return PATH_BY_ID[id] || null; }
-
-// Three forks to choose after each act. `act` is the act just cleared (1 = first 10 wins).
-// diffAdd grows with the act so every fork is harder than the last act's forks.
-export function pathChoices(act) {
-  const t = (n) => PATH_THEMES[((n % PATH_THEMES.length) + PATH_THEMES.length) % PATH_THEMES.length];
-  return [
-    { ...t(act),     label: 'Steady Road', diffAdd: act + 0 },
-    { ...t(act + 1), label: 'Hard Road',   diffAdd: act + 1 },
-    { ...t(act + 2), label: 'Brutal Road', diffAdd: act + 2 },
-  ];
+// realm by index (endless beyond the authored list — diff keeps climbing for completionists).
+export function realmAt(i) {
+  if (i < REALMS.length) return { ...REALMS[i], index: i, num: i + 1 };
+  const last = REALMS[REALMS.length - 1], over = i - REALMS.length + 1;
+  return { name: `${last.name} +${over}`, hint: 'Beyond the known realms', color: '#ff5e8a', pool: last.pool, diff: last.diff + over * 3, index: i, num: i + 1 };
 }
 
 // Light deterministic variation + escalation. `opts.diff` (from chosen paths) and rounds past

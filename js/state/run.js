@@ -55,7 +55,7 @@ export function freshRun(seedStr = 'warbound-' + Date.now()) {
     pool,
     rngState: null,
     over: false, won: false,
-    act: 1, pathDiff: 0, pathName: null, pathPool: null, actComplete: false,   // Warpath branching paths
+    realm: 0,   // which Warpath realm this run is attempting (set by startSolo)
   };
   // No starting champions — the player buys their team freely from the shop with the
   // starting gold above. Round 1 is the gentle "Lone Brigand" so a quick buy can win it.
@@ -332,9 +332,8 @@ export function resolveRound(run, won) {
   // life back at round 3 if hurt (anti-stomp floor)
   if (run.round === 3 && run.lives < START_LIVES) run.lives++;
   run.round++;
-  // Warpath is endless via branching paths: every WIN_TARGET wins completes an ACT and forks the
-  // road onto a harder path (handled in main.js). The run only ends when you run out of lives.
-  if (won && run.wins % WIN_TARGET === 0) run.actComplete = true;
+  // Warpath realm: beat all WIN_TARGET warbands to CONQUER the realm (won), or run out of lives.
+  if (run.wins >= WIN_TARGET) { run.over = true; run.won = true; }
   if (run.lives <= 0) { run.over = true; run.won = false; }
   ensureRng(run);
   rollShop(run);                   // respects shopLocked (frozen shop persists)

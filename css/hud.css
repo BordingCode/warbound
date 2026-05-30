@@ -411,3 +411,25 @@
 .combat-stats .cs-ic .ic { width: 12px; height: 12px; }
 .combat-stats .cs-dps { min-width: 42px; color: var(--gold); font-weight: 700; }
 .combat-stats .cs-tank { min-width: 30px; color: var(--ink-dim); }
+
+/* Realm select — "Conquer the Realms" */
+.realm-list { display: flex; flex-direction: column; gap: 9px; }
+.realm-card { display: flex; gap: 12px; align-items: stretch; padding: 11px 13px; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--rc) 14%, var(--bg-2)), var(--bg-2));
+  border: 1px solid color-mix(in srgb, var(--rc) 45%, var(--line)); transition: transform .08s, box-shadow .15s; }
+.realm-card:active { transform: scale(.99); }
+.realm-card.frontier { border-color: var(--rc); box-shadow: 0 0 16px color-mix(in srgb, var(--rc) 35%, transparent); }
+.realm-card.conquered { opacity: .82; }
+.realm-card.locked { opacity: .5; cursor: not-allowed; filter: grayscale(.6); }
+.realm-card .rc-side { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 56px; border-right: 1px solid color-mix(in srgb, var(--rc) 30%, var(--line)); padding-right: 10px; }
+.realm-card .rc-num { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-dim); font-weight: 800; }
+.realm-card .rc-mark { color: var(--rc); display: inline-flex; }
+.realm-card .rc-mark .ic { width: 20px; height: 20px; }
+.realm-card .rc-body { flex: 1; min-width: 0; }
+.realm-card .rc-name { font-size: 16px; font-weight: 800; color: var(--rc); }
+.realm-card .rc-hint { font-size: 12px; color: var(--ink-dim); margin: 1px 0 5px; }
+.realm-card .rc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
+.realm-card .rc-danger { letter-spacing: 1px; color: var(--rc); }
+.realm-card .rc-badge { font-weight: 800; color: var(--ink); }
+.realm-card.frontier .rc-badge { color: var(--rc); }
+.realm-card.conquered .rc-badge { color: var(--hp); }
