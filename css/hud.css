@@ -384,3 +384,9 @@
 
 /* Planning controls are locked + dimmed while a fight plays out (backs up the act() guard). */
 .combat-locked { opacity: .4; filter: grayscale(.5); pointer-events: none; transition: opacity .2s; }
+
+/* Rich gear illustrations (Armory) — explicit-sized SVGs; let containers fit them. */
+.gear-art { display: block; }
+.socket .socket-icon, .inv-item .ii-icon, .loadout-row .lr-icon { line-height: 0; }
+.loadout-row .lr-icon { width: auto; }
+.reveal-card .reveal-icon { display: flex; justify-content: center; }

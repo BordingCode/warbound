@@ -5,6 +5,7 @@ import { UNITS, UNITS_BY_ID, statsForStar } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG } from './svg.js';
 import { ic, iconEl, crest, rankMedal } from './icons.js';
+import { gearArt } from './gear-art.js';
 import { simulate } from './sim/combat.js';
 import { hashSeed } from './rng.js';
 import { CombatPlayer } from './render/player.js';
@@ -875,20 +876,20 @@ function showArmory() {
         style: it ? { '--rc': rar(it.rarity).color, '--ic': Meta.itemColor(it) } : {},
         title: it ? `${it.name} — ${Meta.effectText(it)} (tap to unequip)` : `${s.name}: empty`,
         onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null,
-      }, [el('.socket-icon', { html: ic(it ? it.icon : s.icon) }), el('.socket-label', {}, s.name)]);
+      }, [el('.socket-icon', { html: it ? gearArt(it.slot, it.rarity, 34) : ic(s.icon) }), el('.socket-label', {}, s.name)]);
     };
     // a detailed loadout row per slot (name + plain-language effect), rarity-coloured
     const loadoutRow = (s) => {
       const it = Meta.equippedItem(m, s.id);
       return el(`.loadout-row${it ? ' filled' : ' empty'}`, { style: it ? { '--rc': rar(it.rarity).color } : {}, onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null }, [
-        el('.lr-icon', { html: ic(it ? it.icon : s.icon) }),
+        el('.lr-icon', { html: it ? gearArt(it.slot, it.rarity, 30) : ic(s.icon) }),
         el('.lr-text', {}, [el('.lr-name', {}, it ? it.name : `${s.name} slot`), el('.lr-eff', {}, it ? Meta.effectText(it) : 'empty — equip a piece below')]),
         it ? el('.lr-x', {}, '✕') : null,
       ]);
     };
     const invCell = (it) => el(`.inv-item${m.equipped[it.slot] === it.iid ? ' eq' : ''}`, { style: { '--rc': rar(it.rarity).color, '--ic': Meta.itemColor(it) }, onclick: () => { Meta.equip(it.iid); Sfx.buy(); render(); }, title: `${Meta.effectText(it)} — tap to equip` }, [
       el('.ii-rar', {}, rar(it.rarity).name),
-      el('.ii-icon', { html: ic(it.icon) }),
+      el('.ii-icon', { html: gearArt(it.slot, it.rarity, 46) }),
       el('.ii-name', {}, it.name),
       el('.ii-eff', {}, Meta.effectText(it)),
     ]);
@@ -958,7 +959,7 @@ function revealItem(item, after) {
   const ov = el('.overlay', {}, el(`.reveal-card rarity-${item.rarity}`, { style: { '--rc': rar.color, '--ic': Meta.itemColor(item) } }, [
     el('.reveal-burst'),
     el('.reveal-rarity', {}, rar.name + ' find!'),
-    el('.reveal-icon', { html: ic(item.icon) }),
+    el('.reveal-icon', { html: gearArt(item.slot, item.rarity, 84) }),
     el('h2', {}, item.name),
     el('.reveal-eff', {}, Meta.effectText(item)),
     el('.reveal-tools', {}, [

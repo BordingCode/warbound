@@ -9,20 +9,25 @@
 import { TRAITS } from '../data/traits.js';
 
 // each slot = one effect family. icon + colour + names all telegraph the effect.
+// vals/names indexed by rarity: [common, rare, epic, legendary, mythic].
 export const SLOTS = [
-  { id: 'weapon', name: 'Weapon', icon: 'sword',  color: '#ff6a4c', eff: 'ad',      vals: [0.06, 0.10, 0.16], names: ['Worn Blade', 'Keen Saber', 'Bloodfang Axe'] },
-  { id: 'armor',  name: 'Armor',  icon: 'shield', color: '#7affa0', eff: 'lives',   vals: [1, 2, 3],          names: ['Padded Vest', 'Iron Cuirass', 'Aegis Plate'] },
-  { id: 'tome',   name: 'Tome',   icon: 'book',   color: '#6fb1ff', eff: 'xp',      vals: [5, 10, 18],        names: ['Field Manual', 'War Codex', 'Tome of Mastery'] },
-  { id: 'coffer', name: 'Coffer', icon: 'coffer', color: '#ffce5c', eff: 'gold',    vals: [4, 8, 14],         names: ['Coin Pouch', "Merchant's Coffer", 'Dragon Hoard'] },
-  { id: 'relic',  name: 'Relic',  icon: 'gem',    color: '#c79bff', eff: 'synergy', vals: [1, 1, 1],          names: ['Sigil', 'Idol', 'Totem'] },
+  { id: 'weapon', name: 'Weapon', icon: 'sword',  color: '#ff6a4c', eff: 'ad',      vals: [0.06, 0.10, 0.16, 0.23, 0.32], names: ['Worn Blade', 'Keen Saber', 'Bloodfang Axe', 'Dragonbane Greatsword', 'Worldender'] },
+  { id: 'armor',  name: 'Armor',  icon: 'shield', color: '#7affa0', eff: 'lives',   vals: [1, 2, 3, 4, 6],                 names: ['Padded Vest', 'Iron Cuirass', 'Aegis Plate', 'Dragonscale Bulwark', 'Aegis of the Titans'] },
+  { id: 'tome',   name: 'Tome',   icon: 'book',   color: '#6fb1ff', eff: 'xp',      vals: [5, 10, 18, 28, 40],             names: ['Field Manual', 'War Codex', 'Tome of Mastery', 'Grimoire of Ages', 'Codex Infinitum'] },
+  { id: 'coffer', name: 'Coffer', icon: 'coffer', color: '#ffce5c', eff: 'gold',    vals: [4, 8, 14, 22, 32],              names: ['Coin Pouch', "Merchant's Coffer", 'Dragon Hoard', 'Vault of Kings', 'Reliquary of Midas'] },
+  { id: 'relic',  name: 'Relic',  icon: 'gem',    color: '#c79bff', eff: 'synergy', vals: [1, 1, 1, 2, 2],                 names: ['Sigil', 'Idol', 'Totem', 'Relic', 'Artifact'] },
 ];
 const SLOT_BY_ID = Object.fromEntries(SLOTS.map((s) => [s.id, s]));
+// Legendary + Mythic are FORGE-ONLY (weight 0 = never drop from a War Cache) — you earn them by
+// fusing two Epics, then two Legendaries.
 export const RARITIES = [
-  { id: 'common', name: 'Common', color: '#8b97a8', weight: 64 },
-  { id: 'rare',   name: 'Rare',   color: '#6fb1ff', weight: 28 },
-  { id: 'epic',   name: 'Epic',   color: '#c79bff', weight: 8 },
+  { id: 'common',    name: 'Common',    color: '#8b97a8', weight: 64 },
+  { id: 'rare',      name: 'Rare',      color: '#6fb1ff', weight: 28 },
+  { id: 'epic',      name: 'Epic',      color: '#c79bff', weight: 8 },
+  { id: 'legendary', name: 'Legendary', color: '#ffb031', weight: 0 },
+  { id: 'mythic',    name: 'Mythic',    color: '#ff5e8a', weight: 0 },
 ];
-const RIDX = { common: 0, rare: 1, epic: 2 };
+const RIDX = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
 export const CHEST_COST = 12;
 const SAVE_KEY = 'warbound_meta_v2';
 const OLD_KEY = 'warbound_meta_v1';
@@ -75,7 +80,10 @@ export function makeItem(slotId, rarityId, rng) {
   const item = { iid: newIid(), slot: slotId, rarity: rarityId, icon: s.icon, color: s.color, name: s.names[r], eff: { type: s.eff, value: s.vals[r] } };
   if (s.eff === 'synergy') {
     const pick = () => TRAIT_IDS[Math.floor((rng ? rng() : Math.random()) * TRAIT_IDS.length)];
-    const tb = {}; tb[pick()] = 1; if (rarityId === 'epic') { const t2 = pick(); tb[t2] = (tb[t2] || 0) + 1; }
+    // higher rarity = more synergies AND a bigger per-trait bonus (relic vals: 1/1/1/2/2)
+    const traitCount = r >= 4 ? 3 : r >= 2 ? 2 : 1;
+    const per = s.vals[r];
+    const tb = {}; for (let i = 0; i < traitCount; i++) { const t = pick(); tb[t] = (tb[t] || 0) + per; }
     item.eff.traitBonus = tb;
     const tnames = Object.keys(tb).map((t) => TRAITS[t] ? TRAITS[t].name : t).join('/');
     item.name = `${tnames} ${s.names[r]}`;
@@ -113,9 +121,9 @@ export function gearBonuses(m) {
   return b;
 }
 // ---- combine: fuse 2 of the SAME slot + SAME rarity into ONE of the next rarity up ----
-// "Its own kind": same equipment family (slot) and same tier. common+common -> rare, rare+rare
-// -> epic. Epic is the ceiling. Returns the groups that currently have a valid fusion available.
-const RARITY_ORDER = ['common', 'rare', 'epic'];
+// "Its own kind": same equipment family (slot) and same tier. Chain all the way:
+// common -> rare -> epic -> legendary -> mythic. Mythic is the ceiling.
+const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 export function nextRarity(rarityId) { const i = RARITY_ORDER.indexOf(rarityId); return i >= 0 && i < RARITY_ORDER.length - 1 ? RARITY_ORDER[i + 1] : null; }
 
 export function combinables(m) {
