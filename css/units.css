@@ -20,8 +20,11 @@
 .unit .frame {
   position: absolute; left: 0; right: 0; bottom: 30%;   /* feet sit at the base */
   display: flex; justify-content: center; align-items: flex-end; z-index: 1;
+  pointer-events: none;   /* the head overflows upward into the tile above — don't let it
+                             steal taps from the unit that actually lives in that tile.
+                             The drag/tap target is the .unit tile box itself. */
 }
-.unit .champ { width: 120%; height: auto; overflow: visible; filter: drop-shadow(0 2px 2px #0008); }
+.unit .champ { width: 120%; height: auto; overflow: visible; filter: drop-shadow(0 2px 2px #0008); pointer-events: none; }
 .unit .champ-body { transform-origin: 50% 95%; animation: idle 2.6s ease-in-out infinite; }
 @keyframes idle { 50% { transform: translateY(-2.2%) scaleY(1.015); } }
 
