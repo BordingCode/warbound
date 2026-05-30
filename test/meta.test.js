@@ -1,5 +1,4 @@
 // Warpath meta-progression tests. Run: node test/meta.test.js
-// Shim localStorage (node has none) so the persist round-trips work.
 globalThis.localStorage = (() => { let s = {}; return { getItem: (k) => (k in s ? s[k] : null), setItem: (k, v) => { s[k] = String(v); }, removeItem: (k) => { delete s[k]; }, clear: () => { s = {}; } }; })();
 import * as Meta from '../js/state/meta.js';
 
@@ -13,53 +12,56 @@ const rng = (seq) => { let i = 0; return () => seq[i++ % seq.length]; };
   ok('spoils: a win pays much more than a loss', Meta.spoilsForRun(10, 14, true) > Meta.spoilsForRun(0, 8, false) + 30);
 }
 
-// ---- makeItem: rarity scales the effect; trinket grants a synergy crown ----
+// ---- coherence: each slot's effect/icon/colour match its theme ----
 {
-  const c = Meta.makeItem('weapon', 'common', rng([0.5]));
-  const e = Meta.makeItem('weapon', 'epic', rng([0.5]));
-  ok('item: epic weapon gives more gold than common', e.eff.value > c.eff.value && c.eff.type === 'gold');
-  const tr = Meta.makeItem('trinket', 'common', rng([0.1]));
-  ok('item: trinket grants a synergy crown (traitBonus)', tr.eff.type === 'synergy' && tr.eff.traitBonus && Object.keys(tr.eff.traitBonus).length >= 1);
-  const epicTr = Meta.makeItem('trinket', 'epic', rng([0.1, 0.9]));
-  ok('item: epic trinket can boost two synergies', Object.values(epicTr.eff.traitBonus).reduce((a, b) => a + b, 0) >= 2);
+  ok('slots: 5 themed slots', Meta.SLOTS.length === 5);
+  const weapon = Meta.makeItem('weapon', 'epic', rng([0.5]));
+  ok('weapon -> attack damage, ⚔ icon', weapon.eff.type === 'ad' && weapon.icon === '⚔');
+  const tome = Meta.makeItem('tome', 'common', rng([0.5]));
+  ok('tome -> XP, 📖 icon', tome.eff.type === 'xp' && tome.icon === '📖');
+  const coffer = Meta.makeItem('coffer', 'epic', rng([0.5]));
+  ok('coffer -> gold, 💰 icon, scales with rarity', coffer.eff.type === 'gold' && coffer.icon === '💰' && coffer.eff.value > Meta.makeItem('coffer', 'common', rng([0.5])).eff.value);
+  const relic = Meta.makeItem('relic', 'common', rng([0.1]));
+  ok('relic -> synergy crown, named & coloured for its trait', relic.eff.type === 'synergy' && Object.keys(relic.eff.traitBonus).length >= 1 && /Sigil$/.test(relic.name));
+  const epicRelic = Meta.makeItem('relic', 'epic', rng([0.1, 0.9]));
+  ok('epic relic boosts two synergies', Object.values(epicRelic.eff.traitBonus).reduce((a, b) => a + b, 0) >= 2);
+  ok('effectText reads cleanly', /Attack Damage/.test(Meta.effectText(weapon)) && /gold/.test(Meta.effectText(coffer)));
 }
 
-// ---- chest: costs spoils, drops an item; equip is one-per-slot (no duplicate slots) ----
+// ---- chest: costs spoils, drops an item ----
 {
-  localStorage.clear();
-  Meta.addSpoils(40);
+  localStorage.clear(); Meta.addSpoils(40);
   const before = Meta.load().spoils;
   const r1 = Meta.openChest(rng([0.5, 0.5, 0.5]));
   ok('chest: opening costs spoils + drops an item', r1.ok && r1.item && r1.spoils === before - Meta.CHEST_COST);
-  // can't open when broke
   Meta.addSpoils(-1000);
-  ok('chest: cannot open with too few spoils', Meta.openChest(rng([0.5])).ok === false);
+  ok('chest: cannot open when broke', Meta.openChest(rng([0.5])).ok === false);
 }
 
-// ---- equip: one item per slot; equipping a second of the same slot replaces it ----
+// ---- equip: one per slot; second of a slot REPLACES (no duplicate slots) ----
 {
   localStorage.clear();
-  const h1 = Meta.makeItem('helm', 'common', rng([0.5]));
-  const h2 = Meta.makeItem('helm', 'epic', rng([0.5]));
-  const m = Meta.load(); m.inventory.push(h1, h2); Meta.save(m);
-  Meta.equip(h1.iid);
-  ok('equip: first helm equipped', Meta.load().equipped.helm === h1.iid);
-  Meta.equip(h2.iid);
-  ok('equip: second helm REPLACES the first (no two helmets)', Meta.load().equipped.helm === h2.iid && Object.values(Meta.load().equipped).filter((x) => x === h1.iid).length === 0);
+  const t1 = Meta.makeItem('tome', 'common', rng([0.5]));
+  const t2 = Meta.makeItem('tome', 'epic', rng([0.5]));
+  const m = Meta.load(); m.inventory.push(t1, t2); Meta.save(m);
+  Meta.equip(t1.iid); ok('equip: first tome equipped', Meta.load().equipped.tome === t1.iid);
+  Meta.equip(t2.iid); ok('equip: second tome REPLACES the first', Meta.load().equipped.tome === t2.iid);
 }
 
-// ---- gearBonuses: aggregates equipped start-of-run boosts ----
+// ---- gearBonuses: aggregates start-of-run boosts incl. the combat AD% and synergy crown ----
 {
   localStorage.clear();
   const m = Meta.load();
-  const w = Meta.makeItem('weapon', 'epic', rng([0.5]));     // +10 gold
-  const a = Meta.makeItem('armor', 'rare', rng([0.5]));      // +2 lives
-  const t = Meta.makeItem('trinket', 'common', rng([0.0]));  // +1 synergy
-  m.inventory.push(w, a, t); Meta.save(m);
-  Meta.equip(w.iid); Meta.equip(a.iid); Meta.equip(t.iid);
+  const w = Meta.makeItem('weapon', 'epic', rng([0.5]));    // +16% AD
+  const a = Meta.makeItem('armor', 'rare', rng([0.5]));     // +2 lives
+  const c = Meta.makeItem('coffer', 'epic', rng([0.5]));    // +14 gold
+  const r = Meta.makeItem('relic', 'common', rng([0.0]));   // +1 synergy
+  m.inventory.push(w, a, c, r); Meta.save(m);
+  Meta.equip(w.iid); Meta.equip(a.iid); Meta.equip(c.iid); Meta.equip(r.iid);
   const b = Meta.gearBonuses(Meta.load());
-  ok('gear: aggregates gold + lives from equipped pieces', b.gold === 10 && b.lives === 2);
-  ok('gear: aggregates the synergy crown into traitBonus', Object.values(b.traitBonus).reduce((x, y) => x + y, 0) >= 1);
+  ok('gear: aggregates gold + lives', b.gold === 14 && b.lives === 2);
+  ok('gear: weapon AD% goes to combat flat', b.flat.ad >= 0.16);
+  ok('gear: relic synergy goes to traitBonus', Object.values(b.traitBonus).reduce((x, y) => x + y, 0) >= 1);
 }
 
 console.log(`\n\n${pass} passed, ${fail} failed`);

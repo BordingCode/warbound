@@ -258,30 +258,73 @@
 .rank-bar { width: 100%; height: 7px; border-radius: 4px; background: #0007; overflow: hidden; box-shadow: inset 0 0 0 1px #0008; }
 .rank-bar .fill { height: 100%; transform-origin: left; background: linear-gradient(90deg, var(--gold), #ffe9a8); transition: transform .6s ease; }
 
-/* ---- Armory (meta-progression) ---- */
-.mode-card.armory:hover { border-color: #c79bff; }
-.btn.dim { opacity: .5; }
-.armory-top { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 380px; margin: 0 auto; }
-.armory-top .spoils { font-weight: 800; color: var(--gold); font-size: 15px; }
-.armory-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; max-width: 380px; margin: 0 auto; }
-.armory-slot { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
-.armory-slot.filled { cursor: pointer; }
-.armory-slot .as-slot { font-size: 11px; color: var(--ink-dim); font-weight: 700; }
-.armory-slot .as-item { font-size: 12.5px; font-weight: 800; margin: 1px 0; }
-.armory-slot .as-eff { font-size: 10.5px; color: var(--ink-dim); line-height: 1.25; }
-.inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; max-width: 380px; margin: 0 auto; max-height: 34svh; overflow-y: auto; }
-.inv-item { background: var(--bg-2); border: 1px solid var(--line); border-radius: 9px; padding: 7px 5px; text-align: center; cursor: pointer; transition: transform .1s; }
-.inv-item:hover { transform: translateY(-2px); }
+/* ---- menu: Warpath + Armory grouped (gear belongs to Warpath) ---- */
+.warpath-group { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.warpath-group .mode-card { border: none; border-radius: 0; border-bottom: 1px solid var(--line); }
+.warpath-group .mode-card:hover { transform: none; background: var(--bg-3); }
+.armory-bar { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; background: linear-gradient(90deg, rgba(199,155,255,0.10), transparent); border-left: 3px solid #c79bff; transition: background .12s; }
+.armory-bar:hover { background: linear-gradient(90deg, rgba(199,155,255,0.22), transparent); }
+.armory-bar .ab-ico { font-size: 22px; }
+.armory-bar .ab-label { font-weight: 800; font-size: 15px; }
+.armory-bar .ab-sub { display: block; font-size: 11px; color: var(--ink-dim); }
+.armory-bar .ab-spoils { margin-left: auto; font-weight: 800; color: var(--gold); }
+
+/* ---- Armory screen ---- */
+.armory-screen { max-width: 420px; margin: 0 auto; width: 100%; }
+.arm-header { display: flex; align-items: center; gap: 10px; width: 100%; }
+.arm-header h1 { font-size: 22px; margin: 0; flex: 1; }
+.btn.icon { padding: 6px 12px; font-size: 16px; }
+.spoils-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--gold-deep); color: var(--gold); font-weight: 800; }
+.arm-tagline { font-size: 12px; color: var(--ink-dim); text-align: center; margin-top: -4px; }
+
+/* paper-doll: portrait + rarity-ringed sockets */
+.champion-panel { display: flex; align-items: center; gap: 14px; background: radial-gradient(120% 100% at 50% 0%, #1d2740, var(--bg-1)); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.champ-portrait { width: 92px; height: 92px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 4px 8px #0008); }
+.champ-portrait .champ { width: 100%; height: auto; }
+.sockets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; flex: 1; }
+.socket { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.socket .socket-icon { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #0c1119; border: 2px dashed #38455f; color: #4a566e; }
+.socket.filled .socket-icon { border: 2px solid var(--rc); background: radial-gradient(closest-side, color-mix(in srgb, var(--ic) 30%, #0c1119), #0c1119); color: #fff; box-shadow: 0 0 8px color-mix(in srgb, var(--rc) 60%, transparent); cursor: pointer; }
+.socket .socket-label { font-size: 8.5px; color: var(--ink-dim); }
+
+/* loadout readout: one row per slot, plain-language effect */
+.loadout { display: flex; flex-direction: column; gap: 5px; }
+.loadout-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+.loadout-row.filled { border-left: 3px solid var(--rc); cursor: pointer; }
+.loadout-row.empty { opacity: .6; }
+.loadout-row .lr-icon { font-size: 18px; width: 24px; text-align: center; }
+.loadout-row .lr-name { font-size: 13px; font-weight: 800; }
+.loadout-row .lr-eff { font-size: 11px; color: var(--ink-dim); }
+.loadout-row .lr-x { margin-left: auto; color: var(--ink-faint); font-size: 12px; }
+.loadout-row.filled:hover .lr-x { color: var(--danger); }
+
+/* War Cache call-to-action */
+.cache-cta { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius); cursor: pointer; background: linear-gradient(90deg, rgba(255,206,92,0.16), rgba(255,206,92,0.04)); border: 1px solid var(--gold-deep); transition: transform .12s, box-shadow .12s; }
+.cache-cta:hover { transform: translateY(-2px); box-shadow: 0 6px 16px #0006; }
+.cache-cta.dim { opacity: .5; filter: grayscale(.6); }
+.cache-cta .cc-chest { font-size: 32px; }
+.cache-cta .cc-title { font-weight: 800; font-size: 15px; }
+.cache-cta .cc-sub { font-size: 11px; color: var(--ink-dim); }
+.cache-cta .cc-cost { margin-left: auto; font-weight: 800; color: var(--gold); font-size: 15px; }
+
+/* inventory grid */
+.inv-head { font-size: 12px; color: var(--ink-dim); font-weight: 700; margin-top: 2px; }
+.inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; max-height: 30svh; overflow-y: auto; padding: 2px; }
+.inv-item { position: relative; background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 14%, var(--bg-2)), var(--bg-2)); border: 1px solid var(--rc); border-radius: 11px; padding: 9px 5px 7px; text-align: center; cursor: pointer; transition: transform .1s, box-shadow .1s; }
+.inv-item:hover { transform: translateY(-2px); box-shadow: 0 5px 12px #0007; }
 .inv-item.eq { box-shadow: 0 0 0 2px var(--gold) inset; }
-.inv-item .ii-icon { font-size: 18px; }
-.inv-item .ii-name { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.inv-item .ii-eff { font-size: 9px; color: var(--ink-dim); line-height: 1.2; }
-/* rarity accents */
-.rarity-common { border-color: #6b7686; }
-.rarity-rare { border-color: #6fb1ff; }
-.rarity-epic { border-color: #c79bff; box-shadow: 0 0 8px #c79bff44; }
-.help-card.reveal .reveal-icon { font-size: 46px; }
-.help-card.reveal .reveal-rarity { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-dim); }
-.help-card.reveal.rarity-epic .reveal-rarity { color: #c79bff; }
-.help-card.reveal.rarity-rare .reveal-rarity { color: #6fb1ff; }
-.help-card.reveal { animation: rankPop .5s cubic-bezier(.34,1.6,.5,1); }
+.inv-item .ii-rar { font-size: 8px; text-transform: uppercase; letter-spacing: .5px; color: var(--rc); font-weight: 800; }
+.inv-item .ii-icon { font-size: 22px; line-height: 1.1; }
+.inv-item .ii-name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inv-item .ii-eff { font-size: 8.5px; color: var(--ink-dim); line-height: 1.2; margin-top: 1px; }
+
+/* chest reveal */
+.reveal-card { position: relative; text-align: center; background: radial-gradient(120% 90% at 50% 10%, color-mix(in srgb, var(--rc) 22%, var(--bg-2)), var(--bg-2)); border: 2px solid var(--rc); border-radius: 18px; padding: 22px 24px; max-width: 290px; box-shadow: 0 0 30px color-mix(in srgb, var(--rc) 40%, transparent); animation: rankPop .5s cubic-bezier(.34,1.6,.5,1); overflow: hidden; }
+.reveal-card .reveal-burst { position: absolute; inset: -40% -40% auto -40%; height: 200%; background: conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--rc) 35%, transparent), transparent 30%); animation: spin 5s linear infinite; pointer-events: none; opacity: .5; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.reveal-card > * { position: relative; }
+.reveal-card .reveal-rarity { font-size: 12px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: var(--rc); }
+.reveal-card .reveal-icon { font-size: 56px; margin: 4px 0; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ic) 70%, transparent)); animation: rankPop .6s .1s both cubic-bezier(.34,1.7,.5,1); }
+.reveal-card h2 { margin: 2px 0 4px; font-size: 20px; }
+.reveal-card .reveal-eff { font-size: 13px; color: var(--ink); }
+.reveal-card .reveal-tools { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }

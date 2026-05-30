@@ -617,7 +617,9 @@ async function startCombat() {
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const seed = hashSeed(run.seed, run.round);
   // build the combat aug: player augments, plus (in ladder) warlord powers + the lobby modifier
-  let augOpt = { aug: { player: Object.assign(augmentBundle(run.augments), { traitBonus: teamTraitBonus() }) } };
+  const soloBundle = Object.assign(augmentBundle(run.augments), { traitBonus: teamTraitBonus() });
+  if (run.mode !== 'ladder' && run.metaFlat) for (const k in run.metaFlat) soloBundle.flat[k] = (soloBundle.flat[k] || 0) + run.metaFlat[k];   // gear's team AD% etc.
+  let augOpt = { aug: { player: soloBundle } };
   if (run.mode === 'ladder' && lobby) {
     const pb = augmentBundle(run.augments);
     const pf = Bots.powerFlat(lobby.human, lobby);   // human warlord power + modifier
@@ -749,7 +751,7 @@ function applyGear(run) {
   if (b.gold) run.gold += b.gold;
   if (b.lives) run.lives += b.lives;
   if (b.xp) { run.xp += b.xp; while (run.level < Run.MAX_LEVEL && run.xp >= Run.xpNeeded(run)) { run.xp -= Run.xpNeeded(run); run.level++; } }
-  if (b.components) { const cs = Object.keys(COMPONENTS); for (let i = 0; i < b.components; i++) Run.addItem(run, cs[Math.floor(Math.random() * cs.length)]); }
+  run.metaFlat = (b.flat && Object.keys(b.flat).length) ? b.flat : null;       // e.g. team +AD%
   run.metaTraitBonus = (b.traitBonus && Object.keys(b.traitBonus).length) ? b.traitBonus : null;
 }
 // your team's synergy-count bonus = augment crowns (+ in solo, the gear's synergy crown).
@@ -795,39 +797,68 @@ function showArmory() {
   audioResume();
   const render = () => {
     const m = Meta.load();
-    const slotEl = (s) => {
+    const rar = (id) => Meta.RARITIES.find((r) => r.id === id);
+    // a socket on the paper-doll: equipped item icon in a rarity ring, or a dim slot ghost
+    const socket = (s) => {
       const it = Meta.equippedItem(m, s.id);
-      return el(`.armory-slot${it ? ' filled rarity-' + it.rarity : ''}`, { onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null, title: it ? 'Tap to unequip' : 'empty slot' }, [
-        el('.as-slot', {}, `${s.icon} ${s.name}`),
-        el('.as-item', {}, it ? it.name : '—'),
-        el('.as-eff', {}, it ? Meta.effectText(it) : 'empty'),
+      return el(`.socket${it ? ' filled' : ''}`, {
+        style: it ? { '--rc': rar(it.rarity).color, '--ic': Meta.itemColor(it) } : {},
+        title: it ? `${it.name} — ${Meta.effectText(it)} (tap to unequip)` : `${s.name}: empty`,
+        onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null,
+      }, [el('.socket-icon', {}, it ? it.icon : s.icon), el('.socket-label', {}, s.name)]);
+    };
+    // a detailed loadout row per slot (name + plain-language effect), rarity-coloured
+    const loadoutRow = (s) => {
+      const it = Meta.equippedItem(m, s.id);
+      return el(`.loadout-row${it ? ' filled' : ' empty'}`, { style: it ? { '--rc': rar(it.rarity).color } : {}, onclick: it ? () => { Meta.unequip(s.id); Sfx.click(); render(); } : null }, [
+        el('.lr-icon', {}, it ? it.icon : s.icon),
+        el('.lr-text', {}, [el('.lr-name', {}, it ? it.name : `${s.name} slot`), el('.lr-eff', {}, it ? Meta.effectText(it) : 'empty — equip a piece below')]),
+        it ? el('.lr-x', {}, '✕') : null,
       ]);
     };
-    const invCell = (it) => el(`.inv-item rarity-${it.rarity}${m.equipped[it.slot] === it.iid ? ' eq' : ''}`, { onclick: () => { Meta.equip(it.iid); Sfx.buy(); render(); }, title: 'Tap to equip' }, [
-      el('.ii-icon', {}, it.icon), el('.ii-name', {}, it.name), el('.ii-eff', {}, Meta.effectText(it)),
+    const invCell = (it) => el(`.inv-item${m.equipped[it.slot] === it.iid ? ' eq' : ''}`, { style: { '--rc': rar(it.rarity).color, '--ic': Meta.itemColor(it) }, onclick: () => { Meta.equip(it.iid); Sfx.buy(); render(); }, title: `${Meta.effectText(it)} — tap to equip` }, [
+      el('.ii-rar', {}, rar(it.rarity).name),
+      el('.ii-icon', {}, it.icon),
+      el('.ii-name', {}, it.name),
+      el('.ii-eff', {}, Meta.effectText(it)),
     ]);
     const canBuy = m.spoils >= Meta.CHEST_COST;
-    $('#app').replaceChildren(el('.game', { style: { gap: '10px', padding: '14px', minHeight: '85svh' } }, [
-      el('.armory-top', {}, [el('h1', { style: { fontSize: '24px', margin: 0 } }, '🎁 Armory'), el('.spoils', {}, `${m.spoils} 🪙`)]),
-      el(`button.btn.primary${canBuy ? '' : ' dim'}`, { style: { fontSize: '15px', padding: '11px' }, onclick: () => { const r = Meta.openChest(); if (r.ok) revealItem(r.item, render); else modal2('Not enough Spoils', `A War Cache costs ${Meta.CHEST_COST} 🪙. Earn Spoils by playing Warpath — even a loss pays.`); } }, `📦 Open War Cache · ${Meta.CHEST_COST} 🪙`),
-      el('.sub', { style: { marginTop: '4px' } }, 'Your Champion — one piece per slot (tap equipped to remove):'),
-      el('.armory-slots', {}, Meta.SLOTS.map(slotEl)),
-      el('.sub', {}, m.inventory.length ? `Inventory (${m.inventory.length}) — tap to equip:` : 'No gear yet — open a War Cache!'),
+    $('#app').replaceChildren(el('.game.armory-screen', { style: { gap: '12px', padding: '14px', minHeight: '85svh' } }, [
+      el('.arm-header', {}, [
+        el('button.btn.icon', { onclick: () => chooseMode() }, '←'),
+        el('h1', {}, '🎁 Armory'),
+        el('.spoils-pill', {}, [el('span.sp-ico', {}, '🪙'), el('span', {}, m.spoils)]),
+      ]),
+      el('.arm-tagline', {}, 'Gear your Champion — these boosts apply to your Warpath runs.'),
+      // paper-doll: portrait + the 5 rarity-ringed sockets
+      el('.champion-panel', {}, [
+        el('.champ-portrait', { html: championSVG(UNITS_BY_ID['knight_captain'], { size: 92 }) }),
+        el('.sockets', {}, Meta.SLOTS.map(socket)),
+      ]),
+      el('.loadout', {}, Meta.SLOTS.map(loadoutRow)),
+      // cache CTA
+      el(`.cache-cta${canBuy ? '' : ' dim'}`, { onclick: () => { const r = Meta.openChest(); if (r.ok) revealItem(r.item, render); else modal2('Not enough Spoils', `A War Cache costs ${Meta.CHEST_COST} 🪙. Earn Spoils by playing Warpath — even a loss pays out.`); } }, [
+        el('.cc-chest', {}, '📦'),
+        el('.cc-text', {}, [el('.cc-title', {}, 'Open War Cache'), el('.cc-sub', {}, 'a random piece of gear')]),
+        el('.cc-cost', {}, `${Meta.CHEST_COST} 🪙`),
+      ]),
+      el('.inv-head', {}, m.inventory.length ? `Inventory · ${m.inventory.length}` : 'No gear yet — open a War Cache'),
       el('.inv-grid', {}, m.inventory.map(invCell)),
-      el('button.btn', { style: { marginTop: '4px' }, onclick: () => chooseMode() }, '← Back'),
     ]));
   };
   render();
 }
 function revealItem(item, after) {
   Sfx.fuse();
-  const ov = el('.overlay', {}, el(`.help-card reveal rarity-${item.rarity}`, { style: { textAlign: 'center', maxWidth: '300px' } }, [
-    el('.reveal-rarity', {}, Meta.RARITIES.find((r) => r.id === item.rarity).name + ' find!'),
+  const rar = Meta.RARITIES.find((r) => r.id === item.rarity);
+  const ov = el('.overlay', {}, el(`.reveal-card rarity-${item.rarity}`, { style: { '--rc': rar.color, '--ic': Meta.itemColor(item) } }, [
+    el('.reveal-burst'),
+    el('.reveal-rarity', {}, rar.name + ' find!'),
     el('.reveal-icon', {}, item.icon),
-    el('h2', { style: { margin: '6px 0', fontSize: '20px' } }, item.name),
-    el('.sub', {}, Meta.effectText(item)),
-    el('.draft-tools', { style: { justifyContent: 'center', marginTop: '10px' } }, [
-      el('button.btn.primary', { onclick: () => { Meta.equip(item.iid); ov.remove(); after && after(); } }, 'Equip'),
+    el('h2', {}, item.name),
+    el('.reveal-eff', {}, Meta.effectText(item)),
+    el('.reveal-tools', {}, [
+      el('button.btn.primary', { onclick: () => { Meta.equip(item.iid); Sfx.fuse(); ov.remove(); after && after(); } }, 'Equip'),
       el('button.btn', { onclick: () => { ov.remove(); after && after(); } }, 'Stash'),
     ]),
   ]));
@@ -844,9 +875,16 @@ function chooseMode() {
     el('h1', { style: { fontSize: '32px', margin: '0', textAlign: 'center' } }, 'Warbound'),
     el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-6px' } }, 'Choose your battle'),
     el('.mode-menu', {}, [
-      card('', '🏰', 'Warpath', 'Climb a ladder of authored warbands solo to the boss. Earn Spoils to gear your Champion and make each run easier.', () => startSolo(true)),
+      // Warpath + its Armory are one visual GROUP — gear belongs to Warpath, not the ladder.
+      el('.warpath-group', {}, [
+        card('', '🏰', 'Warpath', 'Climb a ladder of authored warbands solo to the boss. Earn Spoils to gear your Champion and make each run easier.', () => startSolo(true)),
+        el('.armory-bar', { onclick: () => showArmory() }, [
+          el('span.ab-ico', {}, '🎁'),
+          el('.ab-text', {}, [el('span.ab-label', {}, 'Armory'), el('span.ab-sub', {}, 'gear your Champion — for Warpath')]),
+          el('span.ab-spoils', {}, `${Meta.load().spoils} 🪙`),
+        ]),
+      ]),
       ladderCard,
-      card(' armory', '🎁', 'Armory', `Open War Caches and gear up your Champion. You have ${Meta.load().spoils} Spoils 🪙.`, () => showArmory()),
     ]),
   ]));
 }
