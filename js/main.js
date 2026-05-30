@@ -11,6 +11,7 @@ import { createDragController } from './input/drag.js';
 import { getEnemyBoard } from './data/enemies.js';
 import * as Run from './state/run.js';
 import { resume as audioResume, Sfx, setEnabled as setSound, isEnabled as soundOn } from './audio/audio.js';
+import { launchConfetti } from './render/fx.js';
 
 let run = Run.load() || Run.freshRun();
 let combatSpeed = 1;
@@ -195,6 +196,7 @@ async function startCombat() {
   const winner = await player.play(events, { speed: combatSpeed });
   const won = winner === 'player';
   won ? Sfx.victory() : Sfx.defeat();
+  if (won) launchConfetti(2000);
   setBanner(won ? '🏆 Round won!' : winner === 'enemy' ? '💀 Round lost' : '⚖ Draw — counts as a loss');
 
   Run.resolveRound(run, won);
@@ -207,6 +209,7 @@ async function startCombat() {
 
 function endScreen() {
   const won = run.won;
+  if (won) launchConfetti(4000);
   const card = el('.endscreen', {}, [
     el('h1', { style: { fontSize: '34px', margin: '0' } }, won ? '🏆 VICTORY' : '💀 DEFEAT'),
     el('p', { style: { color: 'var(--ink-dim)' } }, won ? `You won the run with ${run.lives} ❤ to spare!` : `Your warband fell at round ${run.round}. ${run.wins} wins.`),
