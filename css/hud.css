@@ -343,6 +343,39 @@
 .reveal-card .reveal-eff { font-size: 13px; color: var(--ink); }
 .reveal-card .reveal-tools { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
 
+/* ── Rarity-scaled reveal spectacle: the rarer the find, the bigger the moment ── */
+.reveal-card.rarity-common  { box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 20%, transparent); border-width: 1px; }
+.reveal-card.rarity-common  .reveal-burst { opacity: .15; }
+.reveal-card.rarity-rare    .reveal-burst { opacity: .42; }
+.reveal-card.rarity-epic    { box-shadow: 0 0 42px color-mix(in srgb, var(--rc) 55%, transparent); }
+.reveal-card.rarity-epic    .reveal-burst { opacity: .72; animation-duration: 3.5s; }
+.reveal-card.rarity-legendary { border-width: 3px; box-shadow: 0 0 60px color-mix(in srgb, var(--rc) 75%, transparent), 0 0 130px color-mix(in srgb, var(--rc) 32%, transparent); }
+.reveal-card.rarity-legendary .reveal-burst { opacity: .9; animation-duration: 2.6s; }
+.reveal-card.rarity-mythic  { border-width: 3px; box-shadow: 0 0 75px color-mix(in srgb, var(--rc) 88%, transparent), 0 0 160px color-mix(in srgb, var(--rc) 42%, transparent); }
+.reveal-card.rarity-mythic  .reveal-burst { opacity: 1; animation-duration: 1.8s; }
+/* the rarity headline grows and glows with tier */
+.reveal-card.rarity-epic      .reveal-rarity { font-size: 14px; }
+.reveal-card.rarity-legendary .reveal-rarity { font-size: 16px; text-shadow: 0 0 12px var(--rc); }
+.reveal-card.rarity-mythic    .reveal-rarity { font-size: 18px; text-shadow: 0 0 16px var(--rc); }
+/* extra rotating rays behind legendary/mythic */
+.reveal-card .reveal-rays { position: absolute; inset: -60% -60% auto -60%; height: 240%; pointer-events: none; opacity: .35;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rc) 32%, transparent) 0deg 6deg, transparent 6deg 24deg);
+  animation: spin 8s linear infinite reverse;
+  -webkit-mask: radial-gradient(circle at 50% 32%, #000 0%, transparent 64%); mask: radial-gradient(circle at 50% 32%, #000 0%, transparent 64%); }
+/* impact: a brief shake on reveal, plus a breathing aura for the top tiers */
+.reveal-card.impact { animation: rankPop .5s cubic-bezier(.34,1.6,.5,1), revealShake .5s .12s; }
+.reveal-card.rarity-legendary.impact, .reveal-card.rarity-mythic.impact { animation: rankPop .5s cubic-bezier(.34,1.6,.5,1), revealShake .55s .12s, auraPulse 1.9s .6s ease-in-out infinite; }
+@keyframes revealShake { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-6px,3px); } 40% { transform: translate(5px,-4px); } 60% { transform: translate(-4px,-2px); } 80% { transform: translate(3px,2px); } }
+@keyframes auraPulse { 0%,100% { box-shadow: 0 0 55px color-mix(in srgb, var(--rc) 60%, transparent); } 50% { box-shadow: 0 0 95px color-mix(in srgb, var(--rc) 92%, transparent), 0 0 165px color-mix(in srgb, var(--rc) 46%, transparent); } }
+/* full-screen flash the instant a legendary/mythic lands */
+.reveal-flash { position: fixed; inset: 0; z-index: 1900; pointer-events: none; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rc) 55%, transparent), transparent 60%); animation: revealFlash .7s ease-out forwards; }
+@keyframes revealFlash { 0% { opacity: 0; } 12% { opacity: .9; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .reveal-card .reveal-burst, .reveal-card .reveal-rays { animation: none; }
+  .reveal-card.impact { animation: rankPop .4s ease both; }
+  .reveal-flash { display: none; }
+}
+
 /* ---- inline SVG icons (replace emoji) ---- */
 .ic { width: 1em; height: 1em; vertical-align: -0.14em; display: inline-block; flex-shrink: 0; }
 .ic-wrap { display: inline-flex; align-items: center; }

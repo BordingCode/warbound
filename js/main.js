@@ -1024,11 +1024,20 @@ function forgePanel(m, rar, render) {
   ]);
 }
 function revealItem(item, after) {
-  Sfx.fuse();
-  const rar = Meta.RARITIES.find((r) => r.id === item.rarity);
-  const ov = el('.overlay', {}, el(`.reveal-card rarity-${item.rarity}`, { style: { '--rc': rar.color, '--ic': Meta.itemColor(item) } }, [
+  const tier = Math.max(0, Meta.RARITIES.findIndex((r) => r.id === item.rarity));   // 0 common … 4 mythic
+  const rar = Meta.RARITIES[tier] || Meta.RARITIES[0];
+  const motion = motionOn();
+  Sfx.reward(tier);
+  // the rarer the find, the louder the moment: confetti (epic+), rotating rays + shake + screen flash (legendary/mythic)
+  const confettiMs = [0, 0, 1800, 3600, 5200][tier] || 0;
+  if (confettiMs && motion) launchConfetti(confettiMs);
+  const hi = tier >= 3;
+  if (hi && motion) { const flash = el('.reveal-flash', { style: { '--rc': rar.color } }); document.body.append(flash); setTimeout(() => flash.remove(), 700); }
+  const label = ['Common find', 'Rare find!', 'Epic find!', '✦ Legendary! ✦', '★ Mythic! ★'][tier] || `${rar.name} find`;
+  const ov = el('.overlay', {}, el(`.reveal-card rarity-${item.rarity}${hi && motion ? ' impact' : ''}`, { style: { '--rc': rar.color, '--ic': Meta.itemColor(item) } }, [
     el('.reveal-burst'),
-    el('.reveal-rarity', {}, rar.name + ' find!'),
+    hi ? el('.reveal-rays') : null,
+    el('.reveal-rarity', {}, label),
     el('.reveal-icon', { html: gearArt(item.slot, item.rarity, 84) }),
     el('h2', {}, item.name),
     el('.reveal-eff', {}, Meta.effectText(item)),

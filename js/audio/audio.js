@@ -70,6 +70,22 @@ export const Sfx = {
   fuse() { [0, 2, 4].forEach((i, k) => setTimeout(() => tone(noteHz(PENT[i] + 12), { type: 'triangle', dur: 0.18, gain: 0.16 }), k * 80)); },
   victory() { duck(); [0, 2, 4, 7].forEach((s, k) => setTimeout(() => tone(noteHz(s + 12), { type: 'triangle', dur: 0.4, gain: 0.2, cutoff: 5000 }), k * 130)); },
   defeat() { duck(); [4, 2, 0].forEach((s, k) => setTimeout(() => tone(noteHz(s) * 0.75, { type: 'sine', dur: 0.5, gain: 0.18, cutoff: 1600 }), k * 200)); },
+  // Rarity reward fanfare — grander as tier rises (0=common … 4=mythic). Pentatonic & soft, never harsh.
+  reward(tier = 0) {
+    const t = Math.max(0, Math.min(4, tier));
+    const run = [0, 3, 5, 7, 10, 12];                       // rising minor-pentatonic run
+    const len = [1, 2, 4, 5, 6][t];
+    const g = 0.14 + t * 0.018;
+    if (t >= 2) duck();
+    for (let k = 0; k < len; k++) {
+      const semi = run[k] + 12;
+      setTimeout(() => {
+        tone(noteHz(semi) * J(0.02), { type: 'triangle', dur: 0.34, gain: g, cutoff: 5200 });
+        if (t >= 3) tone(noteHz(semi + 12), { type: 'sine', dur: 0.3, gain: 0.05, cutoff: 6500 });   // shimmer octave
+      }, k * 105);
+    }
+    if (t >= 4) [0, 1, 2, 3].forEach((i) => setTimeout(() => tone(noteHz(PENT[i % 5] + 24) * J(0.05), { type: 'sine', dur: 0.18, gain: 0.06, cutoff: 7000 }), len * 105 + i * 70));   // sparkle tail
+  },
 };
 
 function duck() { // briefly dip music when a big cue fires
