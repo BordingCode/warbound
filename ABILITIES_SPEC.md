@@ -7,6 +7,10 @@
 > in `test/synergy-ability.test.js` (38 assertions). **Phases A–D all done** — phase D (faction
 > rebalance via the `test/comp-balance.js` archetype matrix) tightened the 10-comp win-rate spread
 > from 71pt → 26pt, with 9/10 comps in the 40–60% band (median fight ~11s). See the balance commit.
+>
+> **Follow-up (2026-06-01): DISTINCT BASE SPELLS.** Added a `ability.passive` hook system so every
+> champion's BASE is unique from 1★ (not just at 3★) — active OR passive, incl. 2 pure passives
+> (bone_guard, wood_ranger). See the passive-system commit; matrix re-tuned to a 22pt spread.
 
 ## Core design
 Keep `cast(u, now)` as the base engine; add a thin layer of composable **verbs** that abilities
