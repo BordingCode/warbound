@@ -316,14 +316,14 @@
 
 /* inventory grid */
 .inv-head { font-size: 12px; color: var(--ink-dim); font-weight: 700; margin-top: 2px; }
-.inv-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; flex-wrap: wrap; }
-.inv-bar .inv-head { margin-top: 0; }
-.inv-sort { display: flex; align-items: center; gap: 4px; }
-.inv-sort .is-label { font-size: 10px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .5px; margin-right: 2px; }
-.inv-sort .is-btn { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; cursor: pointer; color: var(--ink-dim); background: var(--bg-2); border: 1px solid var(--line); transition: background .12s, color .12s, border-color .12s; }
-.inv-sort .is-btn:hover { color: var(--ink); }
-.inv-sort .is-btn.on { color: #0b0f17; background: var(--gold); border-color: var(--gold); }
-.inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; max-height: 30svh; overflow-y: auto; padding: 2px; }
+.inv-groups { display: flex; flex-direction: column; gap: 14px; max-height: 50svh; overflow-y: auto; padding: 2px; }
+.inv-group { display: flex; flex-direction: column; gap: 7px; }
+.ig-head { display: flex; align-items: center; gap: 7px; padding: 0 1px 5px; border-bottom: 1px solid var(--line); }
+.ig-head .ig-icon { font-size: 15px; line-height: 0; display: flex; color: var(--gc, var(--ink)); }
+.ig-head .ig-name { font-size: 12.5px; font-weight: 800; letter-spacing: .3px; color: var(--gc, var(--ink)); }
+.ig-head .ig-count { font-size: 10px; font-weight: 700; color: var(--ink-dim); background: var(--bg-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+.ig-head .ig-eq { margin-left: auto; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--gold); }
+.inv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; padding: 0; }
 .inv-item { position: relative; background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 14%, var(--bg-2)), var(--bg-2)); border: 1px solid var(--rc); border-radius: 11px; padding: 9px 5px 7px; text-align: center; cursor: pointer; transition: transform .1s, box-shadow .1s; }
 .inv-item:hover { transform: translateY(-2px); box-shadow: 0 5px 12px #0007; }
 .inv-item.eq { box-shadow: 0 0 0 2px var(--gold) inset; }

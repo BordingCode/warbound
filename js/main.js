@@ -925,18 +925,8 @@ function heroPalette(m) {
 // ---------- Armory (meta-progression: chests + equipping your Champion) ----------
 function showArmory() {
   audioResume();
-  let invSort = 'slot';            // how the inventory grid is ordered (persists across re-renders)
-  const SLOT_ORDER = Object.fromEntries(Meta.SLOTS.map((s, i) => [s.id, i]));
   const RAR_ORDER = Object.fromEntries(Meta.RARITIES.map((r, i) => [r.id, i]));   // incl. legendary/mythic
   const iidNum = (it) => parseInt(String(it.iid).replace(/\D/g, ''), 10) || 0;
-  const sortInv = (items, m) => {
-    const a = [...items];
-    const eq = (it) => (m.equipped[it.slot] === it.iid ? 0 : 1);   // equipped pieces float to the front
-    if (invSort === 'slot') a.sort((x, y) => eq(x) - eq(y) || SLOT_ORDER[x.slot] - SLOT_ORDER[y.slot] || RAR_ORDER[y.rarity] - RAR_ORDER[x.rarity] || iidNum(y) - iidNum(x));
-    else if (invSort === 'rarity') a.sort((x, y) => eq(x) - eq(y) || RAR_ORDER[y.rarity] - RAR_ORDER[x.rarity] || SLOT_ORDER[x.slot] - SLOT_ORDER[y.slot] || iidNum(y) - iidNum(x));
-    else a.sort((x, y) => eq(x) - eq(y) || iidNum(y) - iidNum(x));  // 'recent' = newest first
-    return a;
-  };
   const render = () => {
     const m = Meta.load();
     const rar = (id) => Meta.RARITIES.find((r) => r.id === id);
@@ -984,17 +974,25 @@ function showArmory() {
         el('.cc-cost', {}, [String(Meta.CHEST_COST) + ' ', iconEl('spoils')]),
       ]),
       forgePanel(m, rar, render),
-      // ── Inventory ──
-      el('.inv-bar', {}, [
-        sectionHead('Inventory', m.inventory.length ? `${m.inventory.length} pieces` : 'empty'),
-        m.inventory.length > 1 ? el('.inv-sort', {}, [
-          el('span.is-label', {}, 'Sort'),
-          ...[['slot', 'Slot'], ['rarity', 'Rarity'], ['recent', 'New']].map(([k, lbl]) =>
-            el(`button.is-btn${invSort === k ? ' on' : ''}`, { onclick: () => { invSort = k; Sfx.click(); render(); } }, lbl)),
-        ]) : null,
-      ]),
+      // ── Inventory — grouped by slot category so each kind of gear is clearly separated ──
+      sectionHead('Inventory', m.inventory.length ? `${m.inventory.length} pieces` : 'empty'),
       m.inventory.length
-        ? el('.inv-grid', {}, sortInv(m.inventory, m).map(invCell))
+        ? el('.inv-groups', {}, Meta.SLOTS.map((s) => {
+            const items = m.inventory.filter((it) => it.slot === s.id);
+            if (!items.length) return null;
+            const eq = (it) => (m.equipped[it.slot] === it.iid ? 0 : 1);   // equipped piece floats to the front
+            items.sort((x, y) => eq(x) - eq(y) || RAR_ORDER[y.rarity] - RAR_ORDER[x.rarity] || iidNum(y) - iidNum(x));
+            const equippedHere = items.some((it) => m.equipped[it.slot] === it.iid);
+            return el('.inv-group', { style: { '--gc': s.color } }, [
+              el('.ig-head', {}, [
+                el('.ig-icon', { html: ic(s.icon) }),
+                el('span.ig-name', {}, s.name),
+                el('span.ig-count', {}, String(items.length)),
+                equippedHere ? el('span.ig-eq', {}, 'equipped') : null,
+              ]),
+              el('.inv-grid', {}, items.map(invCell)),
+            ]);
+          }).filter(Boolean))
         : el('.inv-empty', {}, 'No gear yet — open a War Cache above.'),
     ]));
   };
