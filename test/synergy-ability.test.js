@@ -29,6 +29,8 @@ const casts = (r) => evs(r).filter(e => e.type === 'cast');
 const WALL = [U('bone_guard', 3, 1, 3), U('bone_guard', 4, 1, 3), U('bone_guard', 3, 2, 3)];
 // strong killers (to force a lone player unit to die — for revive)
 const KILLERS = [U('royal_blade', 3, 1, 3), U('royal_blade', 4, 1, 3), U('bramble_brute', 3, 2, 3)];
+// a board that deals real, fast damage (for passives that trigger on taking hits / ally deaths)
+const HURTERS = () => [U('wyrm_archer', 1, 1, 1), U('wyrm_archer', 5, 1, 1), U('royal_blade', 3, 2, 2), U('royal_blade', 4, 2, 2)];
 
 console.log('\n=== SYNERGIES (trait A/B: OFF vs ON) ===');
 
@@ -110,11 +112,13 @@ console.log('\n=== SYNERGIES (trait A/B: OFF vs ON) ===');
   ok('Assassin (dive / blink)', count(a, e => e.type === 'blink' && e.id === 0) > 0, 'dive is inherent to the class');
   ok('Assassin (crit from trait)', count(b, e => e.type === 'attack' && e.id === 0 && e.crit) > 0 && count(a, e => e.type === 'attack' && e.id === 0 && e.crit) === 0, `crits ${count(a,e=>e.type==='attack'&&e.crit)}→${count(b,e=>e.type==='attack'&&e.crit)}`);
 }
-// healer — healAmp makes Mend heal for more
+// healer — healAmp makes Mend heal for more. Front ally must be a squishy under real pressure so
+// the heal isn't clamped (Bone Guard is now a near-unscratched wall, which clamped this heal to 0).
 {
-  const P = [U('field_medic', 3, 7), U('bone_guard', 3, 5, 2)];
-  const a = sim(P, WALL, { player: { human: 6 } });
-  const b = sim(P, WALL, { player: { human: 6, healer: 4 } });
+  const HURT = [U('royal_blade', 3, 1, 3), U('skeleton_archer', 3, 2, 3), U('skeleton_archer', 4, 2, 3)];
+  const P = [U('field_medic', 3, 7), U('crossbowman', 3, 5, 1)];
+  const a = sim(P, HURT, { player: { human: 6 } });
+  const b = sim(P, HURT, { player: { human: 6, healer: 4 } });
   const ha = evs(a).filter(e => e.type === 'heal' && e.amount > 0)[0], hb = evs(b).filter(e => e.type === 'heal' && e.amount > 0)[0];
   ok('Healer (healAmp → bigger heals)', ha && hb && hb.amount > ha.amount, `mend ${ha?.amount}→${hb?.amount}`);
 }
@@ -132,7 +136,7 @@ console.log('\n=== ABILITIES (each champion casts its unique signature + base ef
 const ABILS = [
   ['Rallying Bash', 'knight_captain', r => casts(r).some(c => c.name === 'Rallying Bash') && count(r, e => e.type === 'cc' && e.kind === 'stun') > 0],
   ['Arcane Nuke', 'court_mage', r => casts(r).some(c => c.name === 'Arcane Nuke') && dmgBy(r, 0, 'magic').length > 0],
-  ['Volley', 'crossbowman', r => casts(r).some(c => c.name === 'Volley')],
+  ['Suppressing Volley', 'crossbowman', r => casts(r).some(c => c.name === 'Suppressing Volley')],
   ['Regicide', 'royal_blade', r => casts(r).some(c => c.name === 'Regicide')],
   ['Mend', 'field_medic', r => casts(r).some(c => c.name === 'Mend') && count(r, e => e.type === 'heal') > 0],
   ['Wild Aegis', 'druid_healer', r => casts(r).some(c => c.name === 'Wild Aegis') && count(r, e => e.type === 'shield') > 0],
@@ -174,14 +178,94 @@ for (const [label, defId, check, board] of ULTS) {
   ok(label, check(r));
 }
 
+console.log('\n=== BASE PASSIVES (each new always-on signature fires its effect) ===');
+const evId = (r, id) => evs(r).filter(e => e.id === id);
+// bone_guard PURE PASSIVE: no cast, but hardens (shield events) as it's struck
+{
+  const r = sim([U('bone_guard', 3, 7, 2)], HURTERS());
+  ok('Bone Guard — pure passive (no cast, gains shields when hit)',
+    casts(r).every(c => c.id !== 0) && evId(r, 0).some(e => e.type === 'shield'), `casts:${casts(r).filter(c=>c.id===0).length} shields:${evId(r,0).filter(e=>e.type==='shield').length}`);
+}
+// skeleton_archer: every 4th auto looses a bonus magic bolt (a ranger dealing MAGIC = the passive)
+{
+  const r = sim([U('skeleton_archer', 3, 7, 2), U('bone_guard', 3, 5, 2)], WALL, { player: { human: 6 } });
+  ok('Skeleton Archer — every-4th bonus bolt (magic from a ranger)', dmgBy(r, 0, 'magic').length > 0);
+}
+// hellguard: pays own HP (sacrifice debuff on self) to deal bonus magic
+{
+  const r = sim([U('hellguard', 3, 7, 2), U('bone_guard', 3, 5, 2)], WALL, { player: { human: 6 } });
+  ok('Hellguard — Soul Tithe fires (pays HP for burst)', has(r, 'debuff', 'sacrifice'), `tithes:${evs(r).filter(e=>e.type==='debuff'&&e.kind==='sacrifice').length}`);
+}
+// no-self-kill guarantee: vs a near-harmless lone dummy, hellguard's tithe can NEVER faint it
+{
+  const r = sim([U('hellguard', 3, 7, 3)], [U('grove_healer', 3, 1, 1)]);   // healer deals trivial damage
+  ok('Hellguard — Soul Tithe floors at 20% HP (never self-kills)',
+    has(r, 'debuff', 'sacrifice') && !evs(r).some(e => e.type === 'faint' && e.id === 0));
+}
+// wood_ranger PURE PASSIVE focus: no cast, ramps damage on a locked target
+{
+  const r = sim([U('wood_ranger', 3, 7, 2), U('bone_guard', 3, 5, 2)], WALL, { player: { human: 6 } });
+  ok('Wood Ranger — pure passive focus (no cast, deals damage)',
+    casts(r).every(c => c.id !== 0) && dmgBy(r, 0).length > 5);
+}
+// dragon_knight guard: redirects part of an adjacent ally's incoming damage onto itself.
+// Two melee knights march side-by-side and brawl together, so the ally reliably takes hits
+// while the guardian is adjacent (a backline guardian would march off and never be adjacent).
+{
+  const P = [U('dragon_knight', 3, 7, 2), U('bramble_brute', 4, 7, 2)];
+  const E = [U('knight_captain', 3, 1, 3), U('knight_captain', 4, 1, 3), U('bramble_brute', 3, 0, 2)];
+  const r = sim(P, E);
+  ok('Dragon Knight — guard redirects adjacent ally damage (takes true dmg)',
+    evs(r).some(e => e.type === 'damage' && e.id === 0 && e.dmgType === 'true'));
+}
+// field_medic triage: bursts heal when an ally dies
+{
+  const P = [U('field_medic', 3, 7, 2), U('imp_assassin', 3, 4, 1), U('crossbowman', 5, 7, 1)];
+  const r = sim(P, HURTERS());
+  const died = evs(r).some(e => e.type === 'faint' && (e.id === 1 || e.id === 2));
+  ok('Field Medic — Triage heals on an ally death', died && evs(r).some(e => e.type === 'heal'));
+}
+// necromancer corpse-harvest: raises a Risen when an ally falls
+{
+  const P = [U('necromancer', 3, 7, 1), U('imp_assassin', 3, 4, 1)];
+  const r = sim(P, HURTERS());
+  const summons = evs(r).filter(e => e.type === 'spawn' && e.summon).length;
+  ok('Necromancer — Corpse Harvest raises on ally death', summons > 0, `risen:${summons}`);
+}
+// beast_hunter: marks the enemy CARRY (highest cost×star) at spawn
+{
+  const enemy = [U('imp_assassin', 3, 1, 1), U('dragon_sage', 4, 1, 1)];   // dragon_sage = the carry
+  const r = sim([U('beast_hunter', 3, 7, 2)], enemy);
+  ok('Beast Hunter — marks the enemy carry at spawn', has(r, 'debuff', 'mark'));
+}
+// imp_assassin: refunds mana on a kill (lets it re-cast sooner) — observable as ≥2 casts vs a wall of chaff
+{
+  const r = sim([U('imp_assassin', 3, 7, 3), U('bone_guard', 3, 5, 2)], [U('field_medic', 3, 1, 1), U('field_medic', 4, 1, 1), U('field_medic', 5, 1, 1)], { player: { human: 6 } });
+  ok('Imp Assassin — Cinder Chain (kills refund mana → keeps casting)', casts(r).filter(c => c.id === 0).length >= 2, `casts:${casts(r).filter(c=>c.id===0).length}`);
+}
+// pit_summoner: its summons DETONATE (meteor) when they die
+{
+  const r = sim([U('pit_summoner', 3, 7, 1), U('bone_guard', 3, 5, 2)], HURTERS());
+  ok('Pit Summoner — volatile summons detonate on death', evs(r).some(e => e.type === 'meteor'));
+}
+
 console.log('\n=== WIRING AUDIT (every champion has a UNIQUE signature ability) ===');
 const abilityNames = UNITS.map(u => u.ability && u.ability.name);
 const dupes = abilityNames.filter((n, i) => abilityNames.indexOf(n) !== i);
 ok('All 29 abilities are uniquely named', dupes.length === 0, dupes.length ? `DUPES: ${[...new Set(dupes)].join(', ')}` : `${abilityNames.length} unique`);
-const allHaveVerbs = UNITS.every(u => u.ability && Array.isArray(u.ability.verbs) && u.ability.verbs.length);
-ok('Every champion ships verb-based ability data', allHaveVerbs);
-const allHaveUlt = UNITS.every(u => u.ability && u.ability.ult && Array.isArray(u.ability.ult.verbs) && u.ability.ult.verbs.length);
-ok('Every champion has a 3★ ult upgrade', allHaveUlt);
+// Every champion ships an ability — either active verbs OR a passive (pure-passive units have no cast).
+const hasPassive = (u) => u.ability && u.ability.passive;
+const allHaveKit = UNITS.every(u => u.ability && ((Array.isArray(u.ability.verbs) && u.ability.verbs.length) || hasPassive(u)));
+ok('Every champion ships an ability (active verbs or a passive)', allHaveKit);
+// Every champion has a 3★ upgrade: an ability ult, OR a passive carrying a star-3 `ult` array,
+// OR a pure-passive (noCast) whose op self-scales at 3★ (wood_ranger focus shred).
+const passiveArr = (u) => { const p = u.ability.passive; return p ? (Array.isArray(p) ? p : [p]) : []; };
+const has3Star = (u) => (u.ability.ult && u.ability.ult.verbs && u.ability.ult.verbs.length) || passiveArr(u).some(p => p.ult && p.ult.length) || u.ability.noCast;
+const allHaveUlt = UNITS.every(has3Star);
+ok('Every champion has a 3★ upgrade', allHaveUlt);
+// And every base is now mechanically distinct (active casters keep verbs; passive/pure-passive units carry a passive).
+const noKit = UNITS.filter(u => !((u.ability.verbs && u.ability.verbs.length) || hasPassive(u)));
+ok('No champion left without a signature', noKit.length === 0, noKit.map(u => u.defId).join(', '));
 
 console.log(`\n${fail === 0 ? '✓ ALL PASS' : '✗ ' + fail + ' FAILED: ' + fails.join(', ')}  (${pass} passed, ${fail} failed)\n`);
 process.exit(fail ? 1 : 0);

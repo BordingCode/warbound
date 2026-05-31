@@ -69,6 +69,14 @@ function makeUnit(entry, team, id, aug = null) {
     markMult: 1, markUntil: -1,
     ragePerAuto: 0, rageCap: 0, onKillVerbs: null, onKillN: 0,
     recastBudget: 1, raiseBudget: 2, slowAura: 0, lifestealAura: 0,
+    // ── PASSIVE state (always-on signatures; read at sim hooks via runPassive) ──
+    passive: def.ability && def.ability.passive ? def.ability.passive : null,
+    hitCount: 0,          // every-Nth-attack counter (skeleton_archer bolt, bone_guard shield)
+    lowHpFired: false,    // one-shot edge-trigger when hp% first crosses a threshold (wraith phase)
+    lastMovedTick: -999,  // tick index of last move — "while standing still" passives (wood_ranger)
+    markLockId: -1, focusStacks: 0,   // wood_ranger focus-fire lock + ramp
+    guardPct: 0,          // dragon_knight: soak this fraction of adjacent allies' incoming damage
+    explodeDmg: 0,        // pit_summoner: a summon detonates for this much magic when it dies
   };
 }
 
@@ -90,7 +98,7 @@ function applyTraits(units, board, traitBonus = {}) {
     if (u.klass === 'mage') { const m = get('mage'); if (m) u.apBonus += m.ap; }
     if (u.klass === 'assassin') { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; } }
     if (u.klass === 'ranger') { const r = get('ranger'); if (r) u.rangerAS = r.rangerAS; }
-    if (u.klass === 'beast' || u.origin === 'beast') { const b = get('beast'); if (b) u.ferocity = Math.max(u.ferocity, b.ferocity); }
+    if (u.klass === 'beast' || u.origin === 'beast') { const b = get('beast'); if (b) { u.ferocity = Math.max(u.ferocity, b.ferocity); if (b.armor) u.armor += b.armor; } }   // beasts ramp AS AND wear thicker hide (survive to ramp)
     if (u.origin === 'undead') { const ud = get('undead'); if (ud) { u.revivePct = Math.max(u.revivePct, ud.revivePct); if (ud.vamp) u.vamp += ud.vamp; } }   // undead leech: sustain kicker so the rainbow board has an offensive edge
     if (u.origin === 'demon') { const d = get('demon'); if (d) { u.burnOnHit = d.burn; u.manaBurnOnHit = d.manaBurn; } }
     if (u.klass === 'summoner') { const s = get('summoner'); if (s) u.summonPower = s.summonPower; }
@@ -165,19 +173,27 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
 
   function gainMana(u, amt, now) {
     if (now < u.manaLockUntil || !u.alive) return;
+    if (u.ability && u.ability.noCast) { u.mana = 0; return; }   // pure-passive units never cast
     u.mana += amt;
     if (u.mana >= u.maxMana) { u.mana -= u.maxMana; u.manaLockUntil = now + 1.0; cast(u, now); }
   }
 
   function applyDamage(target, raw, type, source, now) {
     if (!target.alive) return 0;
-    if (type === 'physical' && source && rng.chance(effDodge(target, now))) { ev(now, 'dodge', { id: target.id }); return 0; }
+    if (type === 'physical' && source && rng.chance(effDodge(target, now))) { ev(now, 'dodge', { id: target.id }); runPassive(target, 'dodge', now, source); return 0; }
     // mitigate by EFFECTIVE resist (armor/mr shred folded in); true/heal ignore resist.
     let post = (type === 'true' || type === 'heal') ? raw : raw * (100 / (100 + effResist(target, type, now)));
     if (type !== 'true') post = Math.max(0, post - target.block);
     // shield soak
     if (target.shield > 0) { const s = Math.min(target.shield, post); target.shield -= s; post -= s; }
     post = Math.round(post);
+    // dragon_knight guard: redirect a fraction of this hit to an adjacent guardian (as true dmg,
+    // so it can't itself be redirected/dodged → no loop). Guardian chosen deterministically (lowest id).
+    if (post > 0 && type !== 'true') {
+      let guardian = null;
+      for (const g of units) if (g.alive && g.team === target.team && g !== target && g.guardPct > 0 && dist2(g, target) <= 1) { if (!guardian || g.id < guardian.id) guardian = g; }
+      if (guardian) { const r = Math.round(post * guardian.guardPct); if (r > 0) { post -= r; guardian.hp -= r; ev(now, 'damage', { id: guardian.id, src: source ? source.id : -1, amount: r, hp: Math.max(0, guardian.hp), dmgType: 'true' }); if (guardian.hp <= 0) die(guardian, now); } }
+    }
     target.hp -= post;
     gainMana(target, manaFromDamage(raw, post), now);
     ev(now, 'damage', { id: target.id, src: source ? source.id : -1, amount: post, hp: Math.max(0, target.hp), dmgType: type });
@@ -189,7 +205,8 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       ev(now, 'damage', { id: source.id, src: target.id, amount: refl, hp: Math.max(0, source.hp), dmgType: 'true' });
       if (source.hp <= 0) die(source, now);
     }
-    if (target.hp <= 0) die(target, now);
+    if (target.hp <= 0) { die(target, now); return post; }
+    if (post > 0 && source) runPassive(target, 'attacked', now, source);   // bone_guard hardens as it's struck
     return post;
   }
 
@@ -208,8 +225,28 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       ev(now, 'revive', { id: u.id, hp: u.hp });
       return;
     }
+    // pit_summoner volatile spawn: QUEUE the detonation (deferred + iterative, so a chain of
+    // exploding summons can't recurse die→applyDamage→die into a stack overflow).
+    if (u.explodeDmg > 0) explosionQueue.push({ col: u.col, row: u.row, dmg: u.explodeDmg, team: u.team, now });
     u.alive = false; occupied.delete(idx(u.col, u.row));
     ev(now, 'faint', { id: u.id });
+    // allyDeath reactions (field_medic triage, necromancer corpse-raise). Gated to REAL unit
+    // deaths — a dying summon must NOT trigger raises, or necromancer loops forever.
+    if (!u.isSummon) for (const a of units.filter((x) => x.alive && x.team === u.team && x.id !== u.id).sort(byIdU)) runPassive(a, 'allyDeath', now, u);
+    drainExplosions();
+  }
+  // Drain queued detonations in a flat loop (reentrancy-guarded): nested deaths just enqueue more.
+  const explosionQueue = [];
+  let draining = false;
+  function drainExplosions() {
+    if (draining) return;
+    draining = true;
+    while (explosionQueue.length) {
+      const e = explosionQueue.shift();
+      ev(e.now, 'meteor', { col: e.col, row: e.row });
+      for (const t of units.filter((x) => x.alive && x.team !== e.team && Math.abs(x.col - e.col) + Math.abs(x.row - e.row) <= 1).sort(byIdU)) applyDamage(t, e.dmg, 'magic', null, e.now);
+    }
+    draining = false;
   }
 
   const pendingSummons = [];
@@ -231,7 +268,9 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       case 'clusterAtPrimary': { const c = lowestHP(units, u.team, true) || primary; return c ? enemiesNear(c, u.team, units, vb.radius || 1).sort(byIdU) : []; }
       case 'lowestEnemyHP': { const t = lowestHP(units, u.team, true); return t ? [t] : []; }
       case 'mostEnemies': return enemies().slice(vb.offset || 0, (vb.offset || 0) + (vb.count || 4));
-      case 'nearestN': { const list = enemies(); list.sort((a, b) => (dist2(u, a) - dist2(u, b)) || (a.id - b.id)); return list.slice(0, onKillN(u, vb)); }
+      case 'nearestN': { const list = enemies(); list.sort((a, b) => (dist2(u, a) - dist2(u, b)) || (a.id - b.id)); return list.slice(0, vb.count || onKillN(u, vb)); }
+      case 'mostMana': { const list = enemies(); list.sort((a, b) => (b.mana - a.mana) || (a.id - b.id)); return list.slice(0, vb.count || 4); }   // fel_archer: hunt enemy casters
+      case 'highestValueEnemy': { const list = enemies(); if (!list.length) return []; let best = list[0]; for (const t of list) { const val = (UNITS_BY_ID[t.defId]?.cost || 1) * t.star; const bv = (UNITS_BY_ID[best.defId]?.cost || 1) * best.star; if (val > bv || (val === bv && t.id < best.id)) best = t; } return [best]; }   // beast_hunter: the enemy carry
       case 'allEnemies': return enemies();
       case 'line': return primary ? enemies().filter((t) => t.col === primary.col) : [];   // pierce forward through the target's column (front→back)
       case 'self': return [u];
@@ -259,7 +298,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       case 'meteors': meteors(u, vb, now, killed); break;
       case 'heal': for (const t of targets) heal(t, (vb.ap || u.ability.ap || 0) * (STAR_MULT[u.star] || 1) + u.apBonus, now); break;
       case 'shield': for (const t of targets) { const amt = Math.round(vb.amount != null ? vb.amount : (vb.ap || u.ability.ap || 0) * (STAR_MULT[u.star] || 1) + u.apBonus); t.shield += amt; ev(now, 'shield', { id: t.id, amount: amt }); } break;
-      case 'summon': for (let k = 0; k < (vb.count || 1); k++) pendingSummons.push({ u, now, hp: vb.hp || 950, ad: vb.ad || 115, statMult: vb.statMult || 1, dodge: vb.dodge || 0, slowAura: vb.slowAura || 0, rage: vb.rage || 0, lifestealAura: vb.lifestealAura || 0 }); break;
+      case 'summon': for (let k = 0; k < (vb.count || 1); k++) pendingSummons.push({ u, now, hp: vb.hp || 950, ad: vb.ad || 115, statMult: vb.statMult || 1, dodge: vb.dodge || 0, slowAura: vb.slowAura || 0, rage: vb.rage || 0, lifestealAura: vb.lifestealAura || 0, explode: vb.explode || 0 }); break;
       case 'stun': for (const t of targets) if (applyCC(t, vb.dur, now)) { t.stunUntil = now + vb.dur; ev(now, 'cc', { id: t.id, kind: 'stun', dur: vb.dur }); } break;
       case 'knockup': for (const t of targets) if (applyCC(t, vb.dur, now)) { t.stunUntil = Math.max(t.stunUntil, now + vb.dur); ev(now, 'cc', { id: t.id, kind: 'knockup', dur: vb.dur }); } break;
       case 'knockback': for (const t of targets) doKnockback(u, t, vb.cells || 1, now); break;
@@ -278,6 +317,30 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       case 'rage': u.ragePerAuto = Math.max(u.ragePerAuto, vb.perAuto); u.rageCap = Math.max(u.rageCap, vb.cap); ev(now, 'buff', { id: u.id, kind: 'rage' }); break;
       case 'cleanse': for (const t of targets) { t.stunUntil = -1; t.slowUntil = -1; t.shredArmorUntil = -1; t.shredMrUntil = -1; t.healCutUntil = -1; t.tauntUntil = -1; t.manaLockUntil = Math.min(t.manaLockUntil, now); if (vb.immune) t.ccImmuneUntil = now + vb.immune; ev(now, 'buff', { id: t.id, kind: 'cleanse' }); } break;
       case 'resetAtk': for (const t of targets) t.attackCd = 0; break;
+      // ── passive-driven ops ──
+      case 'guard': u.guardPct = Math.max(u.guardPct, vb.pct); break;   // dragon_knight: soak adjacent allies' damage (read in applyDamage)
+      case 'casterScale': { const n = units.filter((t) => t.team === u.team && ['mage', 'healer', 'summoner'].includes(t.klass)).length; u.apBonus += (vb.perCaster || 0) * n; break; }   // court_mage: scale with allied casters
+      case 'rageSelf': u.ragePerAuto = Math.max(u.ragePerAuto, vb.perAuto); u.rageCap = Math.max(u.rageCap, vb.cap || 0.9); break;   // pack_stalker frenzy (silent, no buff event spam)
+      case 'sacrifice': {   // hellguard: pay HP to burn the target (floored so it can NEVER self-kill)
+        const cost = Math.floor(u.maxHp * (vb.pctMaxHp || 0.02));
+        if (u.hp > cost + u.maxHp * 0.2 && primary) { u.hp -= cost; ev(now, 'debuff', { id: u.id, kind: 'sacrifice' }); const before = primary.alive; applyDamage(primary, cost * (vb.mult || 2), 'magic', u, now); if (before && !primary.alive) killed.push(primary); }
+        break;
+      }
+      case 'focus': {   // wood_ranger: lock one target, escalating bonus the longer you fire on it
+        if (primary) {
+          if (u.markLockId !== primary.id) { u.markLockId = primary.id; u.focusStacks = 0; }
+          else u.focusStacks = Math.min(vb.cap || 8, u.focusStacks + 1);
+          if (u.focusStacks > 0) { const before = primary.alive; applyDamage(primary, u.ad * (vb.perStack || 0.18) * u.focusStacks, 'physical', u, now); if (before && !primary.alive) killed.push(primary); }
+          if (u.star >= 3) { primary.shredArmorAmt = Math.max(now < primary.shredArmorUntil ? primary.shredArmorAmt : 0, vb.shred || 25); primary.shredArmorUntil = now + 3; ev(now, 'debuff', { id: primary.id, kind: 'shred' }); }
+        }
+        break;
+      }
+      case 'bonusVs': {   // royal_blade: opener — extra damage into a healthy target
+        if (primary && primary.alive && (vb.hpAbove == null || primary.hp / primary.maxHp >= vb.hpAbove)) { const before = primary.alive; applyDamage(primary, u.ad * (vb.mult || 0.8), 'physical', u, now); if (before && !primary.alive) killed.push(primary); }
+        break;
+      }
+      case 'gainManaSelf': u.mana = Math.min(u.maxMana, u.mana + (vb.amount || 30)); break;   // imp_assassin: refund mana on kill to chain (no auto-recast → no reentrancy)
+      case 'raiseCorpse': if (u.raiseBudget > 0) { u.raiseBudget--; pendingSummons.push({ u, now, hp: vb.hp || 700, ad: vb.ad || 95, statMult: 1, dodge: 0, slowAura: 0, rage: 0, lifestealAura: 0 }); } break;   // necromancer: raise a Risen from a fallen ally (budget-capped)
       case 'recastOnKill': break;   // marker — handled by the cast() onKill pass (budget-gated)
       case 'raise': break;          // marker — handled by the cast() onKill pass (budget-gated)
       case 'enableOnKill': break;   // marker — onKill verbs come from ult.onKill
@@ -312,8 +375,26 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
         if (wantsRaise && u.raiseBudget > 0) { u.raiseBudget--; pendingSummons.push({ u, now, hp: 480, ad: 62, statMult: 1, dodge: 0, slowAura: 0, rage: 0, lifestealAura: 0 }); }
         for (const k of onKill) applyVerb(u, k, now, victim, ap, []);   // fresh [] → onKill kills don't recurse
       }
+      for (const victim of killed) runPassive(u, 'kill', now, victim);   // imp_assassin mana-refund chains off ability kills too
       // royal_blade Regicide: on a kill, refund mana + re-dive the next target (hard-capped).
       if (wantsRecast && u.recastBudget > 0 && _reentry < 2) { u.recastBudget--; u.mana = 0; if (targetOf(u, now)) cast(u, now, _reentry + 1); }
+    }
+    runPassive(u, 'cast', now, primary);   // knight_captain rally-on-cast
+  }
+
+  // ── PASSIVE hook dispatcher ────────────────────────────────────────────────
+  // ability.passive = entry | entry[], each { on:'spawn'|'hit'|'attacked'|'dodge'|'kill'|
+  // 'allyDeath'|'lowHp', verbs:[...], ult?:[...] (3★-only), every?:N (counter-gated),
+  // threshold?:f (lowHp) }. Passives FIRE EXISTING VERBS at moments the sim already iterates —
+  // one code path, deterministic (counters are per-unit state, no wall-clock, no unseeded RNG).
+  function passiveList(u) { const p = u.passive; return p ? (Array.isArray(p) ? p : [p]) : []; }
+  function runPassive(u, on, now, primary) {
+    if (!u.alive) return;
+    for (const p of passiveList(u)) {
+      if (p.on !== on) continue;
+      if (p.every) { u.hitCount++; if (u.hitCount % p.every !== 0) continue; }   // every-Nth gate
+      const vs = (p.verbs || []).concat((u.star >= 3 && p.ult) ? p.ult : []);
+      for (const vb of vs) applyVerb(u, vb, now, primary, 0, []);
     }
   }
 
@@ -406,6 +487,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
         tauntTargetId: -1, tauntUntil: -1, ccImmuneUntil: -1, ccSetAt: -2, markMult: 1, markUntil: -1,
         ragePerAuto: p.rage || 0, rageCap: p.rage ? 0.9 : 0, onKillVerbs: null, onKillN: 0, recastBudget: 0, raiseBudget: 0,
         slowAura: p.slowAura || 0, lifestealAura: p.lifestealAura || 0,
+        passive: null, hitCount: 0, lowHpFired: false, lastMovedTick: -999, markLockId: -1, focusStacks: 0, guardPct: 0, explodeDmg: p.explode || 0,
       };
       if (s.lifestealAura) s.vamp = s.lifestealAura;   // enraged pack drains on its own autos
       units.push(s); occupied.add(idx(s.col, s.row));
@@ -421,7 +503,9 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     if (now < target.markUntil && target.markMult > 1) dmg *= target.markMult;
     ev(now, 'attack', { id: u.id, tgt: target.id, ranged: u.range > 1, crit });
     if (u.range > 1) ev(now, 'projectile', { from: u.id, to: target.id, kind: u.klass === 'mage' ? 'magic' : 'arrow' });
+    const wasAlive = target.alive;
     const dealt = applyDamage(target, dmg, 'physical', u, now);
+    const killedThis = wasAlive && !target.alive;
     const ls = u.vamp + (now < u.lifestealUntil ? u.lifestealPct : 0);   // permanent vamp + timed lifesteal verb
     if (ls > 0 && u.alive) heal(u, dealt * ls, now);
     if (u.burnOnHit) applyDamage(target, u.burnOnHit, 'magic', u, now);
@@ -430,7 +514,13 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     if (u.ferocity) u.asStacks = Math.min(1.5, u.asStacks + u.ferocity);
     if (u.ragePerAuto) u.asStacks = Math.min(u.rageCap || 0.9, u.asStacks + u.ragePerAuto);   // bramble_brute / enraged pack
     if (u.rangerAS && rng.chance(u.rangerAS)) u.asStacks = Math.min(1.5, u.asStacks + 0.15);
+    // on-attack & on-kill passives (skeleton bolt, hellguard sacrifice, wood_ranger focus, imp refund)
+    runPassive(u, 'hit', now, target);
+    if (killedThis) runPassive(u, 'kill', now, target);
   }
+
+  // fire spawn passives once, before combat (guard auras, caster-scaling, carry-marks, self steroids)
+  for (const u of units.slice().sort(byId)) runPassive(u, 'spawn', 0, null);
 
   // ---- main tick loop ----
   let tick = 0;
@@ -444,6 +534,8 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       // DoT ticks in discrete 0.5s pulses (readable burn numbers, not a 30/s number-spam)
       if (now < u.dotUntil && u.dotDps && now >= u.dotNextAt) { u.dotNextAt = now + DOT_TICK; const src = u.dotSrcId >= 0 ? units.find((x) => x.id === u.dotSrcId) : null; applyDamage(u, u.dotDps * DOT_TICK, 'magic', src && src.alive ? src : null, now); }
       if (!u.alive) continue;
+      // lowHp passive: one-shot edge trigger when HP% first crosses the threshold (wraith phase-out)
+      if (!u.lowHpFired && u.passive) { const lp = passiveList(u).find((p) => p.on === 'lowHp'); if (lp && u.hp / u.maxHp < (lp.threshold || 0.35)) { u.lowHpFired = true; runPassive(u, 'lowHp', now, null); } }
       // slow-aura summons (spirit_caller ult): chill adjacent enemies, refreshed silently
       if (u.slowAura) for (const e of units) if (e.alive && e.team !== u.team && dist2(u, e) <= 1) { if (e.slowPct <= u.slowAura || now >= e.slowUntil) { e.slowPct = Math.max(e.slowPct, u.slowAura); e.slowUntil = now + 0.25; } }
       if (now < u.stunUntil) continue;   // stunned: ticks above still ran, but can't act
