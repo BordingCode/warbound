@@ -487,14 +487,49 @@ function abilityValue(def, star) {
   if (a.type === 'summon') return Math.round((a.summonAd || 0) * m);
   return 0;
 }
+// Plain-language summary of a unit's PASSIVE signature(s), keyed by (trigger:op). '' if none.
+const PASSIVE_PHRASE = {
+  'spawn:guard': 'soaks 15% of adjacent allies’ incoming damage',
+  'hit:sacrifice': 'spends a little of its own HP each strike for bonus magic',
+  'hit:focus': 'locks onto one target and ramps up damage the longer it fires',
+  'spawn:casterScale': 'gains Ability Power for each allied caster',
+  'hit:bonusVs': 'lands extra damage when striking a healthy foe',
+  'kill:gainManaSelf': 'refunds mana on a kill, chaining its strikes',
+  'spawn:rageSelf': 'builds attack speed the longer it fights',
+  'allyDeath:raiseCorpse': 'raises a Risen whenever an ally falls',
+  'spawn:mark': 'marks the enemy carry — the whole team hits it harder',
+  'cast:buffAS': 'each cast briefly hastes the allies beside it',
+  'dodge:buffAS': 'a dodged attack powers up its next strikes',
+  'hit:magic': 'every few autos looses a bonus bolt',
+  'allyDeath:heal': 'bursts healing onto the wounded when an ally dies',
+  'spawn:lifesteal': 'always leeches life from its attacks',
+  'attacked:shield': 'hardens with a shield as it is struck',
+  'spawn:thorns': 'reflects damage back at attackers',
+  'lowHp:shield': 'phases out behind a shield when badly hurt',
+};
+function passiveSummary(a) {
+  const entries = a.passive ? (Array.isArray(a.passive) ? a.passive : [a.passive]) : [];
+  const phrases = [];
+  for (const p of entries) {
+    const op = (p.verbs && p.verbs[0] && p.verbs[0].op) || '';
+    const ph = PASSIVE_PHRASE[p.on + ':' + op];
+    if (ph) phrases.push(ph);
+  }
+  if (!phrases.length) return '';
+  return phrases.join('; ').replace(/^./, (c) => c.toUpperCase()) + '.';
+}
 function abilityDesc(def, star) {
   const a = def.ability, v = abilityValue(def, star);
-  if (a.type === 'magic') return `Deals ${v} magic damage${a.target === 'cluster' ? ' to all nearby foes' : ''}.`;
-  if (a.type === 'physical') return a.target === 'lowestEnemyHP' ? `Executes the lowest-HP enemy for ${Math.round(v * 1.3)}.` : a.target === 'mostEnemies' ? `Hits several foes for ${Math.round(v * 0.9)} each.` : a.stun ? `Smashes for ${v} and stuns.` : `Cleaves nearby foes for ${v}.`;
-  if (a.type === 'heal') return `Heals the most wounded ally for ${v}.`;
-  if (a.type === 'shield') return `Shields the most wounded ally for ${v}.`;
-  if (a.type === 'summon') return `Raises a creature (${Math.round((a.summonHp || 0) * (STAR_MULT[star] || 1))} HP, ${v} AD).`;
-  return abilityText(a);
+  if (a.noCast) return passiveSummary(a) || 'A purely passive champion.';   // no cast — identity is the passive
+  let s;
+  if (a.type === 'magic') s = `Deals ${v} magic damage${a.target === 'cluster' ? ' to all nearby foes' : ''}.`;
+  else if (a.type === 'physical') s = a.target === 'lowestEnemyHP' ? `Executes the lowest-HP enemy for ${Math.round(v * 1.3)}.` : a.target === 'mostEnemies' ? `Hits several foes for ${Math.round(v * 0.9)} each.` : a.stun ? `Smashes for ${v} and stuns.` : `Cleaves nearby foes for ${v}.`;
+  else if (a.type === 'heal') s = `Heals the most wounded ally for ${v}.`;
+  else if (a.type === 'shield') s = `Shields the most wounded ally for ${v}.`;
+  else if (a.type === 'summon') s = `Raises a creature (${Math.round((a.summonHp || 0) * (STAR_MULT[star] || 1))} HP, ${v} AD).`;
+  else s = abilityText(a);
+  const ps = passiveSummary(a);
+  return ps ? `${s}  Passive: ${ps.replace(/^./, (c) => c.toLowerCase())}` : s;
 }
 // Reusable champion detail sheet (used by inspect, shop (i), and the codex).
 // Shows a per-STAR scaling table (HP / Attack / Ability across ★1–★3) so the upgrade payoff is clear.
@@ -502,7 +537,7 @@ function showUnitInfo(def, star = 1, items = []) {
   const s = statsForStar(def, star);
   Sfx.click();
   const STARS = [1, 2, 3];
-  const abScales = ['magic', 'heal', 'shield', 'physical', 'summon'].includes(def.ability.type);
+  const abScales = !def.ability.noCast && ['magic', 'heal', 'shield', 'physical', 'summon'].includes(def.ability.type);
   const abLabel = { magic: 'Spell', heal: 'Heal', shield: 'Shield', summon: 'Minion AD' }[def.ability.type] || 'Ability';
   const ssRow = (label, fn) => el('.ss-row', {}, [el('span.ss-l', {}, label), ...STARS.map((st) => el(`span.ss-v${st === star ? ' cur' : ''}`, {}, String(fn(st))))]);
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },

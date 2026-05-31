@@ -478,6 +478,7 @@ export class CombatPlayer {
     const map = {
       slow: { c: '#7fe3ff', t: '❄' }, shred: { c: '#ff9a4c', t: '▼def' }, manaBurn: { c: '#6fb1ff', t: '✖mana' },
       healCut: { c: '#ff7eb6', t: '⊘heal' }, dot: { c: '#ff6a3c', t: '🔥' }, mark: { c: '#ffd24a', t: '◎' },
+      sacrifice: { c: '#ff5a3c', t: '✦' },
       haste: { c: '#ffe08a', t: '»as' }, lifesteal: { c: '#9be86a', t: '✚' }, dodge: { c: '#cfe0ff', t: '~' },
       thorns: { c: '#c8e06a', t: '✦' }, regen: { c: '#7affc0', t: '+' }, cleanse: { c: '#aef0ff', t: '✧' }, rage: { c: '#ff8a4c', t: '▲' },
     }[e.kind] || { c: good ? '#9be86a' : '#ff7e7e', t: good ? '+' : '–' };
