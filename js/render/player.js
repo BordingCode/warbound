@@ -221,10 +221,72 @@ export class CombatPlayer {
     setTimeout(() => n.el && n.el.classList.remove('casting'), this._ms(420));
   }
 
+  // Phase-3 SIGNATURE ability visuals — keyed by the ability's name so each named spell reads
+  // distinctly (its own shape/colour/impact), not just a generic per-shape blob. Returns true if
+  // it drew a signature; otherwise _castVfx falls back to the generic per-shape visual below.
+  _signatureVfx(e, c, t) {
+    const sp = this.speed;
+    const fade = (cls, x, y, styles, kf, ms, easing) => { const f = this._fx(cls, x, y, styles); f.animate(kf, { duration: ms / sp, easing }).finished.then(() => f.remove()).catch(() => {}); return f; };
+    const tn = e.tgt >= 0 ? this.nodes.get(e.tgt) : null;
+    switch (e.name) {
+      case 'Smite': {                  // a column of light slams down on the target
+        const p = t || c;
+        fade('vfx-beam', p.x, p.y, {}, [{ transform: 'translate(-50%,-100%) scaleY(.15)', opacity: 0 }, { transform: 'translate(-50%,-100%) scaleY(1)', opacity: .95, offset: .4 }, { transform: 'translate(-50%,-100%) scaleY(1)', opacity: 0 }], 420, 'ease-out');
+        fade('vfx-ring', p.x, p.y, { borderColor: 'var(--dt-magic)' }, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 0 }], 360);
+        this.shake.add(0.12); return true;
+      }
+      case 'Arcane Nuke': {            // a big arcane detonation: twin rings + bright core + shards
+        const p = t || c;
+        fade('vfx-ring', p.x, p.y, { borderColor: 'var(--dt-magic)' }, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(2)', opacity: 0 }], 540, 'cubic-bezier(.2,.7,.3,1)');
+        fade('vfx-ring', p.x, p.y, { borderColor: '#fff' }, [{ transform: 'translate(-50%,-50%) scale(.1)', opacity: .8 }, { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 0 }], 380);
+        fade('vfx-burst', p.x, p.y, { background: 'var(--dt-magic)' }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .95 }, { transform: 'translate(-50%,-50%) scale(1.6)', opacity: 0 }], 360);
+        if (e.tgt >= 0) this._spark(e.tgt, 'var(--dt-magic)', 8, 34);
+        this.shake.add(0.24); this.hitStop(60); return true;
+      }
+      case 'Dragon Breath': {          // a fiery cone of flame from the caster
+        const p = t || c;
+        fade('vfx-cone', (c.x + p.x) / 2, (c.y + p.y) / 2, {}, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .95 }, { transform: 'translate(-50%,-50%) scale(1.5)', opacity: 0 }], 460, 'ease-out');
+        fade('vfx-burst', p.x, p.y, { background: 'var(--dt-fire)' }, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.4)', opacity: 0 }], 380);
+        if (e.tgt >= 0) this._spark(e.tgt, 'var(--dt-fire)', 7, 30);
+        this.shake.add(0.26); this.hitStop(70); return true;
+      }
+      case 'Cleave': {                 // a wide horizontal sweep across the front
+        const p = t || c;
+        fade('vfx-slash', p.x, p.y, { width: '92%' }, [{ transform: 'translate(-50%,-50%) rotate(-12deg) scaleX(.3)', opacity: .95 }, { transform: 'translate(-50%,-50%) rotate(6deg) scaleX(1.2)', opacity: 0 }], 260, 'ease-out');
+        this.shake.add(0.16); return true;
+      }
+      case 'Execute': {                // a brutal downward chop + a red flash on the victim
+        const p = t || c;
+        fade('vfx-slash', p.x, p.y, { width: '70%', borderTopColor: 'var(--danger)', borderRightColor: 'var(--danger)', filter: 'drop-shadow(0 0 5px var(--danger))' }, [{ transform: 'translate(-50%,-65%) rotate(-72deg) scale(.4)', opacity: 1 }, { transform: 'translate(-50%,-50%) rotate(8deg) scale(1.1)', opacity: 0 }], 240, 'cubic-bezier(.4,1.2,.5,1)');
+        if (tn) this._flash(tn.el, 0.9, 160);
+        this.shake.add(0.2); this.hitStop(55); return true;
+      }
+      case 'Volley': {                 // a rain of arrows onto the cluster
+        const p = t || c;
+        for (let i = 0; i < 5; i++) { const ox = (i - 2) * 6; fade('vfx-arrow', p.x + ox, p.y, {}, [{ transform: 'translate(-50%,-260%) rotate(50deg)', opacity: 0 }, { transform: 'translate(-50%,-160%) rotate(50deg)', opacity: 1, offset: .25 }, { transform: 'translate(-50%,0%) rotate(50deg)', opacity: 0 }], 380 + i * 30, 'ease-in'); }
+        this.shake.add(0.1); return true;
+      }
+      case 'Shield Bash': {            // a golden shield slam + a stun ring
+        const p = t || c;
+        fade('vfx-burst', p.x, p.y, { background: 'var(--gold)' }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .85 }, { transform: 'translate(-50%,-50%) scale(1.1)', opacity: 0 }], 260);
+        fade('vfx-stun', p.x, p.y - 9, {}, [{ transform: 'translate(-50%,-50%) scale(.6) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(180deg)', opacity: 1, offset: .3 }, { transform: 'translate(-50%,-50%) scale(1) rotate(540deg)', opacity: 0 }], 700, 'linear');
+        if (tn) this._flash(tn.el, 0.7, 140);
+        this.shake.add(0.18); this.hitStop(55); return true;
+      }
+      case 'Raise Dead': {             // a necro rune flares on the ground as the minion rises
+        fade('vfx-rune', c.x, c.y + 2, {}, [{ transform: 'translate(-50%,-50%) scale(.3) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(45deg)', opacity: .9, offset: .4 }, { transform: 'translate(-50%,-50%) scale(1.1) rotate(90deg)', opacity: 0 }], 560, 'ease-out');
+        this._spark(e.id, '#9d6bff', 7, 26);
+        this.shake.add(0.12); return true;
+      }
+    }
+    return false;
+  }
+
   // Dota-style per-shape ability visuals
   _castVfx(e) {
     const c = this._pos(e.id); if (!c) return;
     const t = e.tgt >= 0 ? this._pos(e.tgt) : null;
+    if (this._signatureVfx(e, c, t)) return;   // a named-ability signature took over
     const sp = this.speed;
     switch (e.shape) {
       case 'aoe': {                       // expanding ring + flash at the target cluster

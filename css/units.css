@@ -109,6 +109,12 @@
 .vfx-shield { width: 15%; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--shield); background: radial-gradient(closest-side, transparent 60%, #ffe08a33); box-shadow: 0 0 10px var(--shield); }
 .vfx-scorch { width: 9%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, #000a, #0000); }
 .vfx-blink { width: 12%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, #c79bffcc, transparent); box-shadow: 0 0 12px #c79bff; }
+/* Phase-3 signature ability VFX */
+.vfx-beam { width: 8%; height: 62%; border-radius: 6px; background: linear-gradient(var(--dt-magic), transparent); filter: drop-shadow(0 0 8px var(--dt-magic)); }
+.vfx-cone { width: 38%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, #fff, var(--dt-fire) 45%, transparent); filter: blur(1px) drop-shadow(0 0 8px var(--dt-fire)); }
+.vfx-arrow { width: 2.6%; height: 9%; border-radius: 2px; background: linear-gradient(#ffffff, #cdd6e3); box-shadow: 0 0 4px #fff; }
+.vfx-stun { width: 16%; aspect-ratio: 1; border-radius: 50%; border-top: 3px dashed var(--gold); border-bottom: 3px dashed var(--gold); filter: drop-shadow(0 0 5px var(--gold)); }
+.vfx-rune { width: 22%; aspect-ratio: 1; border: 2px solid #9d6bff; border-radius: 5px; background: conic-gradient(from 0deg, #9d6bff44, transparent, #9d6bff44, transparent); box-shadow: 0 0 12px #9d6bff; }
 
 /* crit damage number: bigger, bold, gold with a punchy outline */
 .dmg-num.crit { font-size: 20px; font-weight: 900; text-shadow: 0 2px 4px #000, 0 0 6px var(--gold), 0 0 2px #000; letter-spacing: -0.5px; }
