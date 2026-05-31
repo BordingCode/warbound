@@ -19,7 +19,7 @@ const COST_BASE = {
 const ROLE = {
   knight:   { hpx: 1.44, adx: 1.12, range: 1, manaPer: 7, startMana: 0.20 },   // small tank bump for the slower march; realistic 3★ play shows knights don't need the big buff
   mage:     { hpx: 0.78, adx: 0.70, range: 3, manaPer: 8, startMana: 0.35 },   // squishier — Mage burst over-performs; easier to punish
-  ranger:   { hpx: 0.86, adx: 0.80, range: 3, manaPer: 10, startMana: 0.10 },   // toned down hard — Ranger comp was the runaway outlier; now dies if the front breaks
+  ranger:   { hpx: 0.86, adx: 0.65, range: 3, manaPer: 10, startMana: 0.10 },   // toned down hard — all-3★ Ranger comp (every volley ult firing) was the runaway outlier; now dies if the front breaks
   assassin: { hpx: 0.90, adx: 1.08, range: 1, manaPer: 10, startMana: 0.20, dive: true },   // trimmed — c3 assassins got strong with the steeper curve
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
   summoner: { hpx: 1.12, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
@@ -167,9 +167,9 @@ const A = {
     ult: { verbs: [v.summon({ count: 2, hp: 950, ad: 115, rage: 0.05, lifestealAura: 0.15 })] } },
 
   // Dragon (elite, expensive)
-  dragon_knight: { name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap: 225,
+  dragon_knight: { name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap: 250,
     verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.shred('mr', 30, 3, 'cluster'), v.slow(0.25, 3, 'cluster')] } },
-  dragon_sage: { name: 'Cataclysm', type: 'magic', target: 'cluster', radius: 2, ap: 310,
+  dragon_sage: { name: 'Cataclysm', type: 'magic', target: 'cluster', radius: 2, ap: 340,
     verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.meteors({ n: 4, ap: 100, radius: 1 }), v.manaBurn(25)] } },
   wyrm_archer: { name: 'Storm of Arrows', type: 'physical', target: 'mostEnemies', adRatio: 2.8,
     verbs: [v.volley({ adRatio: 2.8 })],
@@ -215,10 +215,11 @@ export const UNITS = [
 
   // ---- Dragon (elite, expensive) ----
   // Dragons are the premium 5-cost elites — strong even at 1★ (rarely reach 3★ in play), so
-  // their base is bumped to stay board-warping against cheaper units whose 3★ ults now fire.
-  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.26, adx: 1.18 }),
-  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.20, adx: 1.16 }),
-  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.20, adx: 1.16 }),
+  // their base is bumped hard to stay board-warping against cheaper units whose 3★ ults now
+  // fire. Only the Dragon comp fields ≥2 dragons, so these bumps don't distort other archetypes.
+  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.30, adx: 1.22 }),
+  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.24, adx: 1.18 }),
+  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.24, adx: 1.18 }),
 ];
 
 export const UNITS_BY_ID = Object.fromEntries(UNITS.map((u) => [u.defId, u]));

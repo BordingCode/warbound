@@ -83,15 +83,15 @@ function applyTraits(units, board, traitBonus = {}) {
     const human = get('human'); if (human) u.manaRegen = Math.max(u.manaRegen, human.manaRegen);
     const knight = get('knight'); if (knight) u.block = Math.max(u.block, knight.block);
     const healer = get('healer'); if (healer) { u.healAmp = Math.max(u.healAmp, healer.healAmp); u.regen = Math.max(u.regen, healer.regen); }
-    const elf = get('elf'); if (elf) { u.dodge = Math.max(u.dodge, elf.dodge); u.shield += elf.shield; }
-    const dragon = get('dragon'); if (dragon) u.mr += dragon.mr;
+    const elf = get('elf'); if (elf) { u.dodge = Math.max(u.dodge, elf.dodge); u.shield += elf.shield; if (elf.as) u.asStacks += elf.as; }   // elven precision: flat attack speed at the top breakpoint (offensive kicker)
+    const dragon = get('dragon'); if (dragon) { u.mr += dragon.mr; if (dragon.adPct) u.ad = Math.round(u.ad * (1 + dragon.adPct)); if (dragon.ap) u.apBonus += dragon.ap; }   // dragons hit as hard as they're tough
     const beast = get('beast'); if (beast && active.beast.tier >= 6) u.ferocity = Math.max(u.ferocity, beast.ferocity);
     // tagged-only
     if (u.klass === 'mage') { const m = get('mage'); if (m) u.apBonus += m.ap; }
     if (u.klass === 'assassin') { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; } }
     if (u.klass === 'ranger') { const r = get('ranger'); if (r) u.rangerAS = r.rangerAS; }
     if (u.klass === 'beast' || u.origin === 'beast') { const b = get('beast'); if (b) u.ferocity = Math.max(u.ferocity, b.ferocity); }
-    if (u.origin === 'undead') { const ud = get('undead'); if (ud) u.revivePct = Math.max(u.revivePct, ud.revivePct); }
+    if (u.origin === 'undead') { const ud = get('undead'); if (ud) { u.revivePct = Math.max(u.revivePct, ud.revivePct); if (ud.vamp) u.vamp += ud.vamp; } }   // undead leech: sustain kicker so the rainbow board has an offensive edge
     if (u.origin === 'demon') { const d = get('demon'); if (d) { u.burnOnHit = d.burn; u.manaBurnOnHit = d.manaBurn; } }
     if (u.klass === 'summoner') { const s = get('summoner'); if (s) u.summonPower = s.summonPower; }
   }
