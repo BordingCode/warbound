@@ -43,7 +43,11 @@ export class CombatPlayer {
 
   // Live per-unit stats panel: one row per YOUR champion (dmg dealt + dmg tanked). Champion icons
   // are built ONCE (keyed by combat id); per-frame updates only touch the two number text nodes.
+  // NOTE: the always-on floating panel is disabled — stats now live behind the top-bar "Warband
+  // stats" button (showStats). Per-unit data is still tracked (in the 'damage' handler) for that
+  // overlay and for playerStats(); this method is a no-op so nothing floats over the board.
   _updateStats() {
+    return;   // disabled: stats moved to the top-bar overlay (showStats). Data still tracked elsewhere.
     const mine = [...this.unitStats.entries()].filter(([, s]) => s.team === 'player');
     if (!this.statsEl || !this._statRows || this._statRows.size !== mine.length) {
       if (this.statsEl) this.statsEl.remove();

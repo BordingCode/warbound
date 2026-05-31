@@ -336,7 +336,7 @@ function renderPlanning() {
   const enemy = getOpponent();
   const boardLimitTxt = `${run.board.length}/${Run.boardLimit(run)}`;
   const { stage, wrap, units } = buildBoardEl();
-  const lastPanel = unitStatsPanel(lastBattleStats); if (lastPanel) wrap.append(lastPanel);   // last battle's per-unit stats, until next fight
+  // (warband stats moved off the board into a top-bar button overlay — see showStats)
 
   const game = el('.game', {}, [
     el('.topbar', {}, [
@@ -345,6 +345,7 @@ function renderPlanning() {
         ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
         : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: `${realmAt(run.realm || 0).name} · conquer all 10` }, `${run.wins}/10`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
+      el('button.btn', { style: { padding: '5px 10px' }, title: 'Warband stats', onclick: showStats, html: ic('bars') }),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Codex', onclick: () => showCodex('units'), html: ic('codex') }),
       el(`button.btn#shakeBtn${motionOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Screen shake (turn off if the game feels laggy)', onclick: toggleMotion, html: ic('burst') }),
       el('button.btn#soundBtn', { style: { padding: '5px 10px' }, title: 'Sound', onclick: toggleSound, html: ic(soundOn() ? 'sound' : 'mute') }),
@@ -525,6 +526,29 @@ function showUnitInfo(def, star = 1, items = []) {
   document.body.append(ov);
 }
 // Trait detail: every breakpoint's effect (active one highlighted) + which champions have it.
+// Warband stats as a tidy overlay opened from the top bar (snapshot: live during a fight, else last battle).
+function showStats() {
+  Sfx.click();
+  const live = inCombat && player && typeof player.playerStats === 'function';
+  const stats = (live ? player.playerStats() : (lastBattleStats || [])).slice().sort((a, b) => b.dealt - a.dealt);
+  const row = (s) => { const d = UNITS_BY_ID[s.defId]; return el('.wstat-row', {}, [
+    el('.wstat-champ', { html: d ? championSVG(d, { size: 26 }) : '' }),
+    el('.wstat-name', {}, d ? d.name : '—'),
+    el('span.wstat-ic', { html: ic('sword') }), el('span.wstat-dealt', {}, String(s.dealt)),
+    el('span.wstat-ic.tank', { html: ic('shield') }), el('span.wstat-tank', {}, String(s.tanked)),
+  ]); };
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
+    el('.help-card', { style: { maxWidth: '340px' } }, [
+      el('h2', { style: { fontSize: '19px' } }, live ? 'Warband — this fight' : 'Last battle'),
+      el('.sub', {}, 'Damage dealt and damage tanked by each of your champions.'),
+      stats.length
+        ? el('.wstat-list', {}, stats.map(row))
+        : el('.sub', { style: { marginTop: '6px' } }, 'No battle yet — finish a round and your champions’ numbers show up here.'),
+      el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
+    ]));
+  document.body.append(ov);
+}
+
 function showTraitInfo(traitId) {
   const def = TRAITS[traitId]; if (!def) return;
   Sfx.click();

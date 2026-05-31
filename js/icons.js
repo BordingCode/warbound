@@ -26,6 +26,7 @@ const P = {
   eye:    '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3"/>',
   ban:    '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 6l12 12" stroke="currentColor" stroke-width="2"/>',
   codex:  '<path d="M5 3h11a2 2 0 012 2v16l-3-2-3 2-3-2-3 2V4a1 1 0 011-1z"/>',
+  bars:   '<rect x="3.5" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="16.5" y="3" width="4" height="17" rx="1"/>',
   help:   '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 9a3 3 0 115 2.2c-.9.7-1.5 1.2-1.5 2.3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="17.5" r="1.2"/>',
   back:   '<path d="M14 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   retry:  '<path d="M5 12a7 7 0 1 1 2 5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 17v-4h4"/>',

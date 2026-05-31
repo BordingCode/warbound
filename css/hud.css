@@ -473,6 +473,18 @@
 .pos-cue.front { top: 51%; color: color-mix(in srgb, var(--danger) 65%, var(--ink-faint)); }
 .pos-cue.back { bottom: 3%; color: color-mix(in srgb, var(--mana) 55%, var(--ink-faint)); }
 
+/* warband-stats overlay (opened from the top-bar bars button) */
+.wstat-list { display: flex; flex-direction: column; gap: 6px; max-height: 46svh; overflow-y: auto; margin: 8px 0 4px; }
+.wstat-row { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.wstat-row .wstat-champ { width: 24px; height: 24px; flex: 0 0 auto; display: inline-flex; }
+.wstat-row .wstat-champ .champ { width: 24px; height: 24px; }
+.wstat-row .wstat-name { flex: 1; min-width: 0; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wstat-row .wstat-ic { display: inline-flex; color: var(--gold); }
+.wstat-row .wstat-ic.tank { color: var(--ink-dim); }
+.wstat-row .wstat-ic .ic { width: 13px; height: 13px; }
+.wstat-row .wstat-dealt { color: var(--gold); font-weight: 800; min-width: 40px; }
+.wstat-row .wstat-tank { color: var(--ink-dim); min-width: 32px; }
+
 /* end-screen reward callout — makes the Spoils payout legible and clears up the gold/Spoils mixup */
 .end-reward { background: color-mix(in srgb, var(--gold) 10%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--gold) 35%, var(--line)); border-radius: 12px; padding: 10px 14px; max-width: 300px; margin: 0 auto; }
 .end-reward .er-line { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 19px; font-weight: 900; color: var(--gold); }
