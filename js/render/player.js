@@ -11,6 +11,24 @@ import { MOVE_INTERVAL } from '../sim/combat.js';
 
 const DT_COLORS = { physical: 'var(--dt-physical)', magic: 'var(--dt-magic)', true: 'var(--dt-true)', heal: 'var(--dt-heal)' };
 
+// Per-unit ability VFX: each hero's spell uses ITS theme colour + a shape variant, so units that
+// share an ability still look distinct (Lich's green blast vs Court Mage's blue ring vs Warlock's
+// red pillar). c = colour key, fx = shape family rendered in _signatureVfx.
+const UNIT_FX = {
+  // Human
+  knight_captain: { c: '#ffd95c', fx: 'slam' }, court_mage: { c: '#6fb1ff', fx: 'ringBurst' }, crossbowman: { c: '#dfe7f2', fx: 'arrows' }, royal_blade: { c: '#cfe0ff', fx: 'chop' }, field_medic: { c: '#7affc0', fx: 'heal' },
+  // Undead
+  bone_guard: { c: '#d8e6cc', fx: 'slam' }, lich: { c: '#8cff9e', fx: 'shards' }, skeleton_archer: { c: '#b6e0a0', fx: 'arrows' }, wraith: { c: '#b0ffd8', fx: 'chop' }, necromancer: { c: '#6effa0', fx: 'rune' },
+  // Elf
+  thornguard: { c: '#7fe6b0', fx: 'slam' }, moon_priestess: { c: '#aef0ff', fx: 'ringBurst' }, wood_ranger: { c: '#8fe07a', fx: 'arrows' }, shadow_dancer: { c: '#9fb0ff', fx: 'chop' }, grove_healer: { c: '#7affc0', fx: 'heal' }, spirit_caller: { c: '#b0ffe0', fx: 'rune' },
+  // Demon
+  hellguard: { c: '#ff8a4c', fx: 'sweep' }, warlock: { c: '#ff5a3c', fx: 'pillar' }, fel_archer: { c: '#ff7a5c', fx: 'arrows' }, imp_assassin: { c: '#ff9a6c', fx: 'chop' }, pit_summoner: { c: '#ff5e8a', fx: 'rune' },
+  // Beast
+  beast_hunter: { c: '#ffc46a', fx: 'arrows' }, bramble_brute: { c: '#c8e06a', fx: 'sweep' }, pack_stalker: { c: '#ffb15a', fx: 'chop' }, druid_healer: { c: '#9be86a', fx: 'shield' }, beastmaster: { c: '#ffd24a', fx: 'rune' },
+  // Dragon
+  dragon_knight: { c: '#ff7a3c', fx: 'cone' }, dragon_sage: { c: '#c79bff', fx: 'cone' }, wyrm_archer: { c: '#ffce5c', fx: 'arrows' },
+};
+
 export class CombatPlayer {
   constructor(unitsLayer, fxLayer) {
     this.unitsLayer = unitsLayer;
@@ -234,65 +252,65 @@ export class CombatPlayer {
     setTimeout(() => n.el && n.el.classList.remove('casting'), this._ms(420));
   }
 
-  // Phase-3 SIGNATURE ability visuals — keyed by the ability's name so each named spell reads
-  // distinctly (its own shape/colour/impact), not just a generic per-shape blob. Returns true if
-  // it drew a signature; otherwise _castVfx falls back to the generic per-shape visual below.
+  // PER-UNIT signature ability visuals: keyed by the casting UNIT (its theme colour + a shape
+  // variant), so two heroes that share an ability still look different — a green Lich blast vs a
+  // red Warlock pillar vs a blue Court Mage ring. Colour is the per-unit signal; the variant is
+  // the shape family. Returns true if it drew one; else _castVfx falls back to the generic shape.
   _signatureVfx(e, c, t) {
     const sp = this.speed;
+    const defId = this.unitStats.get(e.id) && this.unitStats.get(e.id).defId;
+    const cfg = UNIT_FX[defId];
+    if (!cfg) return false;
+    const col = cfg.c, kind = cfg.fx, p = t || c;
+    const glow = `drop-shadow(0 0 6px ${col})`;
     const fade = (cls, x, y, styles, kf, ms, easing) => { const f = this._fx(cls, x, y, styles); f.animate(kf, { duration: ms / sp, easing }).finished.then(() => f.remove()).catch(() => {}); return f; };
     const tn = e.tgt >= 0 ? this.nodes.get(e.tgt) : null;
-    switch (e.name) {
-      case 'Smite': {                  // a column of light slams down on the target
-        const p = t || c;
-        fade('vfx-beam', p.x, p.y, {}, [{ transform: 'translate(-50%,-100%) scaleY(.15)', opacity: 0 }, { transform: 'translate(-50%,-100%) scaleY(1)', opacity: .95, offset: .4 }, { transform: 'translate(-50%,-100%) scaleY(1)', opacity: 0 }], 420, 'ease-out');
-        fade('vfx-ring', p.x, p.y, { borderColor: 'var(--dt-magic)' }, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 0 }], 360);
-        this.shake.add(0.12); return true;
-      }
-      case 'Arcane Nuke': {            // a big arcane detonation: twin rings + bright core + shards
-        const p = t || c;
-        fade('vfx-ring', p.x, p.y, { borderColor: 'var(--dt-magic)' }, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(2)', opacity: 0 }], 540, 'cubic-bezier(.2,.7,.3,1)');
-        fade('vfx-ring', p.x, p.y, { borderColor: '#fff' }, [{ transform: 'translate(-50%,-50%) scale(.1)', opacity: .8 }, { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 0 }], 380);
-        fade('vfx-burst', p.x, p.y, { background: 'var(--dt-magic)' }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .95 }, { transform: 'translate(-50%,-50%) scale(1.6)', opacity: 0 }], 360);
-        if (e.tgt >= 0) this._spark(e.tgt, 'var(--dt-magic)', 8, 34);
-        this.shake.add(0.24); this.hitStop(60); return true;
-      }
-      case 'Dragon Breath': {          // a fiery cone of flame from the caster
-        const p = t || c;
-        fade('vfx-cone', (c.x + p.x) / 2, (c.y + p.y) / 2, {}, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .95 }, { transform: 'translate(-50%,-50%) scale(1.5)', opacity: 0 }], 460, 'ease-out');
-        fade('vfx-burst', p.x, p.y, { background: 'var(--dt-fire)' }, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.4)', opacity: 0 }], 380);
-        if (e.tgt >= 0) this._spark(e.tgt, 'var(--dt-fire)', 7, 30);
-        this.shake.add(0.26); this.hitStop(70); return true;
-      }
-      case 'Cleave': {                 // a wide horizontal sweep across the front
-        const p = t || c;
-        fade('vfx-slash', p.x, p.y, { width: '92%' }, [{ transform: 'translate(-50%,-50%) rotate(-12deg) scaleX(.3)', opacity: .95 }, { transform: 'translate(-50%,-50%) rotate(6deg) scaleX(1.2)', opacity: 0 }], 260, 'ease-out');
-        this.shake.add(0.16); return true;
-      }
-      case 'Execute': {                // a brutal downward chop + a red flash on the victim
-        const p = t || c;
-        fade('vfx-slash', p.x, p.y, { width: '70%', borderTopColor: 'var(--danger)', borderRightColor: 'var(--danger)', filter: 'drop-shadow(0 0 5px var(--danger))' }, [{ transform: 'translate(-50%,-65%) rotate(-72deg) scale(.4)', opacity: 1 }, { transform: 'translate(-50%,-50%) rotate(8deg) scale(1.1)', opacity: 0 }], 240, 'cubic-bezier(.4,1.2,.5,1)');
+    switch (kind) {
+      case 'ringBurst':                // caster magic: expanding coloured ring + bright core
+        fade('vfx-ring', p.x, p.y, { borderColor: col, boxShadow: `0 0 10px ${col}` }, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.8)', opacity: 0 }], 500, 'cubic-bezier(.2,.7,.3,1)');
+        fade('vfx-burst', p.x, p.y, { background: col }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.4)', opacity: 0 }], 340);
+        if (e.tgt >= 0) this._spark(e.tgt, col, 6, 30);
+        this.shake.add(0.16); this.hitStop(50); break;
+      case 'shards':                   // a sharp detonation that throws coloured shards
+        fade('vfx-burst', p.x, p.y, { background: col }, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .95 }, { transform: 'translate(-50%,-50%) scale(1.5)', opacity: 0 }], 320);
+        if (e.tgt >= 0) this._spark(e.tgt, col, 10, 38);
+        this.shake.add(0.2); this.hitStop(55); break;
+      case 'pillar':                   // a column of coloured light slams the target
+        fade('vfx-beam', p.x, p.y, { background: `linear-gradient(${col}, transparent)`, filter: glow }, [{ transform: 'translate(-50%,-100%) scaleY(.15)', opacity: 0 }, { transform: 'translate(-50%,-100%) scaleY(1)', opacity: .95, offset: .4 }, { transform: 'translate(-50%,-100%) scaleY(1)', opacity: 0 }], 420, 'ease-out');
+        fade('vfx-ring', p.x, p.y, { borderColor: col }, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 0 }], 340);
+        this.shake.add(0.18); break;
+      case 'cone':                     // a breath cone in the unit's colour (fire dragon vs void dragon)
+        fade('vfx-cone', (c.x + p.x) / 2, (c.y + p.y) / 2, { background: `radial-gradient(closest-side, #fff, ${col} 45%, transparent)`, filter: glow }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .95 }, { transform: 'translate(-50%,-50%) scale(1.5)', opacity: 0 }], 460, 'ease-out');
+        if (e.tgt >= 0) this._spark(e.tgt, col, 7, 30);
+        this.shake.add(0.26); this.hitStop(70); break;
+      case 'sweep':                    // a wide coloured slash across the front
+        fade('vfx-slash', p.x, p.y, { width: '92%', borderTopColor: col, borderRightColor: col, filter: glow }, [{ transform: 'translate(-50%,-50%) rotate(-12deg) scaleX(.3)', opacity: .95 }, { transform: 'translate(-50%,-50%) rotate(6deg) scaleX(1.2)', opacity: 0 }], 260, 'ease-out');
+        this.shake.add(0.16); break;
+      case 'chop':                     // a brutal coloured downward chop + a flash on the victim
+        fade('vfx-slash', p.x, p.y, { width: '70%', borderTopColor: col, borderRightColor: col, filter: glow }, [{ transform: 'translate(-50%,-65%) rotate(-72deg) scale(.4)', opacity: 1 }, { transform: 'translate(-50%,-50%) rotate(8deg) scale(1.1)', opacity: 0 }], 240, 'cubic-bezier(.4,1.2,.5,1)');
         if (tn) this._flash(tn.el, 0.9, 160);
-        this.shake.add(0.2); this.hitStop(55); return true;
-      }
-      case 'Volley': {                 // a rain of arrows onto the cluster
-        const p = t || c;
-        for (let i = 0; i < 5; i++) { const ox = (i - 2) * 6; fade('vfx-arrow', p.x + ox, p.y, {}, [{ transform: 'translate(-50%,-260%) rotate(50deg)', opacity: 0 }, { transform: 'translate(-50%,-160%) rotate(50deg)', opacity: 1, offset: .25 }, { transform: 'translate(-50%,0%) rotate(50deg)', opacity: 0 }], 380 + i * 30, 'ease-in'); }
-        this.shake.add(0.1); return true;
-      }
-      case 'Shield Bash': {            // a golden shield slam + a stun ring
-        const p = t || c;
-        fade('vfx-burst', p.x, p.y, { background: 'var(--gold)' }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .85 }, { transform: 'translate(-50%,-50%) scale(1.1)', opacity: 0 }], 260);
-        fade('vfx-stun', p.x, p.y - 9, {}, [{ transform: 'translate(-50%,-50%) scale(.6) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(180deg)', opacity: 1, offset: .3 }, { transform: 'translate(-50%,-50%) scale(1) rotate(540deg)', opacity: 0 }], 700, 'linear');
+        this.shake.add(0.2); this.hitStop(55); break;
+      case 'arrows':                   // a rain of coloured arrows onto the cluster
+        for (let i = 0; i < 5; i++) { const ox = (i - 2) * 6; fade('vfx-arrow', p.x + ox, p.y, { background: `linear-gradient(#fff, ${col})`, boxShadow: `0 0 4px ${col}` }, [{ transform: 'translate(-50%,-260%) rotate(50deg)', opacity: 0 }, { transform: 'translate(-50%,-160%) rotate(50deg)', opacity: 1, offset: .25 }, { transform: 'translate(-50%,0%) rotate(50deg)', opacity: 0 }], 380 + i * 30, 'ease-in'); }
+        this.shake.add(0.1); break;
+      case 'slam':                     // a coloured slam + a spinning stun ring
+        fade('vfx-burst', p.x, p.y, { background: col }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .85 }, { transform: 'translate(-50%,-50%) scale(1.1)', opacity: 0 }], 260);
+        fade('vfx-stun', p.x, p.y - 9, { borderTopColor: col, borderBottomColor: col, filter: glow }, [{ transform: 'translate(-50%,-50%) scale(.6) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(180deg)', opacity: 1, offset: .3 }, { transform: 'translate(-50%,-50%) scale(1) rotate(540deg)', opacity: 0 }], 700, 'linear');
         if (tn) this._flash(tn.el, 0.7, 140);
-        this.shake.add(0.18); this.hitStop(55); return true;
-      }
-      case 'Raise Dead': {             // a necro rune flares on the ground as the minion rises
-        fade('vfx-rune', c.x, c.y + 2, {}, [{ transform: 'translate(-50%,-50%) scale(.3) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(45deg)', opacity: .9, offset: .4 }, { transform: 'translate(-50%,-50%) scale(1.1) rotate(90deg)', opacity: 0 }], 560, 'ease-out');
-        this._spark(e.id, '#9d6bff', 7, 26);
-        this.shake.add(0.12); return true;
-      }
+        this.shake.add(0.18); this.hitStop(55); break;
+      case 'rune':                     // a coloured summoning rune flares on the ground
+        fade('vfx-rune', c.x, c.y + 2, { borderColor: col, background: `conic-gradient(from 0deg, ${col}44, transparent, ${col}44, transparent)`, boxShadow: `0 0 12px ${col}` }, [{ transform: 'translate(-50%,-50%) scale(.3) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(45deg)', opacity: .9, offset: .4 }, { transform: 'translate(-50%,-50%) scale(1.1) rotate(90deg)', opacity: 0 }], 560, 'ease-out');
+        this._spark(e.id, col, 7, 26);
+        this.shake.add(0.12); break;
+      case 'heal':                     // a soft coloured heal glow rising on the ally
+        fade('vfx-heal', p.x, p.y, { background: `radial-gradient(closest-side, ${col}, transparent)` }, [{ transform: 'translate(-50%,-50%) scale(.4)', opacity: .8 }, { transform: 'translate(-50%,-90%) scale(1.25)', opacity: 0 }], 520, 'ease-out');
+        break;
+      case 'shield':                   // a coloured protective bubble pops in around the ally
+        fade('vfx-shield', p.x, p.y, { borderColor: col, boxShadow: `0 0 10px ${col}` }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.1)', opacity: .2 }], 420, 'cubic-bezier(.3,1.5,.6,1)');
+        break;
+      default: return false;
     }
-    return false;
+    return true;
   }
 
   // Dota-style per-shape ability visuals
