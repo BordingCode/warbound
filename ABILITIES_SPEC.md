@@ -4,8 +4,9 @@
 > champion, each gaining a qualitative **3★ ultimate** upgrade (extra effect, not just bigger
 > numbers). Drafted by the game-designer pass. Status: **BUILT (2026-05-31)** — verb engine in
 > `sim/combat.js`, all 29 abilities in `data/units.js`, VFX in `render/player.js`, headless-tested
-> in `test/synergy-ability.test.js` (38 assertions). Phases A–C done. Phase D (fine origin
-> rebalance via the archetype-matrix tooling) remains — dragons already re-bumped; broader pass TBD.
+> in `test/synergy-ability.test.js` (38 assertions). **Phases A–D all done** — phase D (faction
+> rebalance via the `test/comp-balance.js` archetype matrix) tightened the 10-comp win-rate spread
+> from 71pt → 26pt, with 9/10 comps in the 40–60% band (median fight ~11s). See the balance commit.
 
 ## Core design
 Keep `cast(u, now)` as the base engine; add a thin layer of composable **verbs** that abilities
