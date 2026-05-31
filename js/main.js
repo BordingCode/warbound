@@ -22,7 +22,9 @@ import { launchConfetti } from './render/fx.js';
 
 let run = null;            // set by boot (solo resume) or a mode start
 let lobby = null;          // ladder-mode warlord lobby
-let combatSpeed = 1;
+const SPEEDS = [[0.5, '½×'], [1, '1×'], [2, '2×'], [4, '4×']];   // ½× is the new, calmer default
+const spdId = (s) => String(s).replace('.', '');
+let combatSpeed = (() => { try { const v = parseFloat(localStorage.getItem('warbound_speed')); return SPEEDS.some(([s]) => s === v) ? v : 0.5; } catch { return 0.5; } })();
 let inCombat = false;
 let dragCtl = null;
 let lastBattleStats = null;   // per-unit stats from the last fight; shown in planning until the next battle
@@ -365,9 +367,7 @@ function renderPlanning() {
     stage,
     el('.combat-ctl', {}, [
       el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, 'Ready'),
-      el('button.btn#spd1', { onclick: () => setSpeed(1) }, '1×'),
-      el('button.btn#spd2', { onclick: () => setSpeed(2) }, '2×'),
-      el('button.btn#spd4', { onclick: () => setSpeed(4) }, '4×'),
+      ...SPEEDS.map(([s, lbl]) => el(`button.btn#spd${spdId(s)}`, { onclick: () => setSpeed(s) }, lbl)),
       el('.sell-zone#sellZone', { style: { marginLeft: 'auto' }, html: ic('sell') + ' Sell' }),
     ]),
     buildItemsTray(),
@@ -625,8 +625,8 @@ function abilityText(a) {
   return '';
 }
 
-function setSpeed(s) { combatSpeed = s; if (player) player.setSpeed(s); highlightSpeed(); }
-function highlightSpeed() { for (const s of [1, 2, 4]) { const b = $(`#spd${s}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
+function setSpeed(s) { combatSpeed = s; try { localStorage.setItem('warbound_speed', String(s)); } catch {} if (player) player.setSpeed(s); highlightSpeed(); }
+function highlightSpeed() { for (const [s] of SPEEDS) { const b = $(`#spd${spdId(s)}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
 function setBanner(t) { const b = $('.phase-banner'); if (b) b.textContent = t; }
 function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soundBtn'); if (b) b.innerHTML = ic(soundOn() ? 'sound' : 'mute'); if (soundOn()) Sfx.click(); }
 function motionOn() { try { return localStorage.getItem('warbound_shake') !== '0'; } catch { return true; } }
