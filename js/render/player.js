@@ -104,6 +104,49 @@ export class CombatPlayer {
       [{ transform: 'scale(1,1)' }, { transform: `scale(${sx},${sy})`, offset: .3 }, { transform: 'scale(1,1)' }],
       { duration: this._ms(220), easing: 'cubic-bezier(.34,1.56,.64,1)' });
   }
+  // Phase-2 signature attack motion per CLASS, so an auto-attack reads as "that's a knight / a
+  // ranger / a mage" at a glance. dx,dy = clamped board direction toward the target. The body's
+  // idle loop resumes automatically when the one-shot WAAPI animation ends.
+  _attackMotion(body, klass, ranged, dx, dy) {
+    const run = (kf, ms, easing) => body.animate(kf, { duration: this._ms(ms), easing });
+    if (!ranged) {
+      if (klass === 'knight') {                 // heavy overhead chop: wind back, then a weighty fall
+        run([{ transform: 'translate(0,0) rotate(0)' },
+             { transform: `translate(${-dx * 10}%, -8%) rotate(-7deg)`, offset: .24 },
+             { transform: `translate(${dx * 46}%, ${dy * 40}%) rotate(7deg) scale(1.1)`, offset: .54 },
+             { transform: 'translate(0,0) rotate(0)' }], 380, 'cubic-bezier(.3,1.25,.5,1)');
+      } else if (klass === 'assassin') {        // quick double flick
+        run([{ transform: 'translate(0,0)' },
+             { transform: `translate(${dx * 30}%, ${dy * 26}%) scale(1.05)`, offset: .18 },
+             { transform: 'translate(0,0)', offset: .4 },
+             { transform: `translate(${dx * 34}%, ${dy * 28}%) scale(1.05)`, offset: .62 },
+             { transform: 'translate(0,0)' }], 300, 'ease-out');
+      } else {                                  // default lunge (beast & co.)
+        run([{ transform: 'translate(0,0)' },
+             { transform: `translate(${dx * 42}%, ${dy * 42}%) scale(1.08)`, offset: .35 },
+             { transform: 'translate(0,0)' }], 300, 'cubic-bezier(.3,1.4,.5,1)');
+      }
+    } else {
+      if (klass === 'ranger') {                 // draw & loose: pull the body back, then snap forward
+        run([{ transform: 'scaleX(1) translate(0,0)' },
+             { transform: `scaleX(.92) translate(${-dx * 10}%,0)`, offset: .42 },
+             { transform: `scaleX(1.06) translate(${dx * 9}%,0)`, offset: .6 },
+             { transform: 'scaleX(1) translate(0,0)' }], 320, 'ease-out');
+      } else if (klass === 'mage') {            // channel: a forward push with a swell
+        run([{ transform: 'scale(1)' },
+             { transform: `translate(${dx * 8}%, ${dy * 4}%) scale(1.07)`, offset: .5 },
+             { transform: 'translate(0,0) scale(1)' }], 340, 'ease-in-out');
+      } else if (klass === 'healer') {          // gentle reach (soft, never punchy)
+        run([{ transform: 'scale(1)' },
+             { transform: 'translateY(-6%) scale(1.03)', offset: .5 },
+             { transform: 'scale(1)' }], 380, 'ease-in-out');
+      } else {                                   // summoner & other ranged — a conjuring bob
+        run([{ transform: 'scale(1)' },
+             { transform: 'translateY(-7%) scale(1.05)', offset: .42 },
+             { transform: 'scale(1)' }], 340, 'ease-in-out');
+      }
+    }
+  }
   // a scorch decal left where a unit died (Vlambeer "permanence" — makes kills memorable)
   _scorch(x, y) {
     const d = this._fx('vfx-scorch', x, y, {});
@@ -268,17 +311,15 @@ export class CombatPlayer {
       case 'attack': {
         const a = this.nodes.get(e.id); if (!a) break;
         const body = a.el.querySelector('.champ-body');
-        if (e.ranged) {
-          if (body) { body.classList.remove('attacking'); void body.offsetWidth; body.classList.add('attacking'); }
-        } else if (body) {
-          // melee: lunge TOWARD the target, then a slash arc lands on it
-          const from = this._pos(e.id), to = this._pos(e.tgt);
-          if (from && to) {
-            const dx = Math.max(-1, Math.min(1, (to.x - from.x) / 12.5)), dy = Math.max(-1, Math.min(1, (to.y - from.y) / 12.5));
-            body.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${dx * 42}%, ${dy * 42}%) scale(1.08)`, offset: .35 }, { transform: 'translate(0,0)' }], { duration: 300 / this.speed, easing: 'cubic-bezier(.3,1.4,.5,1)' });
-            const slash = this._fx('vfx-slash', to.x, to.y, { width: '60%' });
-            slash.animate([{ transform: 'translate(-50%,-50%) rotate(-35deg) scale(.4)', opacity: .9 }, { transform: 'translate(-50%,-50%) rotate(30deg) scale(1)', opacity: 0 }], { duration: 200 / this.speed, easing: 'ease-out' }).finished.then(() => slash.remove()).catch(() => {});
-          }
+        const klass = (UNITS_BY_ID[this.unitStats.get(e.id)?.defId] || {}).klass;
+        const from = this._pos(e.id), to = this._pos(e.tgt);
+        let dx = 0, dy = 0;
+        if (from && to) { dx = Math.max(-1, Math.min(1, (to.x - from.x) / 12.5)); dy = Math.max(-1, Math.min(1, (to.y - from.y) / 12.5)); }
+        if (body) this._attackMotion(body, klass, e.ranged, dx, dy);
+        if (!e.ranged && from && to) {   // melee: a slash arc lands on the target — bigger & slower for a knight, quick & small for an assassin
+          const w = klass === 'knight' ? '72%' : klass === 'assassin' ? '46%' : '58%';
+          const slash = this._fx('vfx-slash', to.x, to.y, { width: w });
+          slash.animate([{ transform: 'translate(-50%,-50%) rotate(-35deg) scale(.4)', opacity: .9 }, { transform: 'translate(-50%,-50%) rotate(30deg) scale(1)', opacity: 0 }], { duration: this._ms(klass === 'knight' ? 240 : 185), easing: 'ease-out' }).finished.then(() => slash.remove()).catch(() => {});
         }
         if (e.id % 2 === 0 || !e.ranged) { e.ranged ? Sfx.arrow() : Sfx.sword(); }
         if (e.crit) { this.critPending.add(e.id); this.shake.add(0.18); this.hitStop(55); }
