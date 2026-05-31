@@ -167,8 +167,10 @@ const A = {
     ult: { verbs: [v.summon({ count: 2, hp: 950, ad: 115, rage: 0.05, lifestealAura: 0.15 })] } },
 
   // Dragon (elite, expensive)
+  // 3★ was a duplicate of Lich's Frost Nova (cluster magic + slow + MR-shred). Re-flavoured to a
+  // frontline-dragon identity: the roar SHOVES the enemy line back and sears wounds shut (healCut).
   dragon_knight: { name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap: 250,
-    verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.shred('mr', 30, 3, 'cluster'), v.slow(0.25, 3, 'cluster')] } },
+    verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.knockback(1, 'cluster'), v.healCut(0.40, 3, 'cluster')] } },
   dragon_sage: { name: 'Cataclysm', type: 'magic', target: 'cluster', radius: 2, ap: 340,
     verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.meteors({ n: 4, ap: 100, radius: 1 }), v.manaBurn(25)] } },
   wyrm_archer: { name: 'Storm of Arrows', type: 'physical', target: 'mostEnemies', adRatio: 2.8,

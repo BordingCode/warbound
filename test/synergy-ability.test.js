@@ -166,7 +166,7 @@ const ULTS = [
   ['Moon Priestess 3★ chains', 'moon_priestess', r => has(r, 'arc', null)],
   ['Pit Summoner 3★ meteors', 'pit_summoner', r => has(r, 'meteor', null)],
   ['Beast Hunter 3★ marks', 'beast_hunter', r => has(r, 'debuff', 'mark')],
-  ['Dragon Knight 3★ shred+slow', 'dragon_knight', r => has(r, 'debuff', 'shred') && has(r, 'debuff', 'slow')],
+  ['Dragon Knight 3★ heal-cut (roar)', 'dragon_knight', r => has(r, 'debuff', 'healCut')],
 ];
 for (const [label, defId, check, board] of ULTS) {
   const P = board || [U(defId, 3, 7, 3), U('bone_guard', 3, 5, 2), U('field_medic', 4, 7)];
