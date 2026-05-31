@@ -3,7 +3,7 @@
 import { el, $, $$ } from './dom.js';
 import { UNITS, UNITS_BY_ID, statsForStar, STAR_MULT } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
-import { championSVG } from './svg.js';
+import { championSVG, getArtSet, setArtSet } from './champ-art.js';
 import { ic, iconEl, crest, rankMedal } from './icons.js';
 import { gearArt } from './gear-art.js';
 import { simulate } from './sim/combat.js';
@@ -1127,6 +1127,11 @@ function chooseMode() {
         ]),
       ]),
       ladderCard,
+    ]),
+    el('.art-toggle', { onclick: () => { setArtSet(getArtSet() === 'detailed' ? 'classic' : 'detailed'); Sfx.click(); chooseMode(); } }, [
+      el('span', { style: { color: 'var(--ink-dim)' } }, 'Character art:'),
+      el('span', { style: { fontWeight: 800, color: 'var(--gold)' } }, getArtSet() === 'detailed' ? 'Detailed' : 'Classic'),
+      el('span', { style: { color: 'var(--ink-faint)' } }, '· tap to switch'),
     ]),
   ]));
 }

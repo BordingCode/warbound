@@ -2,7 +2,7 @@
 // The sim already decided the outcome; this is pure performance (juice + readability).
 // Pausable / speed-scalable / skippable because it only animates `events`.
 import { el } from '../dom.js';
-import { championSVG } from '../svg.js';
+import { championSVG } from '../champ-art.js';
 import { UNITS_BY_ID } from '../data/units.js';
 import { Sfx } from '../audio/audio.js';
 import { Shake } from './fx.js';
@@ -113,6 +113,14 @@ export class CombatPlayer {
   // idle loop resumes automatically when the one-shot WAAPI animation ends.
   _attackMotion(body, klass, ranged, dx, dy) {
     const run = (kf, ms, easing) => body.animate(kf, { duration: this._ms(ms), easing });
+    // v2 "Detailed" art: swing the actual weapon-arm around the shoulder (limbs move, not just the body)
+    const arm = body.querySelector && body.querySelector('.v2-arm-front');
+    if (arm) {
+      const swing = ranged
+        ? [{ transform: 'rotate(0)' }, { transform: 'rotate(-13deg)', offset: .4 }, { transform: 'rotate(3deg)', offset: .62 }, { transform: 'rotate(0)' }]
+        : [{ transform: 'rotate(0)' }, { transform: 'rotate(-46deg)', offset: .26 }, { transform: 'rotate(40deg)', offset: .55 }, { transform: 'rotate(0)' }];
+      arm.animate(swing, { duration: this._ms(ranged ? 320 : (klass === 'knight' ? 380 : 300)), easing: 'cubic-bezier(.3,1.25,.5,1)' });
+    }
     if (!ranged) {
       if (klass === 'knight') {                 // heavy overhead chop: wind back, then a weighty fall
         run([{ transform: 'translate(0,0) rotate(0)' },

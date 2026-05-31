@@ -473,6 +473,10 @@
 .pos-cue.front { top: 51%; color: color-mix(in srgb, var(--danger) 65%, var(--ink-faint)); }
 .pos-cue.back { bottom: 3%; color: color-mix(in srgb, var(--mana) 55%, var(--ink-faint)); }
 
+/* character-art toggle on the main menu */
+.art-toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; cursor: pointer; padding: 6px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-2); user-select: none; }
+.art-toggle:active { transform: scale(.98); }
+
 /* warband-stats overlay (opened from the top-bar bars button) */
 .wstat-list { display: flex; flex-direction: column; gap: 6px; max-height: 46svh; overflow-y: auto; margin: 8px 0 4px; }
 .wstat-row { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
