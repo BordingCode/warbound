@@ -28,10 +28,10 @@ export const TRAITS = {
   },
   demon: {
     name: 'Demon', axis: 'origin', kind: 'behaviour', color: '#ff5a3c',
-    desc: 'Demon strikes scorch mana and flesh (soft-counters casters).',
+    desc: 'Every Demon attack sears its target: bonus magic damage on each hit AND it drains the enemy\'s mana, delaying the ability they\'re charging. A strong soft-counter to caster-heavy enemy boards.',
     breakpoints: [2, 4, 6],
     bonuses: { 2: { burn: 18, manaBurn: 6 }, 4: { burn: 34, manaBurn: 12 }, 6: { burn: 60, manaBurn: 20 } },
-    bonusText: { 2: 'Attacks burn + drain mana', 4: 'stronger burn', 6: 'searing burn' },
+    bonusText: { 2: '+18 magic dmg & −6 enemy mana per hit', 4: '+34 magic dmg & −12 enemy mana per hit', 6: '+60 magic dmg & −20 enemy mana per hit' },
   },
   beast: {
     name: 'Beast', axis: 'origin', kind: 'behaviour', color: '#ffb15a',

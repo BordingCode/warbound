@@ -175,7 +175,9 @@
 .sell-zone.hot { border-color: var(--danger); color: var(--danger); background: #2a1414; box-shadow: 0 0 10px #ff5a4d40; }
 
 /* help / intro overlay */
-.overlay { position: fixed; inset: 0; z-index: 1500; background: #06070cdd; display: grid; place-items: center; padding: 20px; backdrop-filter: blur(3px); }
+/* Solid dim backdrop (no backdrop-filter: blur — it flickers / fails to paint over animated
+   content on iOS Safari, which made trait/info overlays flash and vanish). */
+.overlay { position: fixed; inset: 0; z-index: 1500; background: #06070cf2; display: grid; place-items: center; padding: 20px; }
 .help-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 22px 18px; max-width: 380px; box-shadow: var(--shadow-2); max-height: calc(100svh - 40px); overflow-y: auto; }
 .help-card h2 { margin: 0 0 4px; font-size: 22px; color: var(--gold); }
 .help-card .sub { color: var(--ink-dim); font-size: 13px; margin-bottom: 14px; }
@@ -441,8 +443,8 @@
 /* In-battle per-unit stats panel — one row per YOUR champion (dmg dealt / tanked).
    Lives during combat AND persists into planning (.last-battle) until the next fight. */
 .combat-stats { position: absolute; top: 5px; left: 5px; z-index: 6; display: flex; flex-direction: column; gap: 2px;
-  background: color-mix(in srgb, var(--bg-1) 80%, transparent); border: 1px solid var(--line); border-radius: 8px;
-  padding: 4px 7px; font-size: 11px; font-variant-numeric: tabular-nums; pointer-events: none; backdrop-filter: blur(2px); max-width: 46%; }
+  background: color-mix(in srgb, var(--bg-1) 96%, transparent); border: 1px solid var(--line); border-radius: 8px;
+  padding: 4px 7px; font-size: 11px; font-variant-numeric: tabular-nums; pointer-events: none; max-width: 46%; }
 .combat-stats .cs-head { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-faint); font-weight: 800; margin-bottom: 1px; }
 .combat-stats .cs-row { display: flex; align-items: center; gap: 3px; }
 .combat-stats .cs-champ { width: 16px; height: 16px; display: inline-flex; flex: 0 0 auto; }

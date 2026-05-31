@@ -8,6 +8,8 @@
   transition: transform 200ms cubic-bezier(.34, 1.4, .64, 1);
   will-change: transform;
   pointer-events: auto;
+  touch-action: none;   /* claim the touch gesture for dragging — without this the browser can
+                           treat a drag as a scroll and fire pointercancel, so the unit "won't move". */
 }
 /* the team-coloured ground ring = ownership cue AND the cell position anchor (never moves) */
 .unit .base {
