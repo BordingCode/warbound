@@ -44,8 +44,8 @@ export const TRAITS = {
     name: 'Dragon', axis: 'origin', kind: 'behaviour', color: '#ffd24a',
     desc: 'Few but mighty — dragons shrug off magic.',
     breakpoints: [1, 2],
-    bonuses: { 1: { mr: 28 }, 2: { mr: 50, breath: true } },
-    bonusText: { 1: '+28 magic resist', 2: '+50 MR + dragon breath' },
+    bonuses: { 1: { mr: 28 }, 2: { mr: 50 } },
+    bonusText: { 1: '+28 magic resist', 2: '+50 magic resist (near-immune to spells)' },
   },
 
   // ---------- CLASSES ----------
