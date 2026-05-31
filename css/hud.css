@@ -471,6 +471,12 @@
 .pos-cue.front { top: 51%; color: color-mix(in srgb, var(--danger) 65%, var(--ink-faint)); }
 .pos-cue.back { bottom: 3%; color: color-mix(in srgb, var(--mana) 55%, var(--ink-faint)); }
 
+/* end-screen reward callout — makes the Spoils payout legible and clears up the gold/Spoils mixup */
+.end-reward { background: color-mix(in srgb, var(--gold) 10%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--gold) 35%, var(--line)); border-radius: 12px; padding: 10px 14px; max-width: 300px; margin: 0 auto; }
+.end-reward .er-line { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 19px; font-weight: 900; color: var(--gold); }
+.end-reward .er-ico { font-size: 18px; line-height: 0; display: inline-flex; }
+.end-reward .er-sub { font-size: 11px; color: var(--ink-dim); margin-top: 4px; line-height: 1.35; }
+
 .realm-card .rc-emblem { color: var(--rc); display: flex; opacity: .95; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--rc) 45%, transparent)); }
 .realm-card .rc-mark { color: var(--rc); display: inline-flex; }
 .realm-card .rc-mark .ic { width: 20px; height: 20px; }

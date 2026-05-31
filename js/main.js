@@ -823,7 +823,7 @@ function offerUnderdogDraft(after) {
 
 function endScreen(ladderSummary) {
   const stat = (label, val) => el('.istat', { style: { minWidth: '120px' } }, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
-  let head, sub, stats, rankBlock = null, extraBtn = null;
+  let head, sub, stats, rankBlock = null, rewardBlock = null, extraBtn = null;
   if (run.mode === 'ladder') {
     const place = (ladderSummary && ladderSummary.humanPlace) || (lobby && lobby.human.place) || Bots.aliveCount(lobby);
     const first = place === 1;
@@ -860,7 +860,14 @@ function endScreen(ladderSummary) {
     }
     // earn Spoils ONCE (even on a loss) — the meta-progression that eases the climb
     if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
-    stats = [stat('Realm', realm.name), stat('Warbands', `${run.wins}/10`), stat('Spoils', `+${run.spoilsEarned || 0}`)];
+    stats = [stat('Realm', realm.name), stat('Warbands', `${run.wins}/10`)];
+    const spoilsTotal = Meta.load().spoils;
+    const caches = Math.floor(spoilsTotal / Meta.CHEST_COST);
+    // a clear, prominent reward callout — and clears up "where's my gold?": gold resets, Spoils carry.
+    rewardBlock = el('.end-reward', {}, [
+      el('.er-line', {}, [iconEl('spoils', 'er-ico'), el('span.er-amt', {}, `+${run.spoilsEarned || 0} Spoils`)]),
+      el('.er-sub', {}, `${spoilsTotal} total — enough for ${caches} War Cache${caches === 1 ? '' : 's'} in the Armory. Your Spoils & gear carry to every realm; only the in-battle gold resets.`),
+    ]);
     extraBtn = won
       ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realm.index + 1) }, `Next Realm ▶`)
       : el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realm.index) }, `↻ Retry realm`);
@@ -869,6 +876,7 @@ function endScreen(ladderSummary) {
     el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
     el('p', { style: { color: 'var(--ink-dim)', margin: '0' } }, sub),
     el('.istats', { style: { maxWidth: '280px' } }, stats),
+    rewardBlock,
     rankBlock,
     run.mode !== 'ladder' && run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name, html: augIcon(AUGMENTS[id]) })))]) : null,
     el('.end-btns', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } }, [
