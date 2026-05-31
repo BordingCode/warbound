@@ -5,22 +5,24 @@
 
 // Base 1-star stats per cost tier.
 const COST_BASE = {
+  // Steep ~1.3×/cost curve so a 1★ elite ≈ a 3★ cheap unit (3★ = ×2.89). Without this, six
+  // 3★ cost-1 bodies dwarf a comp that must run 1★ cost-5s, so expensive-unit comps are dead.
   1: { hp: 480, ad: 62, as: 0.70, armor: 16, mr: 16, mana: 35 },
-  2: { hp: 560, ad: 72, as: 0.72, armor: 20, mr: 20, mana: 38 },
-  3: { hp: 630, ad: 84, as: 0.75, armor: 24, mr: 24, mana: 42 },
-  4: { hp: 720, ad: 98, as: 0.78, armor: 28, mr: 28, mana: 46 },
-  5: { hp: 850, ad: 118, as: 0.80, armor: 32, mr: 32, mana: 50 },
+  2: { hp: 620, ad: 80, as: 0.72, armor: 20, mr: 20, mana: 38 },
+  3: { hp: 810, ad: 105, as: 0.75, armor: 25, mr: 25, mana: 42 },
+  4: { hp: 1050, ad: 137, as: 0.78, armor: 31, mr: 31, mana: 46 },
+  5: { hp: 1370, ad: 178, as: 0.80, armor: 38, mr: 38, mana: 50 },
 };
 
 // Role shapes: how a class bends the base stats + which mana-gen profile it uses.
 // manaPer = mana gained per auto-attack (TFT: carry 10, caster 7, tank 5).
 const ROLE = {
-  knight:   { hpx: 1.62, adx: 1.12, range: 1, manaPer: 7, startMana: 0.20 },   // tankier to survive the longer (slower-march) approach
-  mage:     { hpx: 0.85, adx: 0.70, range: 3, manaPer: 8, startMana: 0.35 },
-  ranger:   { hpx: 0.95, adx: 1.10, range: 3, manaPer: 10, startMana: 0.10 },
-  assassin: { hpx: 0.90, adx: 1.20, range: 1, manaPer: 10, startMana: 0.20, dive: true },
+  knight:   { hpx: 1.44, adx: 1.12, range: 1, manaPer: 7, startMana: 0.20 },   // small tank bump for the slower march; realistic 3★ play shows knights don't need the big buff
+  mage:     { hpx: 0.78, adx: 0.70, range: 3, manaPer: 8, startMana: 0.35 },   // squishier — Mage burst over-performs; easier to punish
+  ranger:   { hpx: 0.86, adx: 0.80, range: 3, manaPer: 10, startMana: 0.10 },   // toned down hard — Ranger comp was the runaway outlier; now dies if the front breaks
+  assassin: { hpx: 0.90, adx: 1.08, range: 1, manaPer: 10, startMana: 0.20, dive: true },   // trimmed — c3 assassins got strong with the steeper curve
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
-  summoner: { hpx: 1.08, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
+  summoner: { hpx: 1.12, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
 };
 
 // `tune` = optional per-unit balance overrides: { hpx, adx } multipliers.
@@ -52,7 +54,7 @@ const A = {
   volley:  (ad) => ({ name: 'Volley', type: 'physical', target: 'mostEnemies', adRatio: ad }),
   mend:    (ap) => ({ name: 'Mend', type: 'heal', target: 'lowestAllyHP', ap }),
   ward:    (ap) => ({ name: 'Aegis', type: 'shield', target: 'lowestAllyHP', ap }),
-  raise:   (ap) => ({ name: 'Raise Dead', type: 'summon', summonHp: 450, summonAd: 66, ap }),
+  raise:   (ap) => ({ name: 'Raise Dead', type: 'summon', summonHp: 950, summonAd: 115, ap }),   // summons were puny vs the new stat curve — Summoner comp was dead
   bash:    (ad) => ({ name: 'Shield Bash', type: 'physical', target: 'current', adRatio: ad + 0.6, stun: 1.0 }),
   breath:  (ap) => ({ name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap }),
 };
@@ -95,9 +97,9 @@ export const UNITS = [
   mk('beastmaster',    'Beastmaster',    'beast', 'summoner', 4, A.raise(280)),
 
   // ---- Dragon (elite, expensive) ----
-  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.breath(185), { hpx: 0.80, adx: 0.82 }),
-  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.breath(260), { hpx: 0.80, adx: 0.82 }),
-  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.volley(2.6), { hpx: 0.84, adx: 0.86 }),
+  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.breath(225), { hpx: 1.16, adx: 1.12 }),
+  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.breath(310), { hpx: 1.12, adx: 1.10 }),
+  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.volley(2.8), { hpx: 1.12, adx: 1.10 }),
 ];
 
 export const UNITS_BY_ID = Object.fromEntries(UNITS.map((u) => [u.defId, u]));
