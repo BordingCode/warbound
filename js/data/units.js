@@ -76,7 +76,7 @@ export const UNITS = [
 
   // ---- Elf ----
   mk('thornguard',     'Thornguard',     'elf', 'knight', 2, A.bash(2.1)),
-  mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.nuke(380)),
+  mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.smite(560)),   // single-target lunar bolt (a focused burst vs the AoE nukers) — activates the unused Smite ability
   mk('wood_ranger',    'Wood Ranger',    'elf', 'ranger', 1, A.volley(2.1)),
   mk('shadow_dancer',  'Shadow Dancer',  'elf', 'assassin', 3, A.exec(3.2)),
   mk('grove_healer',   'Grove Healer',   'elf', 'healer', 2, A.mend(260)),
