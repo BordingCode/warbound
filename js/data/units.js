@@ -44,62 +44,181 @@ function mk(defId, name, origin, klass, cost, ability, tune = {}) {
   };
 }
 
-// Ability data. type: magic|physical|heal|shield|summon. target: current|lowestAllyHP|
-// mostEnemies|cluster|self. ap = base scaling number (boosted by Mage trait / AP items).
+// ── Ability data ──────────────────────────────────────────────────────────
+// Each champion now has a UNIQUE signature ability (per ABILITIES_SPEC.md): a base
+// effect plus a qualitative 3★ ULTIMATE upgrade. The combat sim runs a thin layer of
+// composable VERBS (sim/combat.js). At 3★ the engine runs `verbs.concat(ult.verbs)`.
+//
+// We keep LEGACY HEADLINE fields (type/target/ap/adRatio/radius/stun/summonHp/summonAd)
+// describing the PRIMARY effect so the autobalancer (sim/tuner.mjs), unit tooltips
+// (main.js) and bot valuation (bots.js) keep working unchanged. The primary damage
+// verbs read `ab.ap`/`ab.adRatio` from the headline, so tuning those still flows through.
+//
+// Verb shorthands. target selectors (resolved in combat.js):
+//   current · cluster(radius) · mostEnemies(count,mult,offset) · lowestEnemyHP · self ·
+//   lowestAllyHP · allies · adjacentAllies · lowestNAllies(n) · line · allEnemies · nearestN(n)
+const v = {
+  magic:    (o = {}) => ({ op: 'magic', target: 'current', ...o }),
+  cluster:  (o = {}) => ({ op: 'magic', target: 'cluster', radius: 1, ...o }),
+  phys:     (o = {}) => ({ op: 'phys', target: 'current', ...o }),
+  cleave:   (o = {}) => ({ op: 'phys', target: 'cluster', radius: 1, ...o }),
+  volley:   (o = {}) => ({ op: 'phys', target: 'mostEnemies', count: 4, mult: 0.7, ...o }),
+  exec:     (o = {}) => ({ op: 'exec', threshold: 0.25, mult: 1.3, ...o }),
+  line:     (o = {}) => ({ op: 'line', ...o }),
+  chain:    (o = {}) => ({ op: 'chain', count: 2, falloff: 0.6, ...o }),
+  meteors:  (o = {}) => ({ op: 'meteors', n: 3, radius: 1, ...o }),
+  heal:     (o = {}) => ({ op: 'heal', target: 'lowestAllyHP', ...o }),
+  shield:   (o = {}) => ({ op: 'shield', target: 'lowestAllyHP', ...o }),
+  shieldSelf: (amount) => ({ op: 'shield', target: 'self', amount }),
+  summon:   (o = {}) => ({ op: 'summon', count: 2, hp: 950, ad: 115, ...o }),
+  stun:     (dur, target = 'current') => ({ op: 'stun', dur, target }),
+  knockup:  (dur, target = 'current') => ({ op: 'knockup', dur, target }),
+  knockback:(cells, target = 'current') => ({ op: 'knockback', cells, target }),
+  slow:     (pct, dur, target = 'current') => ({ op: 'slow', pct, dur, target }),
+  shred:    (stat, amount, dur, target = 'current') => ({ op: 'shred', stat, amount, dur, target }),
+  manaBurn: (amount, target = 'current', lockDur = 0) => ({ op: 'manaBurn', amount, lockDur, target }),
+  taunt:    (radius, dur) => ({ op: 'taunt', radius, dur }),
+  healCut:  (pct, dur, target = 'current') => ({ op: 'healCut', pct, dur, target }),
+  dot:      (dps, dur, target = 'current') => ({ op: 'dot', dps, dur, target }),
+  buffAS:   (amount, dur, target = 'self') => ({ op: 'buffAS', amount, dur, target }),
+  rage:     (perAuto, cap) => ({ op: 'rage', perAuto, cap }),
+  lifesteal:(pct, dur, target = 'self') => ({ op: 'lifesteal', pct, dur, target }),
+  dodge:    (amount, dur, target = 'self') => ({ op: 'dodge', amount, dur, target }),
+  cleanse:  (target = 'self', immune = 0) => ({ op: 'cleanse', target, immune }),
+  regen:    (perSec, dur, target = 'self') => ({ op: 'regen', perSec, dur, target }),
+  thorns:   (amount, dur, target = 'self') => ({ op: 'thorns', amount, dur, target }),
+  mark:     (mult, dur, target = 'lowestEnemyHP') => ({ op: 'mark', mult, dur, target }),
+  resetAtk: (target = 'self') => ({ op: 'resetAtk', target }),
+};
+// onKill: list of verbs that fire only if a primary-damage verb's hit KILLED its target.
 const A = {
-  smite:   (ap) => ({ name: 'Smite', type: 'magic', target: 'current', ap }),
-  nuke:    (ap) => ({ name: 'Arcane Nuke', type: 'magic', target: 'cluster', radius: 1, ap }),
-  cleave:  (ad) => ({ name: 'Cleave', type: 'physical', target: 'cluster', radius: 1, adRatio: ad }),
-  exec:    (ad) => ({ name: 'Execute', type: 'physical', target: 'lowestEnemyHP', adRatio: ad }),
-  volley:  (ad) => ({ name: 'Volley', type: 'physical', target: 'mostEnemies', adRatio: ad }),
-  mend:    (ap) => ({ name: 'Mend', type: 'heal', target: 'lowestAllyHP', ap }),
-  ward:    (ap) => ({ name: 'Aegis', type: 'shield', target: 'lowestAllyHP', ap }),
-  raise:   (ap) => ({ name: 'Raise Dead', type: 'summon', summonHp: 950, summonAd: 115, ap }),   // summons were puny vs the new stat curve — Summoner comp was dead
-  bash:    (ad) => ({ name: 'Shield Bash', type: 'physical', target: 'current', adRatio: ad + 0.6, stun: 1.0 }),
-  breath:  (ap) => ({ name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap }),
+  // Human
+  knight_captain: { name: 'Rallying Bash', type: 'physical', target: 'current', adRatio: 2.0, stun: 1.0,
+    verbs: [v.phys({ adRatio: 2.0 }), v.stun(1.0), v.shieldSelf(30)],
+    ult: { verbs: [v.buffAS(0.25, 3, 'adjacentAllies')] } },
+  court_mage: { name: 'Arcane Nuke', type: 'magic', target: 'cluster', radius: 1, ap: 220,
+    verbs: [v.cluster({ radius: 1 })], ult: { verbs: [v.manaBurn(30)] } },
+  crossbowman: { name: 'Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.2,
+    verbs: [v.volley({ adRatio: 2.2 })], ult: { verbs: [v.slow(0.25, 2, 'mostEnemies')] } },
+  royal_blade: { name: 'Regicide', type: 'physical', target: 'lowestEnemyHP', adRatio: 3.0,
+    verbs: [v.exec({ adRatio: 3.0 })], ult: { verbs: [{ op: 'recastOnKill', max: 1 }] } },
+  field_medic: { name: 'Mend', type: 'heal', target: 'lowestAllyHP', ap: 200,
+    verbs: [v.heal({ ap: 200 })], ult: { verbs: [v.cleanse('lowestAllyHP', 1.5)] } },
+
+  // Undead
+  bone_guard: { name: 'Grave Bash', type: 'physical', target: 'current', adRatio: 1.8, stun: 1.0,
+    verbs: [v.phys({ adRatio: 1.8 }), v.stun(1.0)], ult: { verbs: [v.lifesteal(0.30, 4, 'self')] } },
+  lich: { name: 'Frost Nova', type: 'magic', target: 'cluster', radius: 1, ap: 320,
+    verbs: [v.cluster({ radius: 1 }), v.slow(0.30, 2, 'cluster')],
+    ult: { verbs: [v.shred('mr', 30, 4, 'cluster')] } },
+  skeleton_archer: { name: 'Bone Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.0,
+    verbs: [v.volley({ adRatio: 2.0, onKill: [{ op: 'raise', max: 2 }] })], ult: { verbs: [{ op: 'enableOnKill' }] } },
+  wraith: { name: 'Soul Reap', type: 'physical', target: 'lowestEnemyHP', adRatio: 3.6,
+    verbs: [v.exec({ adRatio: 3.6, drain: 0.40 })],
+    ult: { verbs: [{ op: 'enableOnKill' }], onKill: [v.resetAtk('self'), v.buffAS(0.4, 3, 'self')] } },
+  necromancer: { name: 'Raise Dead', type: 'summon', summonHp: 950, summonAd: 115,
+    verbs: [v.summon({ count: 2, hp: 950, ad: 115 })],
+    ult: { verbs: [v.summon({ count: 1, hp: 950, ad: 115, statMult: 2 }), v.summon({ count: 1, hp: 950, ad: 115 })] } },
+
+  // Elf
+  thornguard: { name: 'Bramble Bash', type: 'physical', target: 'current', adRatio: 2.1, stun: 1.0,
+    verbs: [v.phys({ adRatio: 2.1 }), v.stun(1.0), v.thorns(0.15, 3, 'self')],
+    ult: { verbs: [v.knockup(1.25), v.taunt(1, 2)] } },
+  moon_priestess: { name: 'Lunar Bolt', type: 'magic', target: 'current', ap: 560,
+    verbs: [v.magic({ ap: 560 })], ult: { verbs: [v.chain({ count: 2, falloff: 0.6 })] } },
+  wood_ranger: { name: 'Piercing Shot', type: 'physical', target: 'current', adRatio: 2.1,
+    verbs: [v.line({ adRatio: 2.1 })], ult: { verbs: [v.shred('armor', 25, 4, 'line')] } },
+  shadow_dancer: { name: 'Shadow Step', type: 'physical', target: 'lowestEnemyHP', adRatio: 3.2,
+    verbs: [v.exec({ adRatio: 3.2 })], ult: { verbs: [v.dodge(0.40, 3, 'self'), v.buffAS(0.4, 3, 'self')] } },
+  grove_healer: { name: 'Verdant Mend', type: 'heal', target: 'lowestAllyHP', ap: 260,
+    verbs: [v.heal({ ap: 260 })],
+    ult: { verbs: [v.heal({ ap: 130, target: 'adjacentAllies' }), v.regen(12, 3, 'lowestAllyHP')] } },
+  spirit_caller: { name: 'Call Spirits', type: 'summon', summonHp: 950, summonAd: 115,
+    verbs: [v.summon({ count: 2, hp: 950, ad: 115 })],
+    ult: { verbs: [v.summon({ count: 2, hp: 950, ad: 115, dodge: 0.30, slowAura: 0.15 })] } },
+
+  // Demon
+  hellguard: { name: 'Fel Cleave', type: 'physical', target: 'cluster', radius: 1, adRatio: 1.9,
+    verbs: [v.cleave({ adRatio: 1.9 })], ult: { verbs: [v.manaBurn(25, 'cluster'), v.healCut(0.40, 3, 'cluster')] } },
+  warlock: { name: 'Doom Bolt', type: 'magic', target: 'cluster', radius: 1, ap: 400,
+    verbs: [v.cluster({ radius: 1 })], ult: { verbs: [v.dot(60, 3, 'cluster'), v.manaBurn(30)] } },
+  fel_archer: { name: 'Searing Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.3,
+    verbs: [v.volley({ adRatio: 2.3 })], ult: { verbs: [v.manaBurn(12, 'mostEnemies')] } },
+  imp_assassin: { name: 'Backstab', type: 'physical', target: 'lowestEnemyHP', adRatio: 2.6,
+    verbs: [v.exec({ adRatio: 2.6 })],
+    ult: { verbs: [{ op: 'enableOnKill' }], onKill: [v.manaBurn(40, 'nearestN', 0), v.slow(0.30, 2, 'nearestN')], onKillN: 2 } },
+  pit_summoner: { name: 'Open the Pit', type: 'summon', summonHp: 950, summonAd: 115,
+    verbs: [v.summon({ count: 2, hp: 950, ad: 115 })], ult: { verbs: [v.meteors({ n: 3, ap: 120, radius: 1 })] } },
+
+  // Beast
+  beast_hunter: { name: "Hunter's Volley", type: 'physical', target: 'mostEnemies', adRatio: 2.4,
+    verbs: [v.volley({ adRatio: 2.4 })], ult: { verbs: [v.mark(1.4, 5, 'lowestEnemyHP')] } },
+  bramble_brute: { name: 'Thorn Cleave', type: 'physical', target: 'cluster', radius: 1, adRatio: 2.4,
+    verbs: [v.cleave({ adRatio: 2.4 }), v.knockback(1, 'cluster')],
+    ult: { verbs: [v.rage(0.06, 0.9), v.thorns(0.25, 99, 'self')] } },
+  pack_stalker: { name: 'Pounce', type: 'physical', target: 'lowestEnemyHP', adRatio: 3.3,
+    verbs: [v.exec({ adRatio: 3.3 })],
+    ult: { verbs: [{ op: 'phys', target: 'clusterAtPrimary', radius: 1, adRatio: 3.3, mult: 0.6 }, { op: 'enableOnKill' }], onKill: [v.buffAS(0.3, 3, 'self')] } },
+  druid_healer: { name: 'Wild Aegis', type: 'shield', target: 'lowestAllyHP', ap: 300,
+    verbs: [v.shield({ ap: 300 })],
+    ult: { verbs: [{ op: 'shield', target: 'lowestNAllies', n: 3, ap: 210 }, v.buffAS(0.2, 3, 'shielded')] } },
+  beastmaster: { name: 'Summon Pack', type: 'summon', summonHp: 950, summonAd: 115,
+    verbs: [v.summon({ count: 2, hp: 950, ad: 115 })],
+    ult: { verbs: [v.summon({ count: 2, hp: 950, ad: 115, rage: 0.05, lifestealAura: 0.15 })] } },
+
+  // Dragon (elite, expensive)
+  dragon_knight: { name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap: 225,
+    verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.shred('mr', 30, 3, 'cluster'), v.slow(0.25, 3, 'cluster')] } },
+  dragon_sage: { name: 'Cataclysm', type: 'magic', target: 'cluster', radius: 2, ap: 310,
+    verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.meteors({ n: 4, ap: 100, radius: 1 }), v.manaBurn(25)] } },
+  wyrm_archer: { name: 'Storm of Arrows', type: 'physical', target: 'mostEnemies', adRatio: 2.8,
+    verbs: [v.volley({ adRatio: 2.8 })],
+    ult: { verbs: [v.volley({ adRatio: 2.8, offset: 4 }), v.slow(0.20, 2, 'allEnemies')] } },
 };
 
 export const UNITS = [
   // ---- Human ----
-  mk('knight_captain', 'Knight-Captain', 'human', 'knight', 1, A.bash(2.0)),
-  mk('court_mage',     'Court Mage',     'human', 'mage',   2, A.nuke(220)),
-  mk('crossbowman',    'Crossbowman',    'human', 'ranger', 1, A.volley(2.2)),
-  mk('royal_blade',    'Royal Blade',    'human', 'assassin', 3, A.exec(3.0)),
-  mk('field_medic',    'Field Medic',    'human', 'healer', 1, A.mend(200)),
+  mk('knight_captain', 'Knight-Captain', 'human', 'knight', 1, A.knight_captain),
+  mk('court_mage',     'Court Mage',     'human', 'mage',   2, A.court_mage),
+  mk('crossbowman',    'Crossbowman',    'human', 'ranger', 1, A.crossbowman),
+  mk('royal_blade',    'Royal Blade',    'human', 'assassin', 3, A.royal_blade),
+  mk('field_medic',    'Field Medic',    'human', 'healer', 1, A.field_medic),
 
   // ---- Undead ----
-  mk('bone_guard',     'Bone Guard',     'undead', 'knight', 1, A.bash(1.8)),
-  mk('lich',           'Lich',           'undead', 'mage',   3, A.nuke(320)),
-  mk('skeleton_archer','Skeleton Archer','undead', 'ranger', 1, A.volley(2.0)),
-  mk('wraith',         'Wraith',         'undead', 'assassin', 4, A.exec(3.6)),
-  mk('necromancer',    'Necromancer',    'undead', 'summoner', 5, A.raise(260)),
+  mk('bone_guard',     'Bone Guard',     'undead', 'knight', 1, A.bone_guard),
+  mk('lich',           'Lich',           'undead', 'mage',   3, A.lich),
+  mk('skeleton_archer','Skeleton Archer','undead', 'ranger', 1, A.skeleton_archer),
+  mk('wraith',         'Wraith',         'undead', 'assassin', 4, A.wraith),
+  mk('necromancer',    'Necromancer',    'undead', 'summoner', 5, A.necromancer),
 
   // ---- Elf ----
-  mk('thornguard',     'Thornguard',     'elf', 'knight', 2, A.bash(2.1)),
-  mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.smite(560)),   // single-target lunar bolt (a focused burst vs the AoE nukers) — activates the unused Smite ability
-  mk('wood_ranger',    'Wood Ranger',    'elf', 'ranger', 1, A.volley(2.1)),
-  mk('shadow_dancer',  'Shadow Dancer',  'elf', 'assassin', 3, A.exec(3.2)),
-  mk('grove_healer',   'Grove Healer',   'elf', 'healer', 2, A.mend(260)),
-  mk('spirit_caller',  'Spirit Caller',  'elf', 'summoner', 3, A.raise(220)),
+  mk('thornguard',     'Thornguard',     'elf', 'knight', 2, A.thornguard),
+  mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.moon_priestess),
+  mk('wood_ranger',    'Wood Ranger',    'elf', 'ranger', 1, A.wood_ranger),
+  mk('shadow_dancer',  'Shadow Dancer',  'elf', 'assassin', 3, A.shadow_dancer),
+  mk('grove_healer',   'Grove Healer',   'elf', 'healer', 2, A.grove_healer),
+  mk('spirit_caller',  'Spirit Caller',  'elf', 'summoner', 3, A.spirit_caller),
 
   // ---- Demon ----
-  mk('hellguard',      'Hellguard',      'demon', 'knight', 2, A.cleave(1.9)),
-  mk('warlock',        'Warlock',        'demon', 'mage',   4, A.nuke(400)),
-  mk('fel_archer',     'Fel Archer',     'demon', 'ranger', 2, A.volley(2.3)),
-  mk('imp_assassin',   'Imp Assassin',   'demon', 'assassin', 1, A.exec(2.6)),
-  mk('pit_summoner',   'Pit Summoner',   'demon', 'summoner', 5, A.raise(300)),
+  mk('hellguard',      'Hellguard',      'demon', 'knight', 2, A.hellguard),
+  mk('warlock',        'Warlock',        'demon', 'mage',   4, A.warlock),
+  mk('fel_archer',     'Fel Archer',     'demon', 'ranger', 2, A.fel_archer),
+  mk('imp_assassin',   'Imp Assassin',   'demon', 'assassin', 1, A.imp_assassin),
+  mk('pit_summoner',   'Pit Summoner',   'demon', 'summoner', 5, A.pit_summoner),
 
   // ---- Beast ----
-  mk('beast_hunter',   'Beast Hunter',   'beast', 'ranger', 2, A.volley(2.4)),
-  mk('bramble_brute',  'Bramble Brute',  'beast', 'knight', 4, A.cleave(2.4)),
-  mk('pack_stalker',   'Pack Stalker',   'beast', 'assassin', 3, A.exec(3.3)),
-  mk('druid_healer',   'Druid Healer',   'beast', 'healer', 3, A.ward(300)),
-  mk('beastmaster',    'Beastmaster',    'beast', 'summoner', 4, A.raise(280)),
+  mk('beast_hunter',   'Beast Hunter',   'beast', 'ranger', 2, A.beast_hunter),
+  mk('bramble_brute',  'Bramble Brute',  'beast', 'knight', 4, A.bramble_brute),
+  mk('pack_stalker',   'Pack Stalker',   'beast', 'assassin', 3, A.pack_stalker),
+  mk('druid_healer',   'Druid Healer',   'beast', 'healer', 3, A.druid_healer),
+  mk('beastmaster',    'Beastmaster',    'beast', 'summoner', 4, A.beastmaster),
 
   // ---- Dragon (elite, expensive) ----
-  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.breath(225), { hpx: 1.16, adx: 1.12 }),
-  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.breath(310), { hpx: 1.12, adx: 1.10 }),
-  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.volley(2.8), { hpx: 1.12, adx: 1.10 }),
+  // Dragons are the premium 5-cost elites — strong even at 1★ (rarely reach 3★ in play), so
+  // their base is bumped to stay board-warping against cheaper units whose 3★ ults now fire.
+  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.26, adx: 1.18 }),
+  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.20, adx: 1.16 }),
+  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.20, adx: 1.16 }),
 ];
 
 export const UNITS_BY_ID = Object.fromEntries(UNITS.map((u) => [u.defId, u]));

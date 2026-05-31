@@ -2,7 +2,10 @@
 
 > Design spec for replacing the 10 shared ability templates with a UNIQUE signature ability per
 > champion, each gaining a qualitative **3★ ultimate** upgrade (extra effect, not just bigger
-> numbers). Drafted by the game-designer pass. Status: **approved-for-build pending Mathias's go.**
+> numbers). Drafted by the game-designer pass. Status: **BUILT (2026-05-31)** — verb engine in
+> `sim/combat.js`, all 29 abilities in `data/units.js`, VFX in `render/player.js`, headless-tested
+> in `test/synergy-ability.test.js` (38 assertions). Phases A–C done. Phase D (fine origin
+> rebalance via the archetype-matrix tooling) remains — dragons already re-bumped; broader pass TBD.
 
 ## Core design
 Keep `cast(u, now)` as the base engine; add a thin layer of composable **verbs** that abilities

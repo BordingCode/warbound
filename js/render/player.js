@@ -451,8 +451,61 @@ export class CombatPlayer {
         try { if (navigator.vibrate) navigator.vibrate(18); } catch {}
         break;
       }
+      // ── ability-verb effects (unique signatures + 3★ ultimates) ──
+      case 'cc': this._ccVfx(e); break;
+      case 'debuff': this._statusVfx(e, false); break;
+      case 'buff': this._statusVfx(e, true); break;
+      case 'arc': this._arcVfx(e); break;          // chain-lightning hop (moon_priestess 3★)
+      case 'meteor': this._meteorVfx(e); break;    // seeded strike (pit_summoner / dragon_sage 3★)
       case 'end': break;
     }
+  }
+
+  // crowd-control landings: a quick coloured ring + glyph on the victim.
+  _ccVfx(e) {
+    const p = this._pos(e.id); if (!p) return;
+    const n = this.nodes.get(e.id);
+    const cfg = { stun: { c: '#ffd95c', g: '✦' }, knockup: { c: '#ffe08a', g: '⤊' }, taunt: { c: '#ff6a6a', g: '!' } }[e.kind] || { c: '#fff', g: '✦' };
+    this._floatNum(e.id, cfg.g, cfg.c);
+    if (this.shake.disabled) return;                 // reduced-motion: glyph only
+    const r = this._fx('vfx-stun', p.x, p.y - 9, { borderTopColor: cfg.c, borderBottomColor: cfg.c, filter: `drop-shadow(0 0 5px ${cfg.c})` });
+    r.animate([{ transform: 'translate(-50%,-50%) scale(.5) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(200deg)', opacity: 1, offset: .3 }, { transform: 'translate(-50%,-50%) scale(1) rotate(540deg)', opacity: 0 }], { duration: 620 / this.speed, easing: 'linear' }).finished.then(() => r.remove()).catch(() => {});
+    if (e.kind === 'knockup' && n) this._squash(n.el, 0.8, 1.25);
+  }
+
+  // debuffs (red/cool tints) vs buffs (warm/green tints): a tiny labelled pip that floats off.
+  _statusVfx(e, good) {
+    const map = {
+      slow: { c: '#7fe3ff', t: '❄' }, shred: { c: '#ff9a4c', t: '▼def' }, manaBurn: { c: '#6fb1ff', t: '✖mana' },
+      healCut: { c: '#ff7eb6', t: '⊘heal' }, dot: { c: '#ff6a3c', t: '🔥' }, mark: { c: '#ffd24a', t: '◎' },
+      haste: { c: '#ffe08a', t: '»as' }, lifesteal: { c: '#9be86a', t: '✚' }, dodge: { c: '#cfe0ff', t: '~' },
+      thorns: { c: '#c8e06a', t: '✦' }, regen: { c: '#7affc0', t: '+' }, cleanse: { c: '#aef0ff', t: '✧' }, rage: { c: '#ff8a4c', t: '▲' },
+    }[e.kind] || { c: good ? '#9be86a' : '#ff7e7e', t: good ? '+' : '–' };
+    this._floatNum(e.id, map.t, map.c);
+    if (!this.shake.disabled) this._spark(e.id, map.c, good ? 3 : 2, 16);
+  }
+
+  // chain-lightning hop: a quick arc drawn between two units.
+  _arcVfx(e) {
+    const a = this._pos(e.from), b = this._pos(e.to); if (!a || !b) return;
+    if (this.shake.disabled) { this._spark(e.to, '#aef0ff', 2, 14); return; }
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    const bolt = this._fx('vfx-arc', mx, my, { width: len + '%', height: '3px', background: 'linear-gradient(90deg, transparent, #aef0ff, #fff, #aef0ff, transparent)', boxShadow: '0 0 6px #aef0ff', transform: `translate(-50%,-50%) rotate(${ang}deg)` });
+    bolt.animate([{ opacity: .95, transform: `translate(-50%,-50%) rotate(${ang}deg) scaleX(.2)` }, { opacity: 0, transform: `translate(-50%,-50%) rotate(${ang}deg) scaleX(1)` }], { duration: 240 / this.speed, easing: 'ease-out' }).finished.then(() => bolt.remove()).catch(() => {});
+    this._spark(e.to, '#aef0ff', 3, 18);
+  }
+
+  // meteor strike: a streak drops onto a cell and detonates.
+  _meteorVfx(e) {
+    const x = e.col * 12.5 + 6.25, y = e.row * 12.5 + 5.5;
+    if (this.shake.disabled) { const f = this._fx('vfx-burst', x, y, { background: '#ff7a3c' }); f.animate([{ opacity: .8, transform: 'translate(-50%,-50%) scale(.5)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.2)' }], { duration: 260 / this.speed }).finished.then(() => f.remove()).catch(() => {}); return; }
+    const streak = this._fx('vfx-beam', x, y, { background: 'linear-gradient(#ffce5c, #ff5a3c)', filter: 'drop-shadow(0 0 6px #ff7a3c)' });
+    streak.animate([{ transform: 'translate(-50%,-160%) scaleY(.6)', opacity: 0 }, { transform: 'translate(-50%,-100%) scaleY(1)', opacity: 1, offset: .55 }, { transform: 'translate(-50%,-100%) scaleY(1)', opacity: 0 }], { duration: 340 / this.speed, easing: 'ease-in' }).finished.then(() => streak.remove()).catch(() => {});
+    const boom = this._fx('vfx-ring', x, y, { borderColor: '#ff7a3c', boxShadow: '0 0 10px #ff7a3c' });
+    boom.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.5)', opacity: 0 }], { duration: 360 / this.speed, easing: 'cubic-bezier(.2,.7,.3,1)' }).finished.then(() => boom.remove()).catch(() => {});
+    this.shake.add(0.16);
   }
 
   // Play the timeline. Returns a promise resolving with the winner.

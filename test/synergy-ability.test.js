@@ -127,17 +127,17 @@ console.log('\n=== SYNERGIES (trait A/B: OFF vs ON) ===');
   ok('Summoner (stronger summons)', sa && sb && sb.maxHp > sa.maxHp, `summon HP ${sa?.maxHp}→${sb?.maxHp}`);
 }
 
-console.log('\n=== ABILITIES (each fires + produces its effect) ===');
+console.log('\n=== ABILITIES (each champion casts its unique signature + base effect) ===');
 // representative caster per ability; human:6 = mana regen so they cast quickly.
 const ABILS = [
-  ['Shield Bash', 'knight_captain', r => casts(r).some(c => c.name === 'Shield Bash')],
+  ['Rallying Bash', 'knight_captain', r => casts(r).some(c => c.name === 'Rallying Bash') && count(r, e => e.type === 'cc' && e.kind === 'stun') > 0],
   ['Arcane Nuke', 'court_mage', r => casts(r).some(c => c.name === 'Arcane Nuke') && dmgBy(r, 0, 'magic').length > 0],
   ['Volley', 'crossbowman', r => casts(r).some(c => c.name === 'Volley')],
-  ['Execute', 'royal_blade', r => casts(r).some(c => c.name === 'Execute')],
+  ['Regicide', 'royal_blade', r => casts(r).some(c => c.name === 'Regicide')],
   ['Mend', 'field_medic', r => casts(r).some(c => c.name === 'Mend') && count(r, e => e.type === 'heal') > 0],
-  ['Aegis (shield)', 'druid_healer', r => casts(r).some(c => c.name === 'Aegis') && count(r, e => e.type === 'shield') > 0],
+  ['Wild Aegis', 'druid_healer', r => casts(r).some(c => c.name === 'Wild Aegis') && count(r, e => e.type === 'shield') > 0],
   ['Raise Dead (summon)', 'necromancer', r => casts(r).some(c => c.name === 'Raise Dead') && count(r, e => e.type === 'spawn' && e.summon) > 0],
-  ['Cleave', 'hellguard', r => casts(r).some(c => c.name === 'Cleave')],
+  ['Fel Cleave', 'hellguard', r => casts(r).some(c => c.name === 'Fel Cleave')],
   ['Dragon Breath', 'dragon_knight', r => casts(r).some(c => c.name === 'Dragon Breath') && dmgBy(r, 0, 'magic').length > 0],
 ];
 for (const [label, defId, check] of ABILS) {
@@ -148,12 +148,40 @@ for (const [label, defId, check] of ABILS) {
   ok(`${label} (${defId})`, check(r), `casts seen: ${namesSeen}`);
 }
 
-console.log('\n=== WIRING AUDIT (effect keys actually consumed by the sim) ===');
-// Cross-check: is any ability defined but unused by every champion?
-const usedAbilities = new Set(UNITS.map(u => u.ability && u.ability.name));
-const ALL_ABILITY_NAMES = ['Smite', 'Arcane Nuke', 'Cleave', 'Execute', 'Volley', 'Mend', 'Aegis', 'Raise Dead', 'Shield Bash', 'Dragon Breath'];
-const unusedAbilities = ALL_ABILITY_NAMES.filter(n => !usedAbilities.has(n));
-ok('No ability defined-but-unused', unusedAbilities.length === 0, unusedAbilities.length ? `UNUSED: ${unusedAbilities.join(', ')}` : 'all used');
+console.log('\n=== 3★ ULTIMATES (the qualitative upgrade emits its new effect) ===');
+// Each row: a 3★ caster (mana-regen forced) should produce the tagged event its ult adds.
+// We check the new sim event tags: debuff{kind}, buff{kind}, cc{kind}, arc, meteor.
+const has = (r, type, kind) => evs(r).some(e => e.type === type && (kind == null || e.kind === kind));
+// optional 4th element = custom board (some ults need specific positioning to observe)
+const ULTS = [
+  ['Knight-Captain 3★ hastes adjacent allies', 'knight_captain', r => has(r, 'buff', 'haste'),
+    [U('knight_captain', 3, 7, 3), U('bone_guard', 4, 7, 2), U('field_medic', 0, 7)]],
+  ['Lich frost-nova slows', 'lich', r => has(r, 'debuff', 'slow')],
+  ['Lich 3★ shreds MR', 'lich', r => has(r, 'debuff', 'shred')],
+  ['Court Mage 3★ mana-burns', 'court_mage', r => has(r, 'debuff', 'manaBurn')],
+  ['Warlock 3★ burns (DoT)', 'warlock', r => has(r, 'debuff', 'dot')],
+  ['Hellguard 3★ heal-cuts', 'hellguard', r => has(r, 'debuff', 'healCut')],
+  ['Bone Guard 3★ lifesteal', 'bone_guard', r => has(r, 'buff', 'lifesteal')],
+  ['Thornguard 3★ knockup', 'thornguard', r => has(r, 'cc', 'knockup')],
+  ['Moon Priestess 3★ chains', 'moon_priestess', r => has(r, 'arc', null)],
+  ['Pit Summoner 3★ meteors', 'pit_summoner', r => has(r, 'meteor', null)],
+  ['Beast Hunter 3★ marks', 'beast_hunter', r => has(r, 'debuff', 'mark')],
+  ['Dragon Knight 3★ shred+slow', 'dragon_knight', r => has(r, 'debuff', 'shred') && has(r, 'debuff', 'slow')],
+];
+for (const [label, defId, check, board] of ULTS) {
+  const P = board || [U(defId, 3, 7, 3), U('bone_guard', 3, 5, 2), U('field_medic', 4, 7)];
+  const r = sim(P, WALL, { player: { human: 6 } });
+  ok(label, check(r));
+}
+
+console.log('\n=== WIRING AUDIT (every champion has a UNIQUE signature ability) ===');
+const abilityNames = UNITS.map(u => u.ability && u.ability.name);
+const dupes = abilityNames.filter((n, i) => abilityNames.indexOf(n) !== i);
+ok('All 29 abilities are uniquely named', dupes.length === 0, dupes.length ? `DUPES: ${[...new Set(dupes)].join(', ')}` : `${abilityNames.length} unique`);
+const allHaveVerbs = UNITS.every(u => u.ability && Array.isArray(u.ability.verbs) && u.ability.verbs.length);
+ok('Every champion ships verb-based ability data', allHaveVerbs);
+const allHaveUlt = UNITS.every(u => u.ability && u.ability.ult && Array.isArray(u.ability.ult.verbs) && u.ability.ult.verbs.length);
+ok('Every champion has a 3★ ult upgrade', allHaveUlt);
 
 console.log(`\n${fail === 0 ? '✓ ALL PASS' : '✗ ' + fail + ' FAILED: ' + fails.join(', ')}  (${pass} passed, ${fail} failed)\n`);
 process.exit(fail ? 1 : 0);
