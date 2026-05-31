@@ -118,5 +118,19 @@
 .vfx-stun { width: 16%; aspect-ratio: 1; border-radius: 50%; border-top: 3px dashed var(--gold); border-bottom: 3px dashed var(--gold); filter: drop-shadow(0 0 5px var(--gold)); }
 .vfx-rune { width: 22%; aspect-ratio: 1; border: 2px solid #9d6bff; border-radius: 5px; background: conic-gradient(from 0deg, #9d6bff44, transparent, #9d6bff44, transparent); box-shadow: 0 0 12px #9d6bff; }
 
+/* ── v2 "Detailed" art: articulated idle so the rig visibly moves its limbs/cape ── */
+.champ-v2 .v2-head, .champ-v2 .v2-cape, .champ-v2 .v2-arm-front, .champ-v2 .v2-arm-back, .champ-v2 .v2-torso, .champ-v2 .v2-leg-l, .champ-v2 .v2-leg-r { transform-box: view-box; }
+.champ-v2 .v2-head { transform-origin: 50px 52px; animation: v2head 3s ease-in-out infinite; }
+@keyframes v2head { 50% { transform: translateY(-1.6px) rotate(1.6deg); } }
+.champ-v2 .v2-torso { transform-origin: 50px 88px; animation: v2breath 3s ease-in-out infinite; }
+@keyframes v2breath { 50% { transform: scaleY(1.025) translateY(-1px); } }
+.champ-v2 .v2-cape { transform-origin: 50px 56px; animation: v2cape 3.6s ease-in-out infinite; }
+@keyframes v2cape { 50% { transform: skewX(-3.5deg) translateX(-1px); } }
+.champ-v2 .v2-arm-front { transform-origin: 28px 62px; animation: v2armf 3s ease-in-out infinite; }
+@keyframes v2armf { 50% { transform: rotate(-4.5deg); } }
+.champ-v2 .v2-arm-back { transform-origin: 68px 62px; animation: v2armb 3.3s ease-in-out infinite; }
+@keyframes v2armb { 50% { transform: rotate(4.5deg); } }
+@media (prefers-reduced-motion: reduce) { .champ-v2 .v2-head, .champ-v2 .v2-cape, .champ-v2 .v2-arm-front, .champ-v2 .v2-arm-back, .champ-v2 .v2-torso { animation: none; } }
+
 /* crit damage number: bigger, bold, gold with a punchy outline */
 .dmg-num.crit { font-size: 20px; font-weight: 900; text-shadow: 0 2px 4px #000, 0 0 6px var(--gold), 0 0 2px #000; letter-spacing: -0.5px; }
