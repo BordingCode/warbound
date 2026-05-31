@@ -15,7 +15,7 @@ const COST_BASE = {
 // Role shapes: how a class bends the base stats + which mana-gen profile it uses.
 // manaPer = mana gained per auto-attack (TFT: carry 10, caster 7, tank 5).
 const ROLE = {
-  knight:   { hpx: 1.40, adx: 1.12, range: 1, manaPer: 7, startMana: 0.20 },
+  knight:   { hpx: 1.62, adx: 1.12, range: 1, manaPer: 7, startMana: 0.20 },   // tankier to survive the longer (slower-march) approach
   mage:     { hpx: 0.85, adx: 0.70, range: 3, manaPer: 8, startMana: 0.35 },
   ranger:   { hpx: 0.95, adx: 1.10, range: 3, manaPer: 10, startMana: 0.10 },
   assassin: { hpx: 0.90, adx: 1.20, range: 1, manaPer: 10, startMana: 0.20, dive: true },

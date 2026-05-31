@@ -7,6 +7,7 @@ import { UNITS_BY_ID } from '../data/units.js';
 import { Sfx } from '../audio/audio.js';
 import { Shake } from './fx.js';
 import { ic } from '../icons.js';
+import { MOVE_INTERVAL } from '../sim/combat.js';
 
 const DT_COLORS = { physical: 'var(--dt-physical)', magic: 'var(--dt-magic)', true: 'var(--dt-true)', heal: 'var(--dt-heal)' };
 
@@ -366,9 +367,9 @@ export class CombatPlayer {
     switch (e.type) {
       case 'spawn': this._spawn(e); break;
       case 'move': if (n) {
-        // glide one cell over the walk time (matches sim MOVE_INTERVAL ~280ms), scaled by playback
-        // speed, with linear easing so a multi-cell march flows smoothly instead of bouncing per cell.
-        n.el.style.transition = `transform ${Math.round(280 / this.speed)}ms linear`;
+        // glide one cell over the sim's walk time (MOVE_INTERVAL), scaled by playback speed, with
+        // linear easing so a multi-cell march flows smoothly instead of bouncing per cell.
+        n.el.style.transition = `transform ${Math.round((MOVE_INTERVAL * 1000) / this.speed)}ms linear`;
         n.el.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`;
         n.el.style.zIndex = e.row + 1;
       } break;

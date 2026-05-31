@@ -12,8 +12,11 @@ import { aggregateMods } from '../data/items.js';
 const DT = 1 / 30;
 const MAX_TICKS = 30 * 45;       // 45s hard cap
 const SUDDEN_DEATH_T = 25;       // after 25s, ramping true damage breaks stalemates
-const MOVE_INTERVAL = 0.28;      // seconds to walk ONE cell (auto-chess/underlords pace, ~3.5 cells/s)
-                                 // — NOT one-tile-per-tick; melee visibly marches in to engage.
+export const MOVE_INTERVAL = 0.42;   // seconds to walk ONE cell (~2.4 cells/s — a deliberate TFT/
+                                 // Underlords-style march, slower than the old frantic 0.28s pace).
+                                 // The renderer reads this so the glide stays in sync. NOTE: changing
+                                 // this shifts melee-vs-ranged balance (melee engage later) — re-run
+                                 // node js/sim/autobalance.js after any change.
 
 const COMBAT_KEYS = ['ad', 'as', 'hp', 'ap', 'armor', 'mr', 'shield', 'vamp', 'thorns', 'critChance', 'critDmg', 'revive'];
 
