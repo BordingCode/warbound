@@ -2,19 +2,21 @@
 .stage {
   position: relative;
   width: min(96vw, 56svh, 520px);
-  margin: 0 auto;
+  margin: 26px auto 0;           /* headroom above the board so top-row heads have room to show */
   aspect-ratio: 1 / 1;
   touch-action: none;            /* drag surface: never scroll the page from here */
 }
 .board-wrap {
   position: absolute; inset: 0;
   border-radius: var(--radius);
-  overflow: hidden;
+  /* NOT clipped — so a top-row unit's head can overflow up into the board's headroom instead
+     of being cut off. The tile grid below is clipped to keep the rounded board edge clean. */
   box-shadow: var(--shadow-2), inset 0 0 0 1px var(--tile-edge);
   background: var(--bg-1);
 }
 .tiles {
   position: absolute; inset: 0;
+  border-radius: var(--radius); overflow: hidden;   /* clip the grid to the rounded board */
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   grid-template-rows: repeat(8, minmax(0, 1fr));

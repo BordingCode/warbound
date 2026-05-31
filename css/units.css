@@ -43,6 +43,11 @@
 /* scale the champion (not the box) for star level, so the cell anchor never shifts */
 .unit[data-star="2"] .champ { width: 134%; }
 .unit[data-star="3"] .champ { width: 150%; filter: drop-shadow(0 0 4px var(--gold)); }
+/* v2 art uses a taller canvas (140 vs 120). Narrow it ~×0.857 so its rendered HEIGHT matches the
+   classic art — otherwise the extra height overflows the board top and clips top-row heads. */
+.unit .champ.champ-v2 { width: 103%; }
+.unit[data-star="2"] .champ.champ-v2 { width: 115%; }
+.unit[data-star="3"] .champ.champ-v2 { width: 129%; }
 
 /* hp + mana bars, ABOVE the unit, team-coloured (green = yours, red = enemy) */
 .unit .bars {

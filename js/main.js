@@ -299,7 +299,7 @@ function buildBenchEl() {
       const inner = el('.frame', { html: championSVG(UNITS_BY_ID[u.defId], { size: 38 }) });
       if (u.star > 1) inner.append(el('.stars', { style: { position: 'absolute', top: '-2px' } }, '★'.repeat(u.star)));
       slot.append(inner);
-      slot.dataset.uid = u.uid;
+      slot.dataset.uid = u.uid || '';
     }
     bench.append(slot);
   });
@@ -315,14 +315,18 @@ function starMap() { const m = {}; for (const u of [...run.board, ...run.bench.f
 function doBuy(i) {
   const before = starMap();
   act(() => Run.buy(run, i));
-  // celebrate the emotional peak of the genre: a champion that just leveled up (TFT 1→2→3★)
-  const upgraded = [...run.board, ...run.bench.filter(Boolean)].find((u) => before[u.uid] != null && u.star > before[u.uid]);
-  if (upgraded) { celebrateFuse(upgraded.uid, upgraded.star); Sfx.fuse(); }
+  // celebrate the emotional peak of the genre: any champion that just leveled up (TFT 1→2→3★).
+  // Use `before[uid] || 1` so a fuse where the freshly-bought copy is the one kept (its prior
+  // star is unknown) still celebrates — and celebrate ALL upgrades (a buy can cascade to two).
+  const upgraded = [...run.board, ...run.bench.filter(Boolean)].filter((u) => u.star > (before[u.uid] || 1));
+  if (upgraded.length) { upgraded.forEach((u) => celebrateFuse(u.uid, u.star)); Sfx.fuse(); }
   else Sfx.buy();
 }
-// pop + gold shine on the upgraded champion's node (board unit or bench slot)
+// pop + gold shine on the upgraded champion's node (board unit or bench slot). Scoped to YOUR
+// units (never the dimmed enemy preview) and guarded so it can't ever target an empty uid.
 function celebrateFuse(uid, star) {
-  const node = document.querySelector(`.units .unit[data-uid="${uid}"]`) || document.querySelector(`.bench .slot[data-uid="${uid}"]`);
+  if (!uid) return;
+  const node = document.querySelector(`.units .unit.team-player:not(.preview)[data-uid="${uid}"]`) || document.querySelector(`.bench .slot[data-uid="${uid}"]`);
   if (!node) return;
   node.classList.add('fusing');
   if (star >= 3) node.classList.add('fusing-gold');   // ★★★ = the holographic gold moment
