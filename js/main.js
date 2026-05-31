@@ -745,6 +745,26 @@ async function startCombat() {
   }, 1100);
 }
 
+// A calm themed emblem per realm, matching its flavour — tinted with the realm's colour.
+const REALM_EMBLEMS = [
+  // 0 The Marches — crossed swords (border skirmish)
+  '<path d="M4 3.5l9 9-2 2-9-9zM20 3.5l-9 9 2 2 9-9z"/><circle cx="5.5" cy="18.5" r="2.3"/><circle cx="18.5" cy="18.5" r="2.3"/>',
+  // 1 The Deepwood — pine tree (elven wood)
+  '<path d="M12 2l5 7h-3l4 6h-4v5h-4v-5H6l4-6H7z"/>',
+  // 2 The Bonelands — skull (undead horde)
+  '<path d="M12 2C7.6 2 4 5.4 4 9.6c0 2.5 1.2 4.2 3 5.4V19h2.2v-2.2h1.6V19h2.4v-2.2h1.6V19H18v-4c1.8-1.2 3-2.9 3-5.4C21 5.4 17.4 2 12 2z"/><circle cx="8.8" cy="10.4" r="1.9" fill="#0c0f17"/><circle cx="15.2" cy="10.4" r="1.9" fill="#0c0f17"/>',
+  // 3 The Inferno — flame (demon legions)
+  '<path d="M13 2c.6 3-2 4.6-2 7 0 1.3 1 2 2 1.2 1-.8 1.1-2.2 1.3-3.4C16.2 9 17.5 11 17.5 14a5.5 5.5 0 11-11 0c0-2.7 1.6-4.7 3-6.6C10.8 9 12 10.2 12.5 11.4 13.4 9 12 5 13 2z"/>',
+  // 4 The Dragonspire — dragon head profile (dragonsworn)
+  '<path d="M2 11l3-1 1-2c1-1 3-1.5 5-1.3-.6.5-1 1.1-1.1 1.8 1.6-.3 3.2.2 4.6 1.3 1.4 1.1 2.3 2.7 2.5 4.6-1.2-1.3-2.5-2-3.9-2.1l1.3 3.4-3.2-2.6c-1.9.6-3.8.2-5.7-1.2.9 0 1.6-.3 2.1-.9-1.3.1-2.4-.3-3.5-1.3z"/><circle cx="9.4" cy="9.8" r=".9" fill="#0c0f17"/>',
+  // 5 The Voidreach — void swirl / portal (every horror)
+  '<path d="M12 3a9 9 0 109 9 5.5 5.5 0 11-5.5-5.5A9 9 0 0012 3zm0 4.5A4.5 4.5 0 117.5 12 2.7 2.7 0 1012 9.3 4.4 4.4 0 0012 7.5z"/>',
+];
+function realmEmblemSVG(i, size = 30) {
+  const inner = REALM_EMBLEMS[i] || '<path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7z"/>';  // fallback: star (endless realms)
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" aria-hidden="true">${inner}</svg>`;
+}
+
 // Realm select — "Conquer the Realms". Conquered realms are permanent (replay to farm gold);
 // the frontier realm is the next to claim; later realms stay locked until you reach them.
 function showRealms() {
@@ -760,7 +780,7 @@ function showRealms() {
       style: { '--rc': r.color },
       onclick: status === 'locked' ? null : () => startSolo(true, i),
     }, [
-      el('.rc-side', {}, [el('.rc-num', {}, 'Realm ' + r.num), status === 'conquered' ? el('.rc-mark', { html: ic('trophy') }) : status === 'locked' ? el('.rc-mark', { html: ic('lock') }) : null]),
+      el('.rc-side', {}, [el('.rc-num', {}, 'Realm ' + r.num), el('.rc-emblem', { html: realmEmblemSVG(i) }), status === 'conquered' ? el('.rc-mark', { html: ic('trophy') }) : status === 'locked' ? el('.rc-mark', { html: ic('lock') }) : null]),
       el('.rc-body', {}, [
         el('.rc-name', {}, r.name),
         el('.rc-hint', {}, r.hint),
