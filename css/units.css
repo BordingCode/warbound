@@ -108,6 +108,7 @@
 .vfx-heal { width: 13%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, var(--dt-heal), transparent); }
 .vfx-shield { width: 15%; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--shield); background: radial-gradient(closest-side, transparent 60%, #ffe08a33); box-shadow: 0 0 10px var(--shield); }
 .vfx-scorch { width: 9%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, #000a, #0000); }
+.vfx-blink { width: 12%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, #c79bffcc, transparent); box-shadow: 0 0 12px #c79bff; }
 
 /* crit damage number: bigger, bold, gold with a punchy outline */
 .dmg-num.crit { font-size: 20px; font-weight: 900; text-shadow: 0 2px 4px #000, 0 0 6px var(--gold), 0 0 2px #000; letter-spacing: -0.5px; }

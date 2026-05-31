@@ -255,7 +255,16 @@ export class CombatPlayer {
         n.el.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`;
         n.el.style.zIndex = e.row + 1;
       } break;
-      case 'blink': if (n) { n.el.style.transition = 'none'; n.el.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`; n.el.style.zIndex = e.row + 1; requestAnimationFrame(() => (n.el.style.transition = '')); } break;
+      case 'blink': if (n) {
+        // assassin DIVE — telegraph it so it reads as an intentional teleport-strike, not a glitch:
+        // a fading after-image at the old cell, an instant snap, then a landing puff + spark.
+        const from = this._pos(e.id);
+        if (from) { const ghost = this._fx('vfx-blink', from.x, from.y); ghost.animate([{ opacity: .5, transform: 'translate(-50%,-50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(.4)' }], { duration: 260 / this.speed, easing: 'ease-out' }).finished.then(() => ghost.remove()).catch(() => {}); }
+        n.el.style.transition = 'none'; n.el.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`; n.el.style.zIndex = e.row + 1; requestAnimationFrame(() => (n.el.style.transition = ''));
+        const to = this._pos(e.id);
+        if (to) { const land = this._fx('vfx-blink', to.x, to.y); land.animate([{ opacity: .75, transform: 'translate(-50%,-50%) scale(.4)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.15)' }], { duration: 240 / this.speed, easing: 'ease-out' }).finished.then(() => land.remove()).catch(() => {}); }
+        this._spark(e.id, 'var(--dt-physical)', 5, 22); this.shake.add(0.1);
+      } break;
       case 'attack': {
         const a = this.nodes.get(e.id); if (!a) break;
         const body = a.el.querySelector('.champ-body');

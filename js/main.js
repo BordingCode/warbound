@@ -90,6 +90,12 @@ function buildBoardEl() {
     }
   }
   wrap.append(tiles, el('.midline'), units, el('.fx-dom'));
+  if (!inCombat) {   // standing reminder that the near rows take the hits and the far rows are safe
+    wrap.append(
+      el('.pos-cue.front', { title: 'Your front row engages first — put tanks here' }, 'Front line'),
+      el('.pos-cue.back', { title: 'Ranged & fragile carries are safest here' }, 'Back line'),
+    );
+  }
   stage.append(wrap);
   return { stage, wrap, units };
 }
@@ -655,7 +661,7 @@ function showHelp() {
     ['sword', '<b>Drag</b> champions from your bench onto the board to deploy them. Drag to the Sell zone to sell.'],
     ['gem', '<b>Synergies:</b> matching <b>Origins</b> (Undead, Elf, Dragon…) & <b>Classes</b> (Knight, Mage…) unlock team bonuses — see the bar near the top.'],
     ['star', '<b>3 copies</b> of the same champion auto-fuse into a stronger ★★ (then ★★★).'],
-    ['shield', '<b>Position matters:</b> tanks in front, fragile carries in back. Then press Ready.'],
+    ['shield', '<b>Position matters:</b> your <b>front row</b> engages first — put tough units (knights) there to shield your <b>ranged</b> units (mages, archers), who fight best from the <b>back row</b>. Assassins teleport to strike the enemy back line. Then press Ready.'],
     ['eye', '<b>Tap a champion</b> to inspect its stats & ability. Watch the dimmed enemy preview to counter them.'],
     run.mode === 'ladder'
       ? ['trophy', '<b>Last warband standing wins.</b> You and 7 rival warlords share one champion pool. Lose a fight and your <b>HP</b> drops — when it hits 0 you\'re out. Outlast everyone to win.']

@@ -113,12 +113,75 @@ const TORSO_KIND = {
   assassin: 'leather', healer: 'cloak', summoner: 'cloak',
 };
 
+// ----- Phase-1 per-hero identity: a chest sigil (shape signal) + a colour key (accent) so
+// units that share a class+origin still read apart at a glance. Sigils live in a 0..16 box,
+// drawn over the chest. Shape carries identity; the colour key recolours accent details. -----
+const SIGILS = {
+  shield:   '<path d="M8 0l7 2.4v4.8c0 4.6-3 8-7 9.8-4-1.8-7-5.2-7-9.8V2.4z"/>',
+  orb:      '<circle cx="8" cy="8" r="6"/>',
+  arrow:    '<path d="M8 0l3.2 5H9.4l.7 11H5.9l.7-11H4.8z"/>',
+  diamond:  '<path d="M8 0l5.2 8L8 16 2.8 8z"/>',
+  cross:    '<path d="M6 0h4v6h6v4h-6v6H6v-6H0V6h6z"/>',
+  skull:    '<path d="M8 0C4.7 0 2 2.5 2 5.8c0 1.8.9 3 2.1 3.8V13H6v-1.6h.9V13h2.2v-1.6h.9V13H12V9.6c1.2-.8 2.1-2 2.1-3.8C14.1 2.5 11.4 0 8 0z"/><circle cx="5.6" cy="6.4" r="1.3" fill="#0b0f17"/><circle cx="10.4" cy="6.4" r="1.3" fill="#0b0f17"/>',
+  crescent: '<path d="M10.5 0a8 8 0 100 16A6.2 6.2 0 1110.5 0z"/>',
+  leaf:     '<path d="M8 0C3.2 4 1.2 9 4 15c5.8-1 8.8-6 8.8-13-2 .8-3.2 2-4.2 3.8C7.6 4 8 2 8 0z"/>',
+  flame:    '<path d="M9 0c.4 3-1.6 4-1.6 6 0 1 .8 1.5 1.6.9C10.2 6 9.8 4.4 11 3c1.3 2 1.9 3.6 1.9 5.8a4.9 4.9 0 11-9.8 0C3.1 6.6 4.2 5 5.4 3.6 7 5.4 8 6.2 8.4 7.2 9 5.4 8 2.8 9 0z"/>',
+  fang:     '<path d="M3 0h10l-1.8 5.5L8 14 4.8 5.5z"/>',
+  horns:    '<path d="M2 14C1.2 8.4 2.2 3.4 5 .6c.2 3.8 1.2 6.6 3 8.4 1.8-1.8 2.8-4.6 3-8.4 2.8 2.8 3.8 7.8 3 13.4-1.8-2.6-3.8-3.8-6-3.8s-4.2 1.2-6 3.8z"/>',
+  star:     '<path d="M8 1l1.9 4.6 5 .4-3.8 3.3 1.2 4.9L8 15.6 3.7 14.2l1.2-4.9L1.1 6l5-.4z"/>',
+};
+// Per-hero art: a signature accent (colour key) + chest sigil (+ optional build). Most heroes
+// share a class silhouette; these two cheap signals make same-class/same-origin units distinct.
+const HERO_ART = {
+  // Human
+  knight_captain:  { palette: { accent: '#ffd95c' }, emblem: 'shield',   build: 'broad' },
+  court_mage:      { palette: { accent: '#6fb1ff' }, emblem: 'orb' },
+  crossbowman:     { palette: { accent: '#cfd8e6' }, emblem: 'arrow' },
+  royal_blade:     { palette: { accent: '#eae2ff' }, emblem: 'diamond' },
+  field_medic:     { palette: { accent: '#7affc0' }, emblem: 'cross' },
+  // Undead
+  bone_guard:      { palette: { accent: '#d8e6cc' }, emblem: 'shield',   build: 'broad' },
+  lich:            { palette: { accent: '#8cff9e' }, emblem: 'skull' },
+  skeleton_archer: { palette: { accent: '#b6e0a0' }, emblem: 'arrow' },
+  wraith:          { palette: { accent: '#b0ffd8' }, emblem: 'crescent' },
+  necromancer:     { palette: { accent: '#6effa0' }, emblem: 'orb' },
+  // Elf
+  thornguard:      { palette: { accent: '#7fe6b0' }, emblem: 'shield',   build: 'broad' },
+  moon_priestess:  { palette: { accent: '#aef0ff' }, emblem: 'crescent' },
+  wood_ranger:     { palette: { accent: '#8fe07a' }, emblem: 'leaf' },
+  shadow_dancer:   { palette: { accent: '#9fb0ff' }, emblem: 'diamond' },
+  grove_healer:    { palette: { accent: '#7affc0' }, emblem: 'cross' },
+  spirit_caller:   { palette: { accent: '#b0ffe0' }, emblem: 'orb' },
+  // Demon
+  hellguard:       { palette: { accent: '#ff8a4c' }, emblem: 'shield',   build: 'broad' },
+  warlock:         { palette: { accent: '#ff5a3c' }, emblem: 'flame' },
+  fel_archer:      { palette: { accent: '#ff7a5c' }, emblem: 'arrow' },
+  imp_assassin:    { palette: { accent: '#ff9a6c' }, emblem: 'fang' },
+  pit_summoner:    { palette: { accent: '#ff5e8a' }, emblem: 'horns' },
+  // Beast
+  beast_hunter:    { palette: { accent: '#ffc46a' }, emblem: 'arrow' },
+  bramble_brute:   { palette: { accent: '#c8e06a' }, emblem: 'leaf',     build: 'broad' },
+  pack_stalker:    { palette: { accent: '#ffb15a' }, emblem: 'fang' },
+  druid_healer:    { palette: { accent: '#9be86a' }, emblem: 'cross' },
+  beastmaster:     { palette: { accent: '#ffd24a' }, emblem: 'horns' },
+  // Dragon
+  dragon_knight:   { palette: { accent: '#ffd24a' }, emblem: 'shield',   build: 'broad' },
+  dragon_sage:     { palette: { accent: '#c79bff' }, emblem: 'flame' },
+  wyrm_archer:     { palette: { accent: '#ffce5c' }, emblem: 'arrow' },
+};
+function emblem(art) {
+  if (!art || !art.emblem || !SIGILS[art.emblem]) return '';
+  // off-white crest reads on any torso; the colour key (accent) lives in the gear/glow details.
+  return `<g transform="translate(42,68)" fill="#eef3ff" opacity="0.9" stroke="#0b0f17" stroke-width="0.6" stroke-opacity="0.35">${SIGILS[art.emblem]}</g>`;
+}
+
 // Build the inner SVG content (no <svg> wrapper) for a champion definition.
 // `paletteOverride` lets callers recolor pieces (e.g. the Armory hero's armor = its gear).
 export function championInner(def, paletteOverride) {
-  const p = Object.assign({}, PALETTES[def.origin] || PALETTES.human, paletteOverride || {});
+  const art = HERO_ART[def.defId] || null;
+  const p = Object.assign({}, PALETTES[def.origin] || PALETTES.human, (art && art.palette) || {}, paletteOverride || {});
   const kind = TORSO_KIND[def.klass] || 'leather';
-  const slim = def.klass === 'assassin' || def.klass === 'ranger';
+  const slim = art && art.build ? art.build === 'slim' : (def.klass === 'assassin' || def.klass === 'ranger');
   return [
     shadow(),
     def.origin === 'dragon' ? wings(p) : '',
@@ -128,6 +191,7 @@ export function championInner(def, paletteOverride) {
     head(p),
     originAccent(p, def.origin),
     gear(p, def.klass),
+    emblem(art),
   ].join('');
 }
 
