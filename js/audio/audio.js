@@ -70,11 +70,11 @@ export const Sfx = {
   fuse() { [0, 2, 4].forEach((i, k) => setTimeout(() => tone(noteHz(PENT[i] + 12), { type: 'triangle', dur: 0.18, gain: 0.16 }), k * 80)); },
   victory() { duck(); [0, 2, 4, 7].forEach((s, k) => setTimeout(() => tone(noteHz(s + 12), { type: 'triangle', dur: 0.4, gain: 0.2, cutoff: 5000 }), k * 130)); },
   defeat() { duck(); [4, 2, 0].forEach((s, k) => setTimeout(() => tone(noteHz(s) * 0.75, { type: 'sine', dur: 0.5, gain: 0.18, cutoff: 1600 }), k * 200)); },
-  // Rarity reward fanfare — grander as tier rises (0=common … 5=ascended). Pentatonic & soft, never harsh.
+  // Rarity reward fanfare — grander as tier rises (0=common … 7=godforged). Pentatonic & soft, never harsh.
   reward(tier = 0) {
-    const t = Math.max(0, Math.min(5, tier));
+    const t = Math.max(0, Math.min(7, tier));
     const run = [0, 3, 5, 7, 10, 12];                       // rising minor-pentatonic run
-    const len = [1, 2, 4, 5, 6, 6][t];
+    const len = [1, 2, 4, 5, 6, 6, 6, 6][t];
     const g = 0.14 + t * 0.018;
     if (t >= 2) duck();
     for (let k = 0; k < len; k++) {

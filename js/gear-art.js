@@ -2,11 +2,11 @@
 // rarity (trim colour, gem, and a glow/ornament that grows with tier). Replaces the flat
 // monochrome icons for equipped/inventory pieces. viewBox 0 0 64 64; returns an <svg> string.
 
-const TIER = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4, ascended: 5 };
+const TIER = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4, ascended: 5, celestial: 6, godforged: 7 };
 
 // metallic vertical gradient + a rarity glow, shared defs per render (unique ids via `uid`)
 function defs(uid, rc, tier) {
-  const glow = [0, 0.12, 0.2, 0.32, 0.45, 0.6][tier] || 0;
+  const glow = [0, 0.12, 0.2, 0.32, 0.45, 0.6, 0.75, 0.9][tier] || 0;
   return `<defs>
     <linearGradient id="steel${uid}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#e8eef6"/><stop offset=".45" stop-color="#aab6c6"/><stop offset="1" stop-color="#5c6677"/>
@@ -101,7 +101,7 @@ const ART = {
 
 let _gid = 0;
 export function gearArt(slotId, rarityId, size = 48) {
-  const rc = ({ common: '#9aa6b8', rare: '#6fb1ff', epic: '#c79bff', legendary: '#ffb031', mythic: '#ff5e8a', ascended: '#7df9ff' })[rarityId] || '#9aa6b8';
+  const rc = ({ common: '#9aa6b8', rare: '#6fb1ff', epic: '#c79bff', legendary: '#ffb031', mythic: '#ff5e8a', ascended: '#7df9ff', celestial: '#e7efff', godforged: '#ffe08a' })[rarityId] || '#9aa6b8';
   const tier = TIER[rarityId] || 0;
   const fn = ART[slotId] || ART.armor;
   const uid = 'g' + (_gid++);

@@ -1056,7 +1056,7 @@ function beginLadder(styleId) {
 }
 // The Champion portrait's ARMOUR recolours to the equipped Armor (and weapon tints the accent),
 // so swapping gear visibly changes the hero. Rarity drives the colour (steel→blue→purple).
-const RARITY_TINT = { common: '#9aa6b8', rare: '#6fb1ff', epic: '#c79bff', legendary: '#ffb031', mythic: '#ff5e8a', ascended: '#7df9ff' };
+const RARITY_TINT = { common: '#9aa6b8', rare: '#6fb1ff', epic: '#c79bff', legendary: '#ffb031', mythic: '#ff5e8a', ascended: '#7df9ff', celestial: '#e7efff', godforged: '#ffe08a' };
 function heroPalette(m) {
   const pal = {};
   const arm = Meta.equippedItem(m, 'armor'); if (arm) pal.secondary = RARITY_TINT[arm.rarity];   // plate/helm/shield
@@ -1176,11 +1176,11 @@ function revealItem(item, after) {
   const motion = motionOn();
   Sfx.reward(tier);
   // the rarer the find, the louder the moment: confetti (epic+), rotating rays + shake + screen flash (legendary+)
-  const confettiMs = [0, 0, 1800, 3600, 5200, 6500][tier] || 0;
+  const confettiMs = [0, 0, 1800, 3600, 5200, 6500, 8000, 9500][tier] || 0;
   if (confettiMs && motion) launchConfetti(confettiMs);
   const hi = tier >= 3;
   if (hi && motion) { const flash = el('.reveal-flash', { style: { '--rc': rar.color } }); document.body.append(flash); setTimeout(() => flash.remove(), 700); }
-  const label = ['Common find', 'Rare find!', 'Epic find!', '✦ Legendary! ✦', '★ Mythic! ★', '✦ ASCENDED! ✦'][tier] || `${rar.name} find`;
+  const label = ['Common find', 'Rare find!', 'Epic find!', '✦ Legendary! ✦', '★ Mythic! ★', '✦ ASCENDED! ✦', '✦ CELESTIAL! ✦', '★ GODFORGED! ★'][tier] || `${rar.name} find`;
   const ov = el('.overlay', {}, el(`.reveal-card rarity-${item.rarity}${hi && motion ? ' impact' : ''}`, { style: { '--rc': rar.color, '--ic': Meta.itemColor(item) } }, [
     el('.reveal-burst'),
     hi ? el('.reveal-rays') : null,
@@ -1203,7 +1203,7 @@ function revealBulk(items, after) {
   const sorted = items.slice().sort((a, b) => tierOf(b) - tierOf(a));
   const bestTier = tierOf(sorted[0]);
   Sfx.reward(bestTier);
-  if (motionOn() && bestTier >= 2) launchConfetti([0, 0, 1500, 3000, 4500, 6000][bestTier] || 1500);
+  if (motionOn() && bestTier >= 2) launchConfetti([0, 0, 1500, 3000, 4500, 6000, 7500, 9000][bestTier] || 1500);
   const rarColor = (it) => (Meta.RARITIES.find((r) => r.id === it.rarity) || {}).color || '#9aa6b8';
   const ov = el('.overlay', {}, el('.reveal-card bulk-card', { style: { maxWidth: '380px', width: '92%' } }, [
     el('h2', {}, `Opened ${items.length} War Cache${items.length > 1 ? 's' : ''}`),

@@ -9,17 +9,17 @@
 import { TRAITS } from '../data/traits.js';
 
 // each slot = one effect family. icon + colour + names all telegraph the effect.
-// vals/names indexed by rarity: [common, rare, epic, legendary, mythic, ascended].
+// vals/names indexed by rarity: [common, rare, epic, legendary, mythic, ascended, celestial, godforged].
 export const SLOTS = [
-  { id: 'weapon', name: 'Weapon', icon: 'sword',  color: '#ff6a4c', eff: 'ad',      vals: [0.06, 0.10, 0.16, 0.23, 0.32, 0.44], names: ['Worn Blade', 'Keen Saber', 'Bloodfang Axe', 'Dragonbane Greatsword', 'Worldender', 'Ragnarok'] },
-  { id: 'armor',  name: 'Armor',  icon: 'shield', color: '#7affa0', eff: 'lives',   vals: [1, 2, 3, 4, 6, 8],                   names: ['Padded Vest', 'Iron Cuirass', 'Aegis Plate', 'Dragonscale Bulwark', 'Aegis of the Titans', 'Bastion Eternal'] },
-  { id: 'tome',   name: 'Tome',   icon: 'book',   color: '#6fb1ff', eff: 'xp',      vals: [5, 10, 18, 28, 40, 56],              names: ['Field Manual', 'War Codex', 'Tome of Mastery', 'Grimoire of Ages', 'Codex Infinitum', 'Codex Eternal'] },
-  { id: 'coffer', name: 'Coffer', icon: 'coffer', color: '#ffce5c', eff: 'gold',    vals: [4, 8, 14, 22, 32, 46],               names: ['Coin Pouch', "Merchant's Coffer", 'Dragon Hoard', 'Vault of Kings', 'Reliquary of Midas', 'Hoard Eternal'] },
-  { id: 'relic',  name: 'Relic',  icon: 'gem',    color: '#c79bff', eff: 'synergy', vals: [1, 1, 1, 2, 2, 3],                   names: ['Sigil', 'Idol', 'Totem', 'Relic', 'Artifact', 'Eternal Sigil'] },
+  { id: 'weapon', name: 'Weapon', icon: 'sword',  color: '#ff6a4c', eff: 'ad',      vals: [0.06, 0.10, 0.16, 0.23, 0.32, 0.44, 0.58, 0.74], names: ['Worn Blade', 'Keen Saber', 'Bloodfang Axe', 'Dragonbane Greatsword', 'Worldender', 'Ragnarok', 'Celestial Edge', 'Godslayer'] },
+  { id: 'armor',  name: 'Armor',  icon: 'shield', color: '#7affa0', eff: 'lives',   vals: [1, 2, 3, 4, 6, 8, 10, 13],                       names: ['Padded Vest', 'Iron Cuirass', 'Aegis Plate', 'Dragonscale Bulwark', 'Aegis of the Titans', 'Bastion Eternal', 'Celestial Aegis', 'Godplate'] },
+  { id: 'tome',   name: 'Tome',   icon: 'book',   color: '#6fb1ff', eff: 'xp',      vals: [5, 10, 18, 28, 40, 56, 74, 96],                  names: ['Field Manual', 'War Codex', 'Tome of Mastery', 'Grimoire of Ages', 'Codex Infinitum', 'Codex Eternal', 'Celestial Codex', 'Tome of Gods'] },
+  { id: 'coffer', name: 'Coffer', icon: 'coffer', color: '#ffce5c', eff: 'gold',    vals: [4, 8, 14, 22, 32, 46, 62, 82],                   names: ['Coin Pouch', "Merchant's Coffer", 'Dragon Hoard', 'Vault of Kings', 'Reliquary of Midas', 'Hoard Eternal', 'Celestial Hoard', 'Godhoard'] },
+  { id: 'relic',  name: 'Relic',  icon: 'gem',    color: '#c79bff', eff: 'synergy', vals: [1, 1, 1, 2, 2, 3, 3, 4],                         names: ['Sigil', 'Idol', 'Totem', 'Relic', 'Artifact', 'Eternal Sigil', 'Celestial Sigil', 'Godsigil'] },
 ];
 const SLOT_BY_ID = Object.fromEntries(SLOTS.map((s) => [s.id, s]));
-// Legendary, Mythic + Ascended are FORGE-ONLY (weight 0 = never drop from a War Cache) — you earn
-// them by fusing up the chain: two Epics → Legendary → Mythic → Ascended (the ceiling).
+// Legendary…Godforged are FORGE-ONLY (weight 0 = never drop from a War Cache) — you earn them by
+// fusing up the chain: Epic → Legendary → Mythic → Ascended → Celestial → Godforged (the ceiling).
 export const RARITIES = [
   { id: 'common',    name: 'Common',    color: '#8b97a8', weight: 64 },
   { id: 'rare',      name: 'Rare',      color: '#6fb1ff', weight: 28 },
@@ -27,8 +27,10 @@ export const RARITIES = [
   { id: 'legendary', name: 'Legendary', color: '#ffb031', weight: 0 },
   { id: 'mythic',    name: 'Mythic',    color: '#ff5e8a', weight: 0 },
   { id: 'ascended',  name: 'Ascended',  color: '#7df9ff', weight: 0 },
+  { id: 'celestial', name: 'Celestial', color: '#e7efff', weight: 0 },
+  { id: 'godforged', name: 'Godforged', color: '#ffe08a', weight: 0 },
 ];
-const RIDX = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4, ascended: 5 };
+const RIDX = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4, ascended: 5, celestial: 6, godforged: 7 };
 export const CHEST_COST = 12;
 const SAVE_KEY = 'warbound_meta_v2';
 const OLD_KEY = 'warbound_meta_v1';
@@ -159,8 +161,8 @@ export function gearBonuses(m) {
 }
 // ---- combine: fuse 2 of the SAME slot + SAME rarity into ONE of the next rarity up ----
 // "Its own kind": same equipment family (slot) and same tier. Chain all the way:
-// common -> rare -> epic -> legendary -> mythic -> ascended. Ascended is the ceiling.
-const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic', 'ascended'];
+// common -> rare -> epic -> legendary -> mythic -> ascended -> celestial -> godforged (ceiling).
+const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic', 'ascended', 'celestial', 'godforged'];
 export function nextRarity(rarityId) { const i = RARITY_ORDER.indexOf(rarityId); return i >= 0 && i < RARITY_ORDER.length - 1 ? RARITY_ORDER[i + 1] : null; }
 
 export function combinables(m) {
