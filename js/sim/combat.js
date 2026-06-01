@@ -7,7 +7,7 @@ import { UNITS_BY_ID, statsForStar, STAR_MULT } from '../data/units.js';
 import { activeTraits } from '../data/traits.js';
 import { idx, inBounds, neighbours, stepToward, COLS, ROWS } from '../grid.js';
 import { mitigate, manaFromDamage, nearestEnemy, enemiesNear, lowestHP, inRange } from './rules.js';
-import { aggregateMods } from '../data/items.js';
+import { aggregateMods, traitGrantsFor } from '../data/items.js';
 
 const DT = 1 / 30;
 const DOT_TICK = 0.5;            // burning/DoT damage lands in discrete 0.5s pulses
@@ -83,7 +83,13 @@ function makeUnit(entry, team, id, aug = null) {
 // Apply a team's active traits to its units (whole-team auras + tagged-only effects).
 // traitBonus (from Augment crowns) bumps synergy counts so a breakpoint can light up.
 function applyTraits(units, board, traitBonus = {}) {
-  const defs = board.map((e) => UNITS_BY_ID[e.defId]);
+  // attach per-unit Emblem trait-grants (warpath-only items) so the holder adds +1 to that
+  // trait's count; gid keeps two same-emblem holders counted as two distinct members.
+  const defs = board.map((e, i) => {
+    const d = UNITS_BY_ID[e.defId];
+    const grants = traitGrantsFor(e.items);
+    return grants.length ? { ...d, grants, gid: e.uid != null ? e.uid : 'b' + i } : d;
+  });
   const active = activeTraits(defs, traitBonus);
   const get = (t) => (active[t] && active[t].bonus) || null;
   for (const u of units) {

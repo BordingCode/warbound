@@ -249,10 +249,35 @@ const evId = (r, id) => evs(r).filter(e => e.id === id);
   ok('Pit Summoner — volatile summons detonate on death', evs(r).some(e => e.type === 'meteor'));
 }
 
+console.log('\n=== EMBLEMS (Warpath items grant a trait) + BRIDGE CHAMPIONS ===');
+// Knight Emblem makes a non-knight count toward Knight → unlocks the block breakpoint (2).
+{
+  const board = (withEmblem) => [
+    { defId: 'bone_guard', col: 3, row: 5, star: 3 },                                  // id 0 (only natural Knight)
+    { defId: 'court_mage', col: 3, row: 7, star: 1, items: withEmblem ? ['emblem_knight'] : [] },
+  ];
+  const E = [U('crossbowman', 3, 1, 3)];
+  const a = simulate(board(false), E, 7), b = simulate(board(true), E, 7);
+  const da = a.events.find(e => e.type === 'damage' && e.id === 0 && e.dmgType === 'physical');
+  const db = b.events.find(e => e.type === 'damage' && e.id === 0 && e.dmgType === 'physical');
+  ok('Knight Emblem (+1 Knight count → block active)', da && db && db.amount < da.amount, `first hit ${da?.amount}→${db?.amount}`);
+}
+// New bridge champions actually fire: Storm Shaman casts magic; Banner Sergeant summons bodies.
+{
+  const P = [U('storm_shaman', 3, 7, 2), U('bone_guard', 3, 5, 3)];
+  const r = simulate(P, WALL, 7, { aug: { player: { traitBonus: { human: 6 } } } });
+  ok('Storm Shaman (Beast-Mage) casts', dmgBy(r, 0, 'magic').length > 0, `${dmgBy(r, 0, 'magic').length} magic hits`);
+}
+{
+  const P = [U('banner_sergeant', 3, 7, 2), U('bone_guard', 3, 5, 3)];
+  const r = simulate(P, WALL, 7, { aug: { player: { traitBonus: { human: 6 } } } });
+  ok('Banner Sergeant (Human-Summoner) summons', r.events.some(e => e.type === 'spawn' && e.t > 0), 'summon spawn event present');
+}
+
 console.log('\n=== WIRING AUDIT (every champion has a UNIQUE signature ability) ===');
 const abilityNames = UNITS.map(u => u.ability && u.ability.name);
 const dupes = abilityNames.filter((n, i) => abilityNames.indexOf(n) !== i);
-ok('All 29 abilities are uniquely named', dupes.length === 0, dupes.length ? `DUPES: ${[...new Set(dupes)].join(', ')}` : `${abilityNames.length} unique`);
+ok(`All ${UNITS.length} abilities are uniquely named`, dupes.length === 0, dupes.length ? `DUPES: ${[...new Set(dupes)].join(', ')}` : `${abilityNames.length} unique`);
 // Every champion ships an ability — either active verbs OR a passive (pure-passive units have no cast).
 const hasPassive = (u) => u.ability && u.ability.passive;
 const allHaveKit = UNITS.every(u => u.ability && ((Array.isArray(u.ability.verbs) && u.ability.verbs.length) || hasPassive(u)));

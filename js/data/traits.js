@@ -96,6 +96,8 @@ export const TRAITS = {
 // Given a list of unit defs on the board, compute active trait counts (distinct units per
 // trait) and the highest reached breakpoint for each. `bonus` adds to a trait's COUNT
 // (from Augment crowns, e.g. {mage:1}) so it can push a synergy to its next breakpoint.
+// A unit object may carry `grants` (array of trait ids from equipped Emblems) + a unique
+// `gid` (so two units granting the same trait each count as a distinct +1, not deduped).
 export function activeTraits(units, bonus) {
   bonus = bonus || {};
   const seen = {};
@@ -103,6 +105,10 @@ export function activeTraits(units, bonus) {
     for (const t of [u.origin, u.klass]) {
       seen[t] = seen[t] || new Set();
       seen[t].add(u.defId);
+    }
+    if (u.grants && u.grants.length) {
+      const gid = u.gid != null ? u.gid : u.defId;
+      for (const t of u.grants) { seen[t] = seen[t] || new Set(); seen[t].add('E:' + gid + ':' + t); }
     }
   }
   const result = {};

@@ -2,7 +2,7 @@
 // injected seeded RNG for shop rolls); no DOM. Serialised to localStorage by IDs only.
 import { RNG, seedFromString } from '../rng.js';
 import { UNITS, UNITS_BY_ID } from '../data/units.js';
-import { COMPONENT_IDS, isComponent, combine } from '../data/items.js';
+import { COMPONENT_IDS, isComponent, combine, isEmblem, EMBLEM_IDS } from '../data/items.js';
 import { AUGMENTS, AUGMENT_IDS, augmentEcon, OFFER_TIER_WEIGHTS } from '../data/augments.js';
 import { activeTraits } from '../data/traits.js';
 
@@ -291,8 +291,11 @@ export function benchUnit(run, uid) { // move a board unit back to bench
 // ---- items ----
 export function addItem(run, id) { run.items.push({ iid: newUid(), id }); }
 export function draftComponents(run) { const ids = _rng.shuffle(COMPONENT_IDS).slice(0, 3); saveRngState(run); return ids; }
+// Warpath-only: offer 3 distinct emblems (grant a trait to one unit). Ladder never calls this.
+export function draftEmblems(run) { const ids = _rng.shuffle(EMBLEM_IDS.slice()).slice(0, 3); saveRngState(run); return ids; }
 export function equipItem(run, iid, uid) {
   const it = run.items.find((x) => x.iid === iid); if (!it) return false;
+  if (isEmblem(it.id) && run.mode === 'ladder') return false;   // emblems are Warpath-only (keep PvP pure)
   const u = run.board.find((b) => b.uid === uid) || run.bench.find((b) => b && b.uid === uid); if (!u) return false;
   u.items = u.items || [];
   if (u.items.length >= 3) return false;

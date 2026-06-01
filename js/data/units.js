@@ -223,6 +223,23 @@ const A = {
   wyrm_archer: { name: 'Storm of Arrows', type: 'physical', target: 'mostEnemies', adRatio: 2.8,
     verbs: [v.volley({ adRatio: 2.8 })],
     ult: { verbs: [v.volley({ adRatio: 2.8, offset: 4 }), v.slow(0.20, 2, 'allEnemies')] } },
+
+  // ── Bridge champions (fill empty Origin×Class cells → new pivots) ──
+  // Beast-MAGE: the only beast caster. PASSIVE — Frenzy: ramps its OWN attack/cast speed the
+  // longer it fights (a beast that snowballs spell cadence). 3★ leaves a burning field.
+  storm_shaman: { name: 'Primal Surge', type: 'magic', target: 'cluster', radius: 1, ap: 300,
+    verbs: [v.cluster({ radius: 1 })], passive: { on: 'spawn', verbs: [v.rageSelf(0.04, 0.6)] },
+    ult: { verbs: [v.dot(60, 3, 'cluster')] } },
+  // Undead-HEALER: enables undead attrition comps. PASSIVE — Plague Touch: its autos infect the
+  // target so they heal for less (anti-sustain). 3★ ult: a sweeping regen over the whole warband.
+  plague_priest: { name: 'Withering Mend', type: 'heal', target: 'lowestAllyHP', ap: 240,
+    verbs: [v.heal({ ap: 240 })], passive: { on: 'hit', verbs: [v.healCut(0.30, 4, 'current')] },
+    ult: { verbs: [v.regen(16, 3, 'allies')] } },
+  // Human-SUMMONER: disciplined ranks + a mana engine. PASSIVE — Rally: every muster also shields
+  // the soldiers beside the banner. 3★ ult: conscripts a heavy (double-stat) footman.
+  banner_sergeant: { name: 'Muster the Ranks', type: 'summon', summonHp: 950, summonAd: 115,
+    verbs: [v.summon({ count: 2, hp: 950, ad: 115 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
+    ult: { verbs: [v.summon({ count: 1, hp: 950, ad: 115, statMult: 2 })] } },
 };
 
 export const UNITS = [
@@ -269,6 +286,11 @@ export const UNITS = [
   mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.36, adx: 1.28 }),
   mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.30, adx: 1.24 }),
   mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.30, adx: 1.24 }),
+
+  // ---- Bridge champions (new pivots) ----
+  mk('storm_shaman',   'Storm Shaman',   'beast',  'mage',     3, A.storm_shaman),
+  mk('plague_priest',  'Plague Priest',  'undead', 'healer',   2, A.plague_priest),
+  mk('banner_sergeant','Banner Sergeant','human',  'summoner', 3, A.banner_sergeant),
 ];
 
 export const UNITS_BY_ID = Object.fromEntries(UNITS.map((u) => [u.defId, u]));

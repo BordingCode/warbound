@@ -32,6 +32,32 @@ export const ITEMS = {
   redemption:    { name: 'Redemption', icon: 'potion', mods: { hp: 0.30, shield: 160, regen: 8 } },
 };
 
+// ── EMBLEMS (Warpath-only) ──────────────────────────────────────────────────
+// Each emblem GRANTS its holder +1 of a trait's count (so a non-Knight counts as a
+// Knight for synergy breakpoints) plus a small thematic stat. `traitGrant` is read by
+// the sim (sim/combat.js → activeTraits per-unit grants). Acquisition is gated to
+// Warpath in run.js/main.js; the Ladder never offers or equips these (keeps PvP pure).
+export const EMBLEMS = {
+  // origins
+  emblem_human:   { name: 'Human Emblem',   icon: 'crown', emblem: true, mods: { hp: 0.08 },        traitGrant: { human: 1 } },
+  emblem_undead:  { name: 'Undead Emblem',  icon: 'crown', emblem: true, mods: { vamp: 0.10 },      traitGrant: { undead: 1 } },
+  emblem_elf:     { name: 'Elf Emblem',     icon: 'crown', emblem: true, mods: { as: 0.10 },         traitGrant: { elf: 1 } },
+  emblem_demon:   { name: 'Demon Emblem',   icon: 'crown', emblem: true, mods: { ap: 18 },           traitGrant: { demon: 1 } },
+  emblem_beast:   { name: 'Beast Emblem',   icon: 'crown', emblem: true, mods: { ad: 0.10 },         traitGrant: { beast: 1 } },
+  emblem_dragon:  { name: 'Dragon Emblem',  icon: 'crown', emblem: true, mods: { mr: 18, ad: 0.06 }, traitGrant: { dragon: 1 } },
+  // classes
+  emblem_knight:  { name: 'Knight Emblem',  icon: 'crown', emblem: true, mods: { armor: 18 },        traitGrant: { knight: 1 } },
+  emblem_mage:    { name: 'Mage Emblem',    icon: 'crown', emblem: true, mods: { ap: 22 },           traitGrant: { mage: 1 } },
+  emblem_ranger:  { name: 'Ranger Emblem',  icon: 'crown', emblem: true, mods: { as: 0.12 },         traitGrant: { ranger: 1 } },
+  emblem_assassin:{ name: 'Assassin Emblem',icon: 'crown', emblem: true, mods: { critChance: 0.12 }, traitGrant: { assassin: 1 } },
+  emblem_healer:  { name: 'Healer Emblem',  icon: 'crown', emblem: true, mods: { regen: 7 },         traitGrant: { healer: 1 } },
+  emblem_summoner:{ name: 'Summoner Emblem',icon: 'crown', emblem: true, mods: { hp: 0.10 },         traitGrant: { summoner: 1 } },
+};
+export const EMBLEM_IDS = Object.keys(EMBLEMS);
+export function isEmblem(id) { return !!EMBLEMS[id]; }
+// Emblems can't be combined and never collide with item recipes.
+export function emblemForTrait(t) { return 'emblem_' + t; }
+
 // Combine matrix (order-independent). Key = sorted "a+b".
 const COMBINE = {
   'sword+sword': 'infinity_edge', 'bow+bow': 'rageblade', 'rod+rod': 'archmage',
@@ -40,9 +66,12 @@ const COMBINE = {
   'bow+rod': 'static_shiv', 'bow+cloak': 'bramble', 'belt+bow': 'titan',
   'cloak+rod': 'solari', 'belt+rod': 'morello', 'belt+cloak': 'redemption',
 };
-export function combine(a, b) { return COMBINE[[a, b].sort().join('+')] || null; }
+export function combine(a, b) {
+  if (isEmblem(a) || isEmblem(b)) return null;   // emblems never combine
+  return COMBINE[[a, b].sort().join('+')] || null;
+}
 export function isComponent(id) { return !!COMPONENTS[id]; }
-export function itemDef(id) { return COMPONENTS[id] || ITEMS[id] || null; }
+export function itemDef(id) { return COMPONENTS[id] || ITEMS[id] || EMBLEMS[id] || null; }
 export function itemLabel(id) { const d = itemDef(id); return d ? d.name : id; }
 
 // Aggregate all item mods on a unit into one object the sim applies.
@@ -53,4 +82,16 @@ export function aggregateMods(itemIds = []) {
     for (const [k, v] of Object.entries(def.mods)) m[k] = (m[k] || 0) + v;
   }
   return m;
+}
+
+// Flatten emblem trait-grants on a unit into a list of trait ids (each = +1 to that
+// trait's synergy count for the holder). Read by activeTraits via the per-unit grants map.
+export function traitGrantsFor(itemIds = []) {
+  const out = [];
+  for (const id of itemIds) {
+    const def = itemDef(id);
+    if (!def || !def.traitGrant) continue;
+    for (const [t, n] of Object.entries(def.traitGrant)) for (let i = 0; i < n; i++) out.push(t);
+  }
+  return out;
 }

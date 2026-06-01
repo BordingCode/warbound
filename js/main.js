@@ -11,7 +11,7 @@ import { hashSeed } from './rng.js';
 import { CombatPlayer, unitStatsPanel } from './render/player.js';
 import { createDragController } from './input/drag.js';
 import { getEnemyBoard, REALMS, realmAt } from './data/enemies.js';
-import { COMPONENTS, itemDef, itemLabel } from './data/items.js';
+import { COMPONENTS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
 import * as Bots from './state/bots.js';
@@ -103,8 +103,16 @@ function buildBoardEl() {
 }
 
 // ---------- traits ----------
+// Board defs with per-unit Emblem trait-grants attached (so the synergy panel reflects emblems).
+function defsWithGrants(board) {
+  return board.map((u, i) => {
+    const d = UNITS_BY_ID[u.defId];
+    const grants = traitGrantsFor(u.items);
+    return grants.length ? { ...d, grants, gid: u.uid != null ? u.uid : 'b' + i } : d;
+  });
+}
 function buildTraitsEl() {
-  const defs = run.board.map((u) => UNITS_BY_ID[u.defId]);
+  const defs = defsWithGrants(run.board);
   const active = activeTraits(defs, teamTraitBonus());
   const rail = el('.traits-rail');
   const entries = Object.entries(active).filter(([t]) => TRAITS[t]).sort((a, b) => (b[1].tier - a[1].tier) || (b[1].count - a[1].count));
@@ -426,6 +434,26 @@ function offerDraft(after) {
 }
 function shouldDraft(finishedRound) { return [1, 2, 5, 7, 10].includes(finishedRound); }
 function shouldAugment(finishedRound) { return [3, 6, 9].includes(finishedRound); }
+function shouldEmblem(finishedRound) { return [4, 8].includes(finishedRound); }   // Warpath-only
+
+// Warpath-only emblem draft: equip on a champion to grant it an extra Origin/Class trait.
+function offerEmblem(after) {
+  const ids = Run.draftEmblems(run);
+  const pick = (id) => { Run.addItem(run, id); Run.save(run); Sfx.buy(); ov.remove(); after ? after() : renderPlanning(); };
+  const ov = el('.overlay', {}, el('.help-card', {}, [
+    el('h2', {}, 'Choose an Emblem'),
+    el('.sub', {}, 'Equip on a champion to grant it an extra trait — force a synergy you couldn’t reach.'),
+    el('.draft-row', {}, ids.map((id) => {
+      const d = EMBLEMS[id]; const t = Object.keys(d.traitGrant)[0]; const tr = TRAITS[t];
+      const stat = Object.entries(d.mods).map(([k, v]) => `+${v < 1 ? Math.round(v * 100) + '%' : v} ${k}`).join(', ');
+      return el('button.draft-pick', { onclick: () => pick(id) }, [
+        el('span.di', { html: ic(d.icon) }), el('span.dn', {}, d.name),
+        el('span.dm', { style: { color: tr.color } }, `+1 ${tr.name}${stat ? ' · ' + stat : ''}`),
+      ]);
+    })),
+  ]));
+  document.body.append(ov);
+}
 
 // Augment draft (pick 1 of 3 run-shaping powers), with skip-for-gold, banish, reroll.
 function offerAugment(after) {
@@ -592,7 +620,7 @@ function showTraitInfo(traitId) {
   const def = TRAITS[traitId]; if (!def) return;
   Sfx.click();
   const owned = new Set(run.board.map((u) => u.defId).concat(run.bench.filter(Boolean).map((u) => u.defId)));
-  const playerDefs = run.board.map((u) => UNITS_BY_ID[u.defId]);
+  const playerDefs = defsWithGrants(run.board);
   const active = activeTraits(playerDefs, teamTraitBonus())[traitId];
   const curTier = active ? active.tier : 0;
   const members = UNITS.filter((u) => u.origin === traitId || u.klass === traitId);
@@ -809,6 +837,7 @@ async function startCombat() {
     $$('.overlay').forEach((o) => o.remove());   // clear anything opened mid-fight (codex/inspect) before post-round prompts
     if (run.over) endScreen();
     else if (shouldAugment(finishedRound)) offerAugment(renderPlanning);
+    else if (shouldEmblem(finishedRound)) offerEmblem(renderPlanning);
     else if (shouldDraft(finishedRound)) offerDraft(renderPlanning);
     else renderPlanning();
   }, 1100);
