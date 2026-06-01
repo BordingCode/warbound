@@ -12,5 +12,6 @@ export function setArtSet(s) { artSet = (s === 'classic') ? 'classic' : 'detaile
 // Detailed everywhere EXCEPT calls that pass a palette override (the Armory hero recolours its
 // armour by equipped gear — a classic-only feature), so those stay on the classic rig.
 export function championSVG(def, opts = {}) {
+  if (def.creature) return championClassic(def, opts);   // boss monster art lives on the classic path (svg.js creatureInner)
   return (artSet === 'detailed' && !opts.palette) ? championSVGV2(def, opts) : championClassic(def, opts);
 }
