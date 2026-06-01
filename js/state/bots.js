@@ -195,6 +195,7 @@ export function createLobby(seedStr, playerStyleId = 'warlord', difficulty = 0, 
   const lobby = { rng, human, bots, players: [human, ...bots], pool, round: 1, pairs: [], opponent: null, underdog: null, modifier, difficulty };
   for (const b of bots) botTurn(b, 1, lobby);     // bots shop round 1 (draws from the shared pool)
   matchmake(lobby);
+  counterPivotAll(lobby);                          // top tiers adapt to their matched foe
   return lobby;
 }
 
@@ -367,6 +368,34 @@ const dmgFrom = (survivors, round) => playerDamage(survivors || [], round);
 export const mirror = (board) => (board || []).map((u) => ({ ...u, row: 7 - u.row }));
 function bumpStreak(p, won) { if (won == null) return; p.streakN = (p.lastStreakWon === won) ? p.streakN + 1 : 1; p.lastStreakWon = won; }
 
+// ---- reactive counter-pivot (top tiers only) ----
+// AFTER matchmaking, a high-difficulty bot re-fields the board that best beats its ACTUAL
+// opponent's board — it reads the matchup instead of fielding a generic best. This is pure
+// DECISION QUALITY (gated by difficulty, deterministic seeded sims), never a stat advantage;
+// low-tier bots never do it (they can't "see" their foe). Bounded: ≤3 candidates × 3 seeds.
+function pairOpponent(p, lobby) {
+  for (const [a, b] of lobby.pairs) { if (a === p) return b; if (b === p) return a; }
+  return null;
+}
+export function counterPivot(bot, lobby) {
+  if (!lobby || (lobby.difficulty || 0) < 4) return;          // Diamond+ only
+  if (!bot.roster || bot.roster.length <= bot.level) return;  // no fielding choice to make
+  const opp = pairOpponent(bot, lobby);
+  if (!opp || opp.ghost || !opp.board || !opp.board.length) return;
+  const cands = candidateSets(bot.roster, bot.level).filter((c, i, arr) => arr.findIndex((x) => sameSet(x, c)) === i);
+  if (cands.length < 2) return;
+  const selfBundle = botBundle(bot, lobby), oppBundle = botBundle(opp, lobby), oppBoard = opp.board;
+  let best = null, bestWins = -1;
+  for (const c of cands) {
+    const A = mirror(positionBoard(c));                        // field the bot on the player half
+    let wins = 0;
+    for (let s = 0; s < 3; s++) if (simulate(A, oppBoard, (s * 97 + 17) >>> 0, { aug: { player: selfBundle, enemy: oppBundle } }).result.winner === 'player') wins++;
+    if (wins > bestWins) { bestWins = wins; best = c; }
+  }
+  if (best) bot.board = positionBoard(best);
+}
+function counterPivotAll(lobby) { for (const bot of lobby.bots) if (bot.alive) counterPivot(bot, lobby); }
+
 function resolveBotPair(a, b, round, seed, lobby) {
   const A = mirror(a.board || []), B = (b.board || []);
   if (!A.length && !B.length) return;
@@ -414,6 +443,7 @@ export function resolveLadderRound(lobby, humanBoard, humanResult, playedRound) 
   lobby.underdog = underdog(lobby) ? underdog(lobby).id : null;
   for (const bot of lobby.bots) if (bot.alive) botTurn(bot, nextRound, lobby);
   matchmake(lobby);
+  counterPivotAll(lobby);                          // top tiers re-field to counter their matched foe (incl. your last board)
   return { over: !human.alive || left.length <= 1, humanPlace: human.place, humanAlive: human.alive, dead: dead.map((d) => d.name), humanIsUnderdog: lobby.underdog === 'you' };
 }
 

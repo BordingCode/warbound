@@ -1,7 +1,7 @@
 // Ladder / AI-warlord tests. Run: node test/ladder.test.js
 // Proves the bots are real economy players sharing ONE champion pool, that the pool is
 // conserved (the genre's signature contention), that boards scale, and a full lobby resolves.
-import { createLobby, botTurn, resolveLadderRound, underdog, STYLES, shuffled, START_HP, POWERS, MODIFIERS, powerFlat, botBundle } from '../js/state/bots.js';
+import { createLobby, botTurn, resolveLadderRound, underdog, STYLES, shuffled, START_HP, POWERS, MODIFIERS, powerFlat, botBundle, counterPivot, mirror } from '../js/state/bots.js';
 import { simulate } from '../js/sim/combat.js';
 import { augmentBundle, AUGMENT_IDS, AUGMENTS } from '../js/data/augments.js';
 import { UNITS, UNITS_BY_ID } from '../js/data/units.js';
@@ -164,6 +164,30 @@ function copiesInExistence(lobby) {
   ok(`gradient: Master is harder than Bronze (Bronze avg ${easy.toFixed(2)} < Master avg ${hard.toFixed(2)})`, hard > easy + 0.15);
   // Bronze placement (fixed skill-3 reference) stays upper-half of an 8-player lobby = winnable.
   ok(`gradient: Bronze is winnable (avg ${easy.toFixed(2)} <= 3.9)`, easy <= 3.9);
+}
+
+// ---- counter-pivot: a top-tier bot re-fields to beat its ACTUAL matched foe ----
+{
+  const mk = (defId, star = 2) => ({ defId, star });
+  const opp = { ghost: false, augments: [], powerId: null, board: [
+    { defId: 'royal_blade', star: 3, col: 2, row: 1 }, { defId: 'royal_blade', star: 3, col: 5, row: 1 },
+    { defId: 'court_mage', star: 3, col: 3, row: 0 }, { defId: 'bone_guard', star: 3, col: 3, row: 3 }, { defId: 'bone_guard', star: 3, col: 4, row: 3 },
+  ] };
+  const roster = ['knight_captain', 'bone_guard', 'thornguard', 'dragon_knight', 'field_medic', 'lich', 'crossbowman', 'grove_healer'].map((d) => mk(d, 2));
+  const wr = (bot, lobby, board) => { let w = 0; const N = 10; for (let s = 0; s < N; s++) if (simulate(mirror(board), opp.board, s * 31 + 5, { aug: { player: botBundle(bot, lobby), enemy: botBundle(opp, lobby) } }).result.winner === 'player') w++; return w / N; };
+  // Diamond+ bot: re-fields from a deliberately weak board to the best counter in its roster
+  const bot = { alive: true, level: 5, augments: [], rng: new RNG(9), roster, board: [{ defId: 'crossbowman', star: 1, col: 0, row: 0 }] };
+  const lobby = { difficulty: 5, modifier: MODIFIERS[0], bots: [bot], pairs: [[bot, opp]] };
+  const before = wr(bot, lobby, bot.board);
+  counterPivot(bot, lobby);
+  const after = wr(bot, lobby, bot.board);
+  ok('counter-pivot: re-fields to a board >= as good vs the actual foe', after >= before);
+  ok('counter-pivot: fields a full board', bot.board.length === bot.level);
+  // gating: a Bronze (difficulty 0) bot never counter-pivots
+  const bot0 = { alive: true, level: 5, augments: [], rng: new RNG(9), roster, board: [{ defId: 'crossbowman', star: 1, col: 0, row: 0 }] };
+  const b0 = bot0.board.slice();
+  counterPivot(bot0, { difficulty: 0, modifier: MODIFIERS[0], bots: [bot0], pairs: [[bot0, opp]] });
+  ok('counter-pivot: low tier never does it (board unchanged)', bot0.board.length === b0.length && bot0.board.every((u, i) => u.defId === b0[i].defId));
 }
 
 console.log(`\n\n${pass} passed, ${fail} failed`);
