@@ -178,6 +178,7 @@ function emblem(art) {
 // Build the inner SVG content (no <svg> wrapper) for a champion definition.
 // `paletteOverride` lets callers recolor pieces (e.g. the Armory hero's armor = its gear).
 export function championInner(def, paletteOverride) {
+  if (def.creature) return creatureInner(def);
   const art = HERO_ART[def.defId] || null;
   const p = Object.assign({}, PALETTES[def.origin] || PALETTES.human, (art && art.palette) || {}, paletteOverride || {});
   const kind = TORSO_KIND[def.klass] || 'leather';
@@ -193,6 +194,55 @@ export function championInner(def, paletteOverride) {
     gear(p, def.klass),
     emblem(art),
   ].join('');
+}
+
+// ── Boss CREATURE art (viewBox 0 0 100 120, ground ~y110). Distinct monster silhouettes,
+// keyed by def.shape, tinted by def.accent. NOT the humanoid champion rig. ──
+function creatureInner(def) {
+  const c = def.accent || '#9aa6b8';
+  const shadow = '<ellipse cx="50" cy="111" rx="34" ry="6.5" fill="#00000055"/>';
+  const eye = (x, y, col) => `<circle cx="${x}" cy="${y}" r="3" fill="${col || '#16201a'}"/>`;
+  const S = {
+    slime: () => shadow +
+      `<path d="M19 109 Q12 72 23 56 Q33 40 50 42 Q67 40 77 56 Q88 72 81 109 Z" fill="${c}" opacity="0.93"/>` +
+      `<path d="M27 60 Q39 49 52 53" stroke="#ffffff" stroke-width="3" fill="none" opacity=".35" stroke-linecap="round"/>` +
+      `<circle cx="40" cy="72" r="7.5" fill="#fff"/><circle cx="62" cy="72" r="7.5" fill="#fff"/>` + eye(41, 74) + eye(63, 74) +
+      `<path d="M37 90 q13 9 26 0" stroke="#16201a" stroke-width="2.6" fill="none" stroke-linecap="round"/>` +
+      `<circle cx="29" cy="112" r="4.2" fill="${c}"/><circle cx="71" cy="111" r="3.4" fill="${c}"/>`,
+    golem: () => shadow +
+      `<rect x="14" y="70" width="14" height="36" rx="6" fill="#7a7060"/><rect x="72" y="70" width="14" height="36" rx="6" fill="#7a7060"/>` +
+      `<rect x="20" y="56" width="60" height="50" rx="11" fill="#8a7f6b"/>` +
+      `<rect x="10" y="50" width="22" height="24" rx="9" fill="#9c907a"/><rect x="68" y="50" width="22" height="24" rx="9" fill="#9c907a"/>` +
+      `<rect x="38" y="38" width="24" height="20" rx="6" fill="#9c907a"/>` +
+      eye(45, 49, '#ffb347') + eye(55, 49, '#ffb347') +
+      `<circle cx="50" cy="80" r="9.5" fill="#ff8c3a"/><circle cx="50" cy="80" r="5" fill="#ffe0b0"/>` +
+      `<path d="M30 64 l8 9 M68 96 l-8 -9 M50 92 l0 8" stroke="#5f5648" stroke-width="2"/>`,
+    wraith: () => shadow +
+      `<path d="M50 33 Q29 37 27 70 Q25 101 34 110 Q40 100 44 110 Q50 100 56 110 Q60 100 66 110 Q75 101 73 70 Q71 37 50 33 Z" fill="${c}" opacity=".82"/>` +
+      `<path d="M50 33 Q33 35 31 58 L69 58 Q67 35 50 33 Z" fill="#2a2f4a"/>` +
+      eye(43, 50, '#9affe9') + eye(57, 50, '#9affe9') +
+      `<path d="M30 62 q-9 7 -11 19" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".8"/>` +
+      `<path d="M70 62 q9 7 11 19" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".8"/>`,
+    hydra: () => shadow +
+      `<path d="M40 86 Q29 60 25 42" stroke="#6c7d61" stroke-width="9" fill="none" stroke-linecap="round"/>` +
+      `<path d="M50 84 Q50 56 50 38" stroke="#6c7d61" stroke-width="9" fill="none" stroke-linecap="round"/>` +
+      `<path d="M60 86 Q71 60 75 42" stroke="#6c7d61" stroke-width="9" fill="none" stroke-linecap="round"/>` +
+      `<ellipse cx="50" cy="94" rx="30" ry="18" fill="#5b6b52"/>` +
+      [[25, 40], [50, 36], [75, 40]].map(([x, y]) =>
+        `<ellipse cx="${x}" cy="${y}" rx="8.5" ry="9.5" fill="${c}"/>` + eye(x - 3, y - 1) + eye(x + 3, y - 1) +
+        `<path d="M${x - 5} ${y + 6} h10" stroke="#16201a" stroke-width="1.6"/>`).join(''),
+    wyrm: () => shadow +
+      `<path d="M30 60 Q5 38 8 73 Q23 66 35 75 Z" fill="#7a2a1a" opacity=".9"/>` +
+      `<path d="M70 60 Q95 38 92 73 Q77 66 65 75 Z" fill="#7a2a1a" opacity=".9"/>` +
+      `<path d="M50 107 Q21 100 25 77 Q29 56 50 56 Q71 56 75 77 Q79 100 50 107 Z" fill="${c}"/>` +
+      `<path d="M50 100 Q34 96 36 80 Q38 67 50 67 Q62 67 64 80 Q66 96 50 100 Z" fill="#ffd0a8" opacity=".4"/>` +
+      `<path d="M50 58 Q47 42 57 32" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>` +
+      `<path d="M57 32 q-13 -4 -17 7 q11 2 15 -2 z" fill="${c}"/>` +
+      `<path d="M52 25 l-3 -9 M63 27 l5 -8" stroke="#ffd24a" stroke-width="2.6" stroke-linecap="round"/>` +
+      `<circle cx="55" cy="29" r="2.6" fill="#ffe14a"/>` +
+      `<path d="M40 35 q-9 0 -13 4 q7 2 11 0 z" fill="#ffb347"/>`,
+  };
+  return (S[def.shape] || S.slime)();
 }
 
 // Full standalone SVG string (used for previews / shop cards). `palette` recolors pieces.

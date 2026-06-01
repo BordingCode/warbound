@@ -10,7 +10,7 @@ import { simulate } from './sim/combat.js';
 import { hashSeed } from './rng.js';
 import { CombatPlayer, unitStatsPanel } from './render/player.js';
 import { createDragController } from './input/drag.js';
-import { getEnemyBoard, REALMS, realmAt, bossForRealm } from './data/enemies.js';
+import { getEnemyBoard, REALMS, realmAt, bossForRealm, getTrialBoard, TRIAL_COUNT } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
@@ -49,6 +49,7 @@ function getOpponent() {
   // Warpath: the foe is keyed to WINS, not the round — you only advance to the next warband when
   // you beat the current one. A loss replays the SAME foe (while your round/economy keeps growing
   // so you can break the wall). The current REALM sets the difficulty + themes the reinforcements.
+  if (run.mode === 'trials') return getTrialBoard(run.wins);   // boss-rush: next boss = bosses beaten
   const realm = realmAt(run.realm || 0);
   // the realm's 10th/final warband is a themed BOSS with a gimmick (telegraphed pre-fight).
   if (run.wins + 1 === Run.WIN_TARGET) return bossForRealm(realm.index);
@@ -359,7 +360,7 @@ function renderPlanning() {
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       run.mode === 'ladder'
         ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
-        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: `${realmAt(run.realm || 0).name} · conquer all 10` }, `${run.wins}/10`)]),
+        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: run.mode === 'trials' ? 'Slay all 5 bosses' : `${realmAt(run.realm || 0).name} · conquer all 10` }, `${run.wins}/${run.winTarget || Run.WIN_TARGET}`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Warband stats', onclick: showStats, html: ic('bars') }),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Codex', onclick: () => showCodex('units'), html: ic('codex') }),
@@ -951,30 +952,35 @@ function endScreen(ladderSummary) {
       ]);
     }
   } else {
-    const realm = realmAt(run.realm || 0);
-    const won = run.won;   // conquered all 10 warbands
-    if (won) {
-      const newConquest = Meta.conquerRealm(realm.index);   // permanent; true only if the frontier advanced
-      launchConfetti(newConquest ? 4500 : 2200);
-      head = 'REALM CONQUERED';
-      sub = newConquest ? `${realm.name} is yours for good — the next realm beckons.` : `${realm.name} cleared again. Spoils farmed; conquest already secured.`;
+    const isTrials = run.mode === 'trials';
+    const won = run.won;
+    if (isTrials) {
+      if (won) { launchConfetti(5200); head = 'TRIALS CLEARED'; sub = 'You slew every boss of the gauntlet — slime, golem, wraith, hydra and the Ember Wyrm. A true champion.'; }
+      else { head = 'DEFEATED'; sub = `The bosses bested you — ${run.wins}/${TRIAL_COUNT} slain. Gear up in the Armory and face them again.`; }
     } else {
-      head = 'DEFEATED';
-      sub = `${realm.name} held your warband off (${run.wins}/10). Gear up in the Armory and march again.`;
+      const realm = realmAt(run.realm || 0);
+      if (won) {
+        const newConquest = Meta.conquerRealm(realm.index);
+        launchConfetti(newConquest ? 4500 : 2200);
+        head = 'REALM CONQUERED';
+        sub = newConquest ? `${realm.name} is yours for good — the next realm beckons.` : `${realm.name} cleared again. Spoils farmed; conquest already secured.`;
+      } else { head = 'DEFEATED'; sub = `${realm.name} held your warband off (${run.wins}/10). Gear up in the Armory and march again.`; }
     }
     // earn Spoils ONCE (even on a loss) — the meta-progression that eases the climb
     if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
-    stats = [stat('Realm', realm.name), stat('Warbands', `${run.wins}/10`)];
+    stats = isTrials ? [stat('Bosses slain', `${run.wins}/${TRIAL_COUNT}`), stat('Rounds', run.round - 1)]
+                     : [stat('Realm', realmAt(run.realm || 0).name), stat('Warbands', `${run.wins}/10`)];
     const spoilsTotal = Meta.load().spoils;
     const caches = Math.floor(spoilsTotal / Meta.CHEST_COST);
-    // a clear, prominent reward callout — and clears up "where's my gold?": gold resets, Spoils carry.
     rewardBlock = el('.end-reward', {}, [
       el('.er-line', {}, [iconEl('spoils', 'er-ico'), el('span.er-amt', {}, `+${run.spoilsEarned || 0} Spoils`)]),
-      el('.er-sub', {}, `${spoilsTotal} total — enough for ${caches} War Cache${caches === 1 ? '' : 's'} in the Armory. Your Spoils & gear carry to every realm; only the in-battle gold resets.`),
+      el('.er-sub', {}, `${spoilsTotal} total — enough for ${caches} War Cache${caches === 1 ? '' : 's'} in the Armory. Your Spoils & gear carry over; only the in-battle gold resets.`),
     ]);
-    extraBtn = won
-      ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realm.index + 1) }, `Next Realm ▶`)
-      : el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realm.index) }, `↻ Retry realm`);
+    extraBtn = isTrials
+      ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startTrials(true) }, won ? '↻ Run the Trials again' : '↻ Retry the Trials')
+      : won
+        ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realmAt(run.realm || 0).index + 1) }, `Next Realm ▶`)
+        : el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realmAt(run.realm || 0).index) }, `↻ Retry realm`);
   }
   const card = el('.endscreen', {}, [
     el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
@@ -1004,6 +1010,19 @@ function startSolo(fresh, realm = 0, seedStr = null) {
   run = resumed || Run.freshRun(seedStr || undefined);   // seedStr → daily/shared reproducible run
   run.mode = 'solo'; lobby = null;
   if (!resumed) { run.realm = realm; applyGear(run); }   // a NEW realm run resets + starts with your gear boosts
+  Run.save(run); renderPlanning();
+  if (!seenIntro()) showHelp();
+}
+// The Trials — boss-rush mode. Reuses the Warpath economy/planning; the foe each round is a
+// unique boss CREATURE. Beat all TRIAL_COUNT bosses to win. Your Armory gear applies; Spoils earned.
+function startTrials(fresh) {
+  if (fresh) Run.clearSave();
+  clearLobby();
+  const resumed = !fresh && Run.load();
+  run = resumed || Run.freshRun();
+  run.mode = 'trials'; lobby = null;
+  if (!resumed) applyGear(run);
+  run.winTarget = TRIAL_COUNT;
   Run.save(run); renderPlanning();
   if (!seenIntro()) showHelp();
 }
@@ -1232,10 +1251,11 @@ function chooseMode() {
         card('', 'sword', 'Warpath', 'Conquer the realms: beat all 10 warbands of a realm to claim it for good, then march on the next, harder one. Earn Spoils to gear your Champion.', () => showRealms()),
         el('.armory-bar', { onclick: () => showArmory() }, [
           el('span.ab-ico', { html: ic('coffer') }),
-          el('.ab-text', {}, [el('span.ab-label', {}, 'Armory'), el('span.ab-sub', {}, 'gear your Champion — for Warpath')]),
+          el('.ab-text', {}, [el('span.ab-label', {}, 'Armory'), el('span.ab-sub', {}, 'gear your Champion — for Warpath & Trials')]),
           el('span.ab-spoils', {}, `${Meta.load().spoils} Spoils`),
         ]),
       ]),
+      card(' trials', 'burst', 'The Trials', 'A boss rush: face a gauntlet of unique monsters — slime, golem, wraith, hydra and the Ember Wyrm — each with its own deadly mechanic. Build a team, learn each fight, slay them all.', () => startTrials(true)),
       ladderCard,
     ]),
     el('.art-toggle', { onclick: () => { setArtSet(getArtSet() === 'detailed' ? 'classic' : 'detailed'); Sfx.click(); chooseMode(); } }, [

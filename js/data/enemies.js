@@ -93,6 +93,32 @@ export const BOSSES = [
     gimmick: { flat: { ad: 0.18, ap: 50, hp: 0.18 } },
     units: [E('dragon_knight', 3, 3, 3), E('warlock', 3, 4, 0), E('lich', 3, 5, 0), E('wraith', 3, 2, 1), E('pit_summoner', 3, 6, 0), E('moon_priestess', 3, 1, 0), E('bramble_brute', 3, 0, 3)] },
 ];
+// ---- THE TRIALS (boss-rush mode): a fixed gauntlet of unique CREATURES (data/creatures.js),
+// one per round, escalating to the Ember Wyrm. Each telegraphs its mechanic on the boss banner.
+// Each boss is the centrepiece of a themed warband (minions = [defId, star, col, row]) so it's a
+// real encounter, not 8-on-1. Minions + the boss scale up across the gauntlet.
+const TRIALS = [
+  { id: 'gloom_slime', name: 'Gloom Slime', tier: 'Trial I',  gimmickName: 'Split',     gimmickDesc: 'Spits corrosive acid on a cluster, and SPLITS into two slimes when wounded. Focus it down with single-target burst.', col: 4, row: 2,
+    minions: [['bone_guard', 2, 2, 3], ['skeleton_archer', 1, 6, 1]] },
+  { id: 'stone_golem', name: 'Stone Golem', tier: 'Trial II', gimmickName: 'Stoneform', gimmickDesc: 'Enormous armor and reflects damage (thorns); its slam stuns. Bring magic/ability damage — raw autos bounce and hurt you back.', col: 4, row: 2,
+    minions: [['knight_captain', 2, 2, 3], ['crossbowman', 2, 1, 1], ['court_mage', 2, 6, 0]] },
+  { id: 'wraith_lord', name: 'Wraith Lord', tier: 'Trial III', gimmickName: 'Soul Harvest', gimmickDesc: 'Drains life to heal itself and raises slain souls as spectres; phases out (dodge) when low. Burst it before it stabilises.', col: 4, row: 1,
+    minions: [['bone_guard', 3, 2, 3], ['lich', 2, 6, 0], ['skeleton_archer', 2, 1, 1], ['wraith', 2, 6, 2]] },
+  { id: 'bone_hydra',  name: 'Bone Hydra', tier: 'Trial IV', gimmickName: 'Many Heads', gimmickDesc: 'Bites your whole front line at once, and REGROWS two more heads at half health. Spread your board and out-sustain it.', col: 4, row: 2,
+    minions: [['bone_guard', 2, 2, 3], ['bone_guard', 2, 6, 3], ['skeleton_archer', 2, 1, 1]] },
+  { id: 'ember_wyrm',  name: 'Ember Wyrm', tier: 'FINAL TRIAL', gimmickName: 'Wyrmfire', gimmickDesc: 'Breathes fire across your BACK line and ENRAGES below half HP (huge attack speed + a meteor storm). Protect your carries and end it fast.', col: 4, row: 0,
+    minions: [['knight_captain', 2, 2, 3], ['wyrm_archer', 2, 1, 1], ['court_mage', 2, 6, 0], ['bone_guard', 3, 6, 3]] },
+];
+export const TRIAL_COUNT = TRIALS.length;
+export function getTrialBoard(index) {
+  const t = TRIALS[Math.min(index, TRIALS.length - 1)];
+  const over = Math.max(0, index - (TRIALS.length - 1));   // beyond the final = endless, scaled
+  const gimmick = over > 0 ? { flat: { hp: 0.25 * over, ad: 0.15 * over } } : null;
+  const units = [{ defId: t.id, star: 1, col: t.col, row: t.row }]
+    .concat((t.minions || []).map(([defId, star, col, row]) => ({ defId, star: Math.min(3, star + (over > 0 ? 1 : 0)), col, row })));
+  return { name: t.name + (over > 0 ? ' +' + over : ''), traitHint: t.tier, boss: true, gimmick, gimmickName: t.gimmickName, gimmickDesc: t.gimmickDesc, units };
+}
+
 // Endless realms reuse the last (toughest) boss, with its gimmick scaled up a touch per overflow.
 export function bossForRealm(realmIndex) {
   const b = BOSSES[Math.min(realmIndex, BOSSES.length - 1)];

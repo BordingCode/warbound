@@ -216,6 +216,9 @@
 .mode-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: transform .12s, border-color .12s, background .12s; }
 .mode-card:hover { transform: translateY(-3px); border-color: var(--gold); background: var(--bg-3); }
 .mode-card.ladder:hover { border-color: var(--hp); }
+.mode-card.trials { border-color: #7a2f3a; background: linear-gradient(180deg, rgba(255,90,120,0.07), var(--bg-2)); }
+.mode-card.trials:hover { border-color: #ff6a8a; }
+.mode-card.trials .mc-emoji { color: #ff6a8a; }
 .mode-card .mc-emoji { font-size: 30px; }
 .mode-card .mc-title { font-size: 18px; font-weight: 800; margin: 4px 0 3px; }
 .mode-card .mc-desc { font-size: 12px; color: var(--ink-dim); line-height: 1.4; }

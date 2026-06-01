@@ -293,7 +293,11 @@ export const UNITS = [
   mk('banner_sergeant','Banner Sergeant','human',  'summoner', 3, A.banner_sergeant),
 ];
 
-export const UNITS_BY_ID = Object.fromEntries(UNITS.map((u) => [u.defId, u]));
+import { CREATURES } from './creatures.js';
+// UNITS_BY_ID includes boss creatures for COMBAT/render lookup only. The player economy (pool,
+// shop, draft, Codex) iterates the UNITS array, which excludes creatures — so bosses never appear
+// as buyable/draftable units.
+export const UNITS_BY_ID = Object.assign(Object.fromEntries(UNITS.map((u) => [u.defId, u])), CREATURES);
 
 // Star scaling: ~1.7x stats per star (HP + AD). Ability scaling follows AD/AP ratios.
 export const STAR_MULT = { 1: 1, 2: 1.7, 3: 1.7 * 1.7 };

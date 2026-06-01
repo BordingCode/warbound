@@ -335,8 +335,8 @@ export function resolveRound(run, won) {
   // life back at round 3 if hurt (anti-stomp floor)
   if (run.round === 3 && run.lives < START_LIVES) run.lives++;
   run.round++;
-  // Warpath realm: beat all WIN_TARGET warbands to CONQUER the realm (won), or run out of lives.
-  if (run.wins >= WIN_TARGET) { run.over = true; run.won = true; }
+  // beat all (winTarget) foes to win (Warpath=10 warbands, Trials=5 bosses), or run out of lives.
+  if (run.wins >= (run.winTarget || WIN_TARGET)) { run.over = true; run.won = true; }
   if (run.lives <= 0) { run.over = true; run.won = false; }
   ensureRng(run);
   rollShop(run);                   // respects shopLocked (frozen shop persists)
