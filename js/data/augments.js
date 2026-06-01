@@ -38,7 +38,7 @@ export const AUGMENTS = {
   knights_vow:    { name: "Knight's Vow", icon: 'shield', tier: 'rare', cat: 'synergy', desc: 'Your Knights gain +40 Armor & Magic Resist.', cond: [{ match: { klass: 'knight' }, mods: { armor: 40, mr: 40 } }], wantTrait: 'knight' },
   assassins_edge: { name: "Assassin's Edge", icon: 'sword', tier: 'rare', cat: 'synergy', desc: 'Your Assassins gain +25% crit chance and +60% crit damage.', cond: [{ match: { klass: 'assassin' }, mods: { critChance: 0.25, critDmg: 0.6 } }], wantTrait: 'assassin' },
   pack_fury:      { name: 'Pack Fury', icon: 'paw', tier: 'rare', cat: 'synergy', desc: 'Your Beasts gain +22% Attack Damage.', cond: [{ match: { origin: 'beast' }, mods: { ad: 0.22 } }], wantTrait: 'beast' },
-  backline_barrage:{ name: 'Backline Barrage', icon: 'bow', tier: 'rare', cat: 'combat', desc: 'Back-row champions: +28% Attack Speed and +12% AD.', cond: [{ match: { row: 'back' }, mods: { as: 0.28, ad: 0.12 } }] },
+  backline_barrage:{ name: 'Backline Barrage', icon: 'bow', tier: 'rare', cat: 'combat', desc: 'Back-row champions: +18% Attack Speed and +8% AD.', cond: [{ match: { row: 'back' }, mods: { as: 0.18, ad: 0.08 } }] },
   frontline_wall: { name: 'Frontline Wall', icon: 'wall', tier: 'rare', cat: 'combat', desc: 'Front-row champions: +28% Health and +30 Armor.', cond: [{ match: { row: 'front' }, mods: { hp: 0.28, armor: 30 } }] },
   bloodforge:     { name: 'Bloodforge', icon: 'fang', tier: 'rare', cat: 'combat', desc: 'Your team heals 22% of attack damage dealt.', combat: { vamp: 0.22 } },
   battle_standard:{ name: 'Battle Standard', icon: 'banner', tier: 'rare', cat: 'combat', desc: 'Your team: +16% Attack Damage and +7% Attack Speed.', combat: { ad: 0.16, as: 0.07 } },
@@ -48,11 +48,11 @@ export const AUGMENTS = {
   glasscannon:    { name: 'Glass Cannon', icon: 'burst', tier: 'prismatic', cat: 'build', desc: 'Your team: +35% Attack Damage, but −15% max Health.', combat: { ad: 0.35, hp: -0.15 } },
   arcane_overflow:{ name: 'Arcane Overflow', icon: 'wand', tier: 'prismatic', cat: 'build', desc: 'Your team: +130 Ability Power, but −10% max Health.', combat: { ap: 130, hp: -0.10 } },
   berserkers_pact:{ name: "Berserker's Pact", icon: 'axe', tier: 'prismatic', cat: 'build', desc: '+45% AD and +20% Attack Speed, but −25% max Health.', combat: { ad: 0.45, as: 0.20, hp: -0.25 } },
-  titans_resolve: { name: "Titan's Resolve", icon: 'shield', tier: 'prismatic', cat: 'build', desc: '+45% max Health and +30 Armor/MR, but −15% Attack Speed.', combat: { hp: 0.45, armor: 30, mr: 30, as: -0.15 } },
+  titans_resolve: { name: "Titan's Resolve", icon: 'shield', tier: 'prismatic', cat: 'build', desc: '+35% max Health and +22 Armor/MR, but −15% Attack Speed.', combat: { hp: 0.35, armor: 22, mr: 22, as: -0.15 } },
   warlords_gambit:{ name: "Warlord's Gambit", icon: 'banner', tier: 'prismatic', cat: 'build', desc: '+1 board slot (field an extra champion), but your team has −6% Health.', econ: { boardPlus: 1 }, combat: { hp: -0.06 } },
   vampire_lords:  { name: 'Vampire Lords', icon: 'fang', tier: 'prismatic', cat: 'build', desc: 'Your team heals 32% of damage dealt, but −6% Attack Damage.', combat: { vamp: 0.32, ad: -0.06 } },
   undying_legion: { name: 'Undying Legion', icon: 'skull', tier: 'prismatic', cat: 'synergy', desc: '+2 to your Undead synergy.', traitBonus: { undead: 2 }, wantTrait: 'undead' },
-  thornmail:      { name: 'Thornmail Aura', icon: 'thorns', tier: 'prismatic', cat: 'build', desc: 'Your team reflects 25% of attack damage taken and +25 Armor, but −10% Attack Damage.', combat: { thorns: 0.25, armor: 25, ad: -0.10 } },
+  thornmail:      { name: 'Thornmail Aura', icon: 'thorns', tier: 'prismatic', cat: 'build', desc: 'Your team reflects 18% of attack damage taken and +20 Armor, but −10% Attack Damage.', combat: { thorns: 0.18, armor: 20, ad: -0.10 } },
 };
 
 export const AUGMENT_IDS = Object.keys(AUGMENTS);
