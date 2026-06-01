@@ -1056,7 +1056,7 @@ function beginLadder(styleId) {
 }
 // The Champion portrait's ARMOUR recolours to the equipped Armor (and weapon tints the accent),
 // so swapping gear visibly changes the hero. Rarity drives the colour (steel→blue→purple).
-const RARITY_TINT = { common: '#9aa6b8', rare: '#6fb1ff', epic: '#c79bff' };
+const RARITY_TINT = { common: '#9aa6b8', rare: '#6fb1ff', epic: '#c79bff', legendary: '#ffb031', mythic: '#ff5e8a', ascended: '#7df9ff' };
 function heroPalette(m) {
   const pal = {};
   const arm = Meta.equippedItem(m, 'armor'); if (arm) pal.secondary = RARITY_TINT[arm.rarity];   // plate/helm/shield
@@ -1166,16 +1166,16 @@ function forgePanel(m, rar, render) {
   ]);
 }
 function revealItem(item, after) {
-  const tier = Math.max(0, Meta.RARITIES.findIndex((r) => r.id === item.rarity));   // 0 common … 4 mythic
+  const tier = Math.max(0, Meta.RARITIES.findIndex((r) => r.id === item.rarity));   // 0 common … 5 ascended
   const rar = Meta.RARITIES[tier] || Meta.RARITIES[0];
   const motion = motionOn();
   Sfx.reward(tier);
-  // the rarer the find, the louder the moment: confetti (epic+), rotating rays + shake + screen flash (legendary/mythic)
-  const confettiMs = [0, 0, 1800, 3600, 5200][tier] || 0;
+  // the rarer the find, the louder the moment: confetti (epic+), rotating rays + shake + screen flash (legendary+)
+  const confettiMs = [0, 0, 1800, 3600, 5200, 6500][tier] || 0;
   if (confettiMs && motion) launchConfetti(confettiMs);
   const hi = tier >= 3;
   if (hi && motion) { const flash = el('.reveal-flash', { style: { '--rc': rar.color } }); document.body.append(flash); setTimeout(() => flash.remove(), 700); }
-  const label = ['Common find', 'Rare find!', 'Epic find!', '✦ Legendary! ✦', '★ Mythic! ★'][tier] || `${rar.name} find`;
+  const label = ['Common find', 'Rare find!', 'Epic find!', '✦ Legendary! ✦', '★ Mythic! ★', '✦ ASCENDED! ✦'][tier] || `${rar.name} find`;
   const ov = el('.overlay', {}, el(`.reveal-card rarity-${item.rarity}${hi && motion ? ' impact' : ''}`, { style: { '--rc': rar.color, '--ic': Meta.itemColor(item) } }, [
     el('.reveal-burst'),
     hi ? el('.reveal-rays') : null,

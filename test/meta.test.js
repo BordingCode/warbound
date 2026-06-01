@@ -81,7 +81,7 @@ const rng = (seq) => { let i = 0; return () => seq[i++ % seq.length]; };
   ok('combine: consumes two, nets one (one weapon left)', after.inventory.filter((x) => x.slot === 'weapon').length === 1);
   ok('combine: unequips a consumed equipped piece', after.equipped.weapon === undefined);
   ok('combine: leaves other slots alone', after.inventory.filter((x) => x.slot === 'armor').length === 1);
-  ok('combine: epic -> legendary -> mythic chain', Meta.nextRarity('epic') === 'legendary' && Meta.nextRarity('legendary') === 'mythic' && Meta.nextRarity('mythic') === null);
+  ok('combine: epic -> legendary -> mythic -> ascended chain (ascended is the ceiling)', Meta.nextRarity('epic') === 'legendary' && Meta.nextRarity('legendary') === 'mythic' && Meta.nextRarity('mythic') === 'ascended' && Meta.nextRarity('ascended') === null);
   ok('combine: needs two of a kind', Meta.combineItems('weapon', 'rare').ok === false);
 }
 
