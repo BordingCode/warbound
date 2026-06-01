@@ -108,6 +108,36 @@ export function openChest(rng) {
   save(m);
   return { ok: true, item, spoils: m.spoils };
 }
+// Open MANY caches at once (capped by Spoils) — the fast path. One load/save, returns the haul.
+export function openChests(n, rng) {
+  const m = load();
+  const can = Math.min(Math.max(0, n | 0), Math.floor(m.spoils / CHEST_COST));
+  if (can <= 0) return { ok: false, items: [], count: 0, spoils: m.spoils };
+  const items = [];
+  for (let i = 0; i < can; i++) {
+    m.spoils -= CHEST_COST;
+    const slot = SLOTS[Math.floor((rng ? rng() : Math.random()) * SLOTS.length)].id;
+    const item = makeItem(slot, rollRarity(rng), rng);
+    m.inventory.push(item); items.push(item);
+  }
+  save(m);
+  return { ok: true, items, count: can, spoils: m.spoils };
+}
+export function affordableChests(m) { m = m || load(); return Math.floor(m.spoils / CHEST_COST); }
+// Auto-equip the best (highest-rarity) owned item in each slot if it beats what's equipped.
+// Returns the slot ids that changed (for a "N upgrades equipped" message).
+export function equipBestPerSlot() {
+  const m = load(); const upgraded = [];
+  for (const s of SLOTS) {
+    const items = m.inventory.filter((it) => it.slot === s.id);
+    if (!items.length) continue;
+    const best = items.reduce((a, b) => (RIDX[b.rarity] > RIDX[a.rarity] ? b : a));
+    const cur = equippedItem(m, s.id);
+    if (!cur || RIDX[best.rarity] > RIDX[cur.rarity]) { if (!cur || best.iid !== cur.iid) upgraded.push(s.id); m.equipped[s.id] = best.iid; }
+  }
+  save(m);
+  return upgraded;
+}
 export function equip(iid) { const m = load(); const it = m.inventory.find((x) => x.iid === iid); if (!it) return false; m.equipped[it.slot] = iid; save(m); return true; }
 export function unequip(slotId) { const m = load(); delete m.equipped[slotId]; save(m); }
 export function equippedItem(m, slotId) { const iid = m.equipped[slotId]; return iid ? m.inventory.find((x) => x.iid === iid) : null; }

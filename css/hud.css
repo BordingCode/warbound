@@ -318,6 +318,15 @@
 .cache-cta .cc-title { font-weight: 800; font-size: 15px; }
 .cache-cta .cc-sub { font-size: 11px; color: var(--ink-dim); }
 .cache-cta .cc-cost { margin-left: auto; font-weight: 800; color: var(--gold); font-size: 15px; }
+.cache-all { display: flex; align-items: center; gap: 8px; padding: 9px 14px; margin-top: -6px; border-radius: var(--radius); cursor: pointer; font-weight: 800; font-size: 14px; color: var(--gold); background: rgba(255,206,92,0.08); border: 1px solid var(--gold-deep); transition: transform .12s; }
+.cache-all:hover { transform: translateY(-1px); }
+.cache-all svg { width: 18px; height: 18px; }
+.cache-all .ca-cost { margin-left: auto; color: var(--gold); }
+.bulk-card .bulk-sub { font-size: 13px; font-weight: 700; margin: 2px 0 10px; }
+.bulk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-height: 46vh; overflow-y: auto; margin-bottom: 14px; }
+.bulk-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border-radius: 12px; background: color-mix(in srgb, var(--rc) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent); }
+.bulk-item .bi-art { width: 40px; height: 40px; }
+.bulk-item .bi-name { font-size: 10px; line-height: 1.15; text-align: center; color: var(--ink); }
 
 /* inventory grid */
 .inv-head { font-size: 12px; color: var(--ink-dim); font-weight: 700; margin-top: 2px; }

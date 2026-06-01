@@ -1115,6 +1115,11 @@ function showArmory() {
         el('.cc-text', {}, [el('.cc-title', {}, 'Open War Cache'), el('.cc-sub', {}, 'a random piece of gear')]),
         el('.cc-cost', {}, [String(Meta.CHEST_COST) + ' ', iconEl('spoils')]),
       ]),
+      // FAST PATH: open every cache you can afford at once, auto-equip upgrades, one quick summary.
+      Meta.affordableChests(m) >= 2
+        ? el('.cache-all', { onclick: () => { const n = Meta.affordableChests(m); const r = Meta.openChests(n); if (r.ok) revealBulk(r.items, render); } },
+            [el('span', { html: ic('coffer') }), el('span', {}, `Open all ×${Meta.affordableChests(m)}`), el('span.ca-cost', {}, [String(Meta.affordableChests(m) * Meta.CHEST_COST) + ' ', iconEl('spoils')])])
+        : null,
       forgePanel(m, rar, render),
       // ── Inventory — grouped by slot category so each kind of gear is clearly separated ──
       sectionHead('Inventory', m.inventory.length ? `${m.inventory.length} pieces` : 'empty'),
@@ -1187,6 +1192,27 @@ function revealItem(item, after) {
       el('button.btn.primary', { onclick: () => { Meta.equip(item.iid); Sfx.fuse(); ov.remove(); after && after(); } }, 'Equip'),
       el('button.btn', { onclick: () => { ov.remove(); after && after(); } }, 'Stash'),
     ]),
+  ]));
+  document.body.append(ov);
+}
+
+// Fast bulk-open summary: auto-equips upgrades, shows the haul + the rarest with one confetti.
+function revealBulk(items, after) {
+  const tierOf = (it) => Math.max(0, Meta.RARITIES.findIndex((r) => r.id === it.rarity));
+  const upgraded = Meta.equipBestPerSlot();
+  const sorted = items.slice().sort((a, b) => tierOf(b) - tierOf(a));
+  const bestTier = tierOf(sorted[0]);
+  Sfx.reward(bestTier);
+  if (motionOn() && bestTier >= 2) launchConfetti([0, 0, 1500, 3000, 4500, 6000][bestTier] || 1500);
+  const rarColor = (it) => (Meta.RARITIES.find((r) => r.id === it.rarity) || {}).color || '#9aa6b8';
+  const ov = el('.overlay', {}, el('.reveal-card bulk-card', { style: { maxWidth: '380px', width: '92%' } }, [
+    el('h2', {}, `Opened ${items.length} War Cache${items.length > 1 ? 's' : ''}`),
+    el('.bulk-sub', { style: { color: upgraded.length ? 'var(--hp)' : 'var(--ink-dim)' } }, upgraded.length ? `✦ ${upgraded.length} upgrade${upgraded.length > 1 ? 's' : ''} auto-equipped` : 'No upgrades this time — all stashed'),
+    el('.bulk-grid', {}, sorted.map((it) => el('.bulk-item', { style: { '--rc': rarColor(it) }, title: `${it.name} — ${Meta.effectText(it)}` }, [
+      el('.bi-art', { html: gearArt(it.slot, it.rarity, 40) }),
+      el('.bi-name', {}, it.name),
+    ]))),
+    el('button.btn.primary', { onclick: () => { ov.remove(); after && after(); } }, 'Done'),
   ]));
   document.body.append(ov);
 }
