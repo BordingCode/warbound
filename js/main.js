@@ -10,7 +10,7 @@ import { simulate } from './sim/combat.js';
 import { hashSeed } from './rng.js';
 import { CombatPlayer, unitStatsPanel } from './render/player.js';
 import { createDragController } from './input/drag.js';
-import { getEnemyBoard, REALMS, realmAt } from './data/enemies.js';
+import { getEnemyBoard, REALMS, realmAt, bossForRealm } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
@@ -50,6 +50,8 @@ function getOpponent() {
   // you beat the current one. A loss replays the SAME foe (while your round/economy keeps growing
   // so you can break the wall). The current REALM sets the difficulty + themes the reinforcements.
   const realm = realmAt(run.realm || 0);
+  // the realm's 10th/final warband is a themed BOSS with a gimmick (telegraphed pre-fight).
+  if (run.wins + 1 === Run.WIN_TARGET) return bossForRealm(realm.index);
   return getEnemyBoard(run.wins + 1, null, { diff: realm.diff, pool: realm.pool });
 }
 
@@ -374,7 +376,12 @@ function renderPlanning() {
     buildTraitsEl(),
     run.mode === 'ladder' ? buildLobbyBar() : null,
     run.mode === 'ladder' ? buildStandings() : null,
-    el('.phase-banner', {}, `${run.mode === 'ladder' ? 'Versus' : 'Next'}: ${enemy.name} — ${enemy.traitHint}`),
+    enemy.boss
+      ? el('.phase-banner.boss-banner', {}, [
+          el('div', { style: { fontWeight: '800', letterSpacing: '.04em' } }, `☠ BOSS — ${enemy.name}`),
+          el('div', { style: { fontSize: '12px', color: 'var(--gold)', marginTop: '2px' } }, `${enemy.gimmickName}: ${enemy.gimmickDesc}`),
+        ])
+      : el('.phase-banner', {}, `${run.mode === 'ladder' ? 'Versus' : 'Next'}: ${enemy.name} — ${enemy.traitHint}`),
     buildEnemyScout(enemy),
     stage,
     el('.combat-ctl', {}, [
@@ -782,6 +789,7 @@ async function startCombat() {
   const soloBundle = Object.assign(augmentBundle(run.augments), { traitBonus: teamTraitBonus() });
   if (run.mode !== 'ladder' && run.metaFlat) for (const k in run.metaFlat) soloBundle.flat[k] = (soloBundle.flat[k] || 0) + run.metaFlat[k];   // gear's team AD% etc.
   let augOpt = { aug: { player: soloBundle } };
+  if (enemy.gimmick) augOpt.aug.enemy = enemy.gimmick;   // Warpath boss gimmick (aug.enemy channel)
   if (run.mode === 'ladder' && lobby) {
     const pb = augmentBundle(run.augments);
     const pf = Bots.powerFlat(lobby.human, lobby);   // human warlord power + modifier
@@ -896,6 +904,10 @@ function showRealms() {
       el('.spoils-pill', { onclick: () => showArmory(), style: { cursor: 'pointer' } }, [iconEl('coffer'), el('span', {}, 'Armory')]),
     ]),
     el('.arm-tagline', {}, `${cleared} of ${REALMS.length} realms conquered. Beat all 10 warbands of a realm to claim it for good — then march on the next.`),
+    el('.seed-bar', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } }, [
+      el('button.btn', { title: 'A fixed shared challenge — same shops & foes for everyone today', onclick: () => startSolo(true, 0, 'daily-' + new Date().toISOString().slice(0, 10)) }, [el('span', { html: ic('star') }), ' Daily run']),
+      el('button.btn', { title: 'Enter a shared seed to replay someone else’s exact run', onclick: () => { const s = prompt('Enter a seed to play a shared run:'); if (s && s.trim()) startSolo(true, 0, s.trim()); } }, [el('span', { html: ic('codex') }), ' Enter seed']),
+    ]),
     el('.realm-list', {}, cards),
   ]));
 }
@@ -971,6 +983,10 @@ function endScreen(ladderSummary) {
     rewardBlock,
     rankBlock,
     run.mode !== 'ladder' && run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name, html: augIcon(AUGMENTS[id]) })))]) : null,
+    run.mode !== 'ladder' ? el('.seed-share', { style: { fontSize: '12px', color: 'var(--ink-dim)' } }, [
+      el('span', {}, 'Seed: '), el('code', { style: { color: 'var(--gold)' } }, run.seedStr),
+      el('button.btn', { style: { padding: '3px 8px', marginLeft: '6px', fontSize: '11px' }, onclick: (e) => { try { navigator.clipboard.writeText(run.seedStr); } catch {} e.target.textContent = 'Copied'; } }, 'Copy seed'),
+    ]) : null,
     el('.end-btns', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } }, [
       extraBtn,
       el(`button.btn${extraBtn ? '' : '.primary'}`, { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => (run.mode === 'ladder' ? chooseMode() : showRealms()) }, run.mode === 'ladder' ? '↻ Main menu' : 'Realms'),
@@ -981,11 +997,11 @@ function endScreen(ladderSummary) {
 
 // ---------- mode select ----------
 // Start (or resume) a Warpath run. `realm` = which realm to attempt (fresh runs reset everything).
-function startSolo(fresh, realm = 0) {
+function startSolo(fresh, realm = 0, seedStr = null) {
   if (fresh) Run.clearSave();
   clearLobby();
   const resumed = !fresh && Run.load();
-  run = resumed || Run.freshRun();
+  run = resumed || Run.freshRun(seedStr || undefined);   // seedStr → daily/shared reproducible run
   run.mode = 'solo'; lobby = null;
   if (!resumed) { run.realm = realm; applyGear(run); }   // a NEW realm run resets + starts with your gear boosts
   Run.save(run); renderPlanning();

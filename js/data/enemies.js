@@ -63,3 +63,42 @@ export function getEnemyBoard(round, rng, opts = {}) {
   const name = opts.name ? opts.name : (esc > 0 ? base.name + ' +' + esc : base.name);
   return { name, traitHint: base.traitHint, units };
 }
+
+// ---- Realm BOSSES: each realm's 10th/final warband is a hand-crafted boss with a GIMMICK.
+// The gimmick is an aug.enemy bundle ({flat,cond,traitBonus}) — the SAME channel augments use —
+// applied to the boss board only, and named/telegraphed pre-fight (the "answer key" pillar).
+export const BOSSES = [
+  { realm: 0, name: 'The Iron Tyrant', traitHint: 'BOSS · Bulwark',
+    gimmickName: 'Bulwark', gimmickDesc: 'The host starts heavily armored. Bring sustained or magic damage — raw autos bounce off.',
+    gimmick: { flat: { armor: 30, hp: 0.15 } },
+    units: [E('knight_captain', 3, 3, 3), E('bone_guard', 3, 2, 3), E('bone_guard', 3, 4, 3), E('crossbowman', 3, 1, 1), E('court_mage', 2, 5, 0), E('field_medic', 2, 6, 0)] },
+  { realm: 1, name: 'Sylvan Matriarch', traitHint: 'BOSS · Evasion',
+    gimmickName: 'Evasion', gimmickDesc: 'They dodge blows and start shielded. Burst them down fast — chip damage gets wasted.',
+    gimmick: { traitBonus: { elf: 4 }, flat: { as: 0.15 } },
+    units: [E('thornguard', 3, 3, 3), E('moon_priestess', 3, 4, 0), E('moon_priestess', 2, 1, 0), E('wood_ranger', 3, 2, 1), E('grove_healer', 3, 5, 0), E('shadow_dancer', 3, 6, 1)] },
+  { realm: 2, name: 'The Bonelord', traitHint: 'BOSS · Undying',
+    gimmickName: 'Undying', gimmickDesc: 'The whole host claws back from death once. You must kill them twice — bring burst and anti-heal.',
+    gimmick: { traitBonus: { undead: 6 }, flat: { hp: 0.12 } },
+    units: [E('bone_guard', 3, 3, 3), E('bone_guard', 3, 2, 3), E('necromancer', 3, 4, 0), E('lich', 3, 5, 0), E('skeleton_archer', 3, 1, 1), E('wraith', 3, 6, 1)] },
+  { realm: 3, name: 'Inferno Tyrant', traitHint: 'BOSS · Hellfire',
+    gimmickName: 'Hellfire', gimmickDesc: 'Every blow burns and drains mana — your casters will struggle to fire. Lean on attack carries.',
+    gimmick: { traitBonus: { demon: 6 }, flat: { ap: 40 } },
+    units: [E('hellguard', 3, 3, 3), E('hellguard', 3, 4, 3), E('warlock', 3, 5, 0), E('fel_archer', 3, 2, 1), E('imp_assassin', 3, 6, 1), E('pit_summoner', 2, 1, 0)] },
+  { realm: 4, name: 'The Worldwyrm', traitHint: 'BOSS · Dragonscale',
+    gimmickName: 'Dragonscale', gimmickDesc: 'Near-immune to spells and hits like a meteor. Out-tank it and chip with physical attacks, not magic.',
+    gimmick: { traitBonus: { dragon: 2 }, flat: { ad: 0.15, mr: 25 } },
+    units: [E('dragon_knight', 3, 3, 3), E('dragon_sage', 3, 4, 0), E('wyrm_archer', 3, 5, 1), E('thornguard', 3, 2, 3), E('moon_priestess', 2, 1, 0), E('grove_healer', 2, 6, 0)] },
+  { realm: 5, name: 'The Void Maw', traitHint: 'BOSS · The End',
+    gimmickName: 'The End', gimmickDesc: 'Every horror at its fiercest — no single counter. Bring your strongest, most rounded board.',
+    gimmick: { flat: { ad: 0.18, ap: 50, hp: 0.18 } },
+    units: [E('dragon_knight', 3, 3, 3), E('warlock', 3, 4, 0), E('lich', 3, 5, 0), E('wraith', 3, 2, 1), E('pit_summoner', 3, 6, 0), E('moon_priestess', 3, 1, 0), E('bramble_brute', 3, 0, 3)] },
+];
+// Endless realms reuse the last (toughest) boss, with its gimmick scaled up a touch per overflow.
+export function bossForRealm(realmIndex) {
+  const b = BOSSES[Math.min(realmIndex, BOSSES.length - 1)];
+  const over = Math.max(0, realmIndex - (BOSSES.length - 1));
+  const gimmick = over > 0
+    ? { ...b.gimmick, flat: { ...(b.gimmick.flat || {}), hp: ((b.gimmick.flat && b.gimmick.flat.hp) || 0) + 0.1 * over, ad: ((b.gimmick.flat && b.gimmick.flat.ad) || 0) + 0.08 * over } }
+    : b.gimmick;
+  return { name: b.name + (over > 0 ? ' +' + over : ''), traitHint: b.traitHint, boss: true, gimmick, gimmickName: b.gimmickName, gimmickDesc: b.gimmickDesc, units: b.units.map((u) => ({ ...u })) };
+}

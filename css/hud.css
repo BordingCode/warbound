@@ -84,6 +84,9 @@
 /* combat overlay controls */
 .combat-ctl { display: flex; gap: 8px; align-items: center; justify-content: center; }
 .phase-banner { text-align: center; font-weight: 800; letter-spacing: .5px; color: var(--ink-dim); min-height: 18px; }
+.boss-banner { color: #ff6a8a; background: linear-gradient(180deg, rgba(255,60,90,.12), rgba(255,60,90,0)); border: 1px solid rgba(255,90,120,.35); border-radius: 10px; padding: 7px 10px; animation: bossPulse 1.6s ease-in-out infinite; }
+@keyframes bossPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,90,120,0); } 50% { box-shadow: 0 0 14px 0 rgba(255,90,120,.35); } }
+@media (prefers-reduced-motion: reduce) { .boss-banner { animation: none; } }
 
 /* items tray */
 .items-tray { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 30px; padding: 4px 6px; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius-sm); }
