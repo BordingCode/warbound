@@ -352,6 +352,7 @@ export function load() {
     if (!raw) return null;
     const run = JSON.parse(raw);
     if (run.v !== 1) return null;
+    if (run.over) { clearSave(); return null; }   // a FINISHED run never restores (boot → menu, not the last fight)
     // backfill fields added after a save was written (forward-compatible migration)
     run.augments = run.augments || run.relics || [];   // relics were renamed to augments
     run.augments = run.augments.filter((id) => AUGMENTS[id]);  // drop any ids no longer valid
