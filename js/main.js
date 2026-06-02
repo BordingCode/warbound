@@ -1179,7 +1179,7 @@ function forgePanel(m, rar, render) {
     return el('.forge-row', {
       style: { '--rc': rar(g.rarity).color, '--uc': rar(up).color },
       title: `Consumes two ${rar(g.rarity).name} ${s.name}s`,
-      onclick: () => { const r = Meta.combineItems(g.slot, g.rarity); if (r.ok) revealItem(r.item, render); },
+      onclick: () => { const r = Meta.combineItems(g.slot, g.rarity); if (r.ok) revealItem(r.item, render, { autoStash: true }); },
     }, [
       el('.fr-icon', { html: ic(s.icon) }),
       el('.fr-text', {}, [
@@ -1194,7 +1194,7 @@ function forgePanel(m, rar, render) {
     rows.length ? el('.forge-list', {}, rows) : el('.forge-empty', {}, 'Collect two of the same slot AND rarity to fuse them into a higher tier.'),
   ]);
 }
-function revealItem(item, after) {
+function revealItem(item, after, opts = {}) {
   const tier = Math.max(0, Meta.RARITIES.findIndex((r) => r.id === item.rarity));   // 0 common … 5 ascended
   const rar = Meta.RARITIES[tier] || Meta.RARITIES[0];
   const motion = motionOn();
@@ -1212,10 +1212,16 @@ function revealItem(item, after) {
     el('.reveal-icon', { html: gearArt(item.slot, item.rarity, 84) }),
     el('h2', {}, item.name),
     el('.reveal-eff', {}, Meta.effectText(item)),
-    el('.reveal-tools', {}, [
-      el('button.btn.primary', { onclick: () => { Meta.equip(item.iid); Sfx.fuse(); ov.remove(); after && after(); } }, 'Equip'),
-      el('button.btn', { onclick: () => { ov.remove(); after && after(); } }, 'Stash'),
-    ]),
+    // forge: the item is already in your inventory — just show it and stash (no equip/stash choice).
+    opts.autoStash
+      ? el('.reveal-tools', {}, [
+          el('.reveal-stashed', {}, 'Stashed in your inventory'),
+          el('button.btn.primary', { onclick: () => { ov.remove(); after && after(); } }, 'Continue'),
+        ])
+      : el('.reveal-tools', {}, [
+          el('button.btn.primary', { onclick: () => { Meta.equip(item.iid); Sfx.fuse(); ov.remove(); after && after(); } }, 'Equip'),
+          el('button.btn', { onclick: () => { ov.remove(); after && after(); } }, 'Stash'),
+        ]),
   ]));
   document.body.append(ov);
 }
