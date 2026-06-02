@@ -70,6 +70,14 @@ function unitNode(u, team) {
     el('.bars', {}, [el('.bar.hp', {}, [el('.trail'), el('.fill')]), el('.bar.mana', {}, [el('.fill')])]),
   );
   if (u.items && u.items.length) node.append(el('.item-dots', {}, u.items.map(() => el('i'))));
+  // On-screen battle stats (opt-in): each of YOUR champions shows last fight's damage dealt & tanked.
+  if (team === 'player' && !inCombat && battleStatsOn()) {
+    const bs = battleStatFor(u.defId);
+    if (bs) node.append(el('.unit-bstat', { title: 'Last battle — damage dealt ⚔ / tanked 🛡' }, [
+      el('span.ub-d', { html: ic('sword') }), el('span', {}, String(bs.dealt)),
+      el('span.ub-t', { html: ic('shield') }), el('span', {}, String(bs.tanked)),
+    ]));
+  }
   node.querySelector('.bar.hp .fill').style.transform = 'scaleX(1)';
   node.querySelector('.bar.hp .trail').style.transform = 'scaleX(1)';
   node.querySelector('.bar.mana .fill').style.transform = 'scaleX(0)';
@@ -364,11 +372,7 @@ function renderPlanning() {
         ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
         : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: run.mode === 'trials' ? `Slay all ${TRIAL_COUNT} bosses` : `${realmAt(run.realm || 0).name} · conquer all 10` }, `${run.wins}/${run.winTarget || Run.WIN_TARGET}`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
-      el('button.btn', { style: { padding: '5px 10px' }, title: 'Warband stats', onclick: showStats, html: ic('bars') }),
-      el('button.btn', { style: { padding: '5px 10px' }, title: 'Codex', onclick: () => showCodex('units'), html: ic('codex') }),
-      el(`button.btn#dragStatsBtn${dragStatsOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Show stats while dragging a champion or item', onclick: toggleDragStats, html: ic('eye') }),
-      el('button.btn#soundBtn', { style: { padding: '5px 10px' }, title: 'Sound', onclick: toggleSound, html: ic(soundOn() ? 'sound' : 'mute') }),
-      el('button.btn', { style: { padding: '5px 10px' }, title: 'How to play', onclick: showHelp }, '?'),
+      el('button.btn#optionsBtn', { style: { padding: '5px 10px' }, title: 'Options & menu', onclick: showOptions, html: ic('bars') }),
     ]),
     el('.topbar', { style: { cursor: 'pointer' }, onclick: showEconomyInfo }, [
       el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt} units`)]),
@@ -823,9 +827,65 @@ function promptInstall() {
     : 'Open your browser’s menu (⋮ or the install icon in the address bar) and choose “Install app” / “Add to Home screen”. Warbound then opens full-screen like a real app — and works offline.');
 }
 
-// On-screen stats while dragging a champion/item (with a dragged-vs-target comparison). Toggle in HUD.
+// On-screen stats while dragging a champion/item (with a dragged-vs-target comparison). Toggle in Options.
 function dragStatsOn() { try { return localStorage.getItem('warbound_dragstats') !== '0'; } catch { return true; } }
 function toggleDragStats() { try { localStorage.setItem('warbound_dragstats', dragStatsOn() ? '0' : '1'); } catch {} Sfx.click(); renderPlanning(); }
+// Battle stats ON THE BOARD (opt-in, default off): each of your champions shows last fight's
+// damage dealt & tanked right on its tile, so you can read your carries/tanks at a glance.
+function battleStatsOn() { try { return localStorage.getItem('warbound_battlestats') === '1'; } catch { return false; } }
+// Sum the last battle's dealt/tanked for a defId (multiple same-id units aggregate). null if none.
+function battleStatFor(defId) {
+  if (!lastBattleStats) return null;
+  let dealt = 0, tanked = 0, found = false;
+  for (const s of lastBattleStats) if (s.defId === defId) { dealt += s.dealt; tanked += s.tanked; found = true; }
+  return found ? { dealt, tanked } : null;
+}
+
+// Consolidated Options & menu — ONE HUD button opens this (replaces the old row of top-bar
+// buttons). Holds the view toggles, sound, the info screens, and a way to LEAVE a run you may
+// have entered by mistake (with a confirm so a real run isn't abandoned by a stray tap).
+function showOptions() {
+  Sfx.click();
+  function done() { ov.remove(); renderPlanning(); }   // re-render so the board reflects toggle changes
+  function askQuit() {
+    card.replaceChildren(
+      el('h2', { style: { fontSize: '20px' } }, 'Leave this run?'),
+      el('.opt-sub', { style: { lineHeight: '1.5', margin: '4px 0 14px' } }, run.mode === 'ladder'
+        ? 'You’ll forfeit this ladder game and return to the menu. Quitting doesn’t change your rank.'
+        : 'You’ll return to the menu and this run ends. Realms you’ve already conquered and Spoils you’ve banked are kept — only this run’s in-progress board is lost.'),
+      el('.opt-confirm', {}, [
+        el('button.btn.danger', { style: { padding: '11px 20px' }, onclick: () => { ov.remove(); chooseMode(); } }, [iconEl('back'), el('span', { style: { marginLeft: '6px' } }, 'Quit to menu')]),
+        el('button.btn.primary', { style: { padding: '11px 20px' }, onclick: () => { ov.remove(); showOptions(); } }, 'Stay'),
+      ]),
+    );
+  }
+  const toggleRow = (iconName, label, sub, isOn, flip) => {
+    const sw = el('.opt-switch', {}, el('.opt-knob'));
+    const row = el('.opt-row.toggle', { onclick: () => { flip(); const on = isOn(); row.classList.toggle('on', on); sw.classList.toggle('on', on); } },
+      [el('.opt-ic', { html: ic(iconName) }), el('.opt-text', {}, [el('.opt-label', {}, label), el('.opt-sub', {}, sub)]), sw]);
+    const on = isOn(); row.classList.toggle('on', on); sw.classList.toggle('on', on);
+    return row;
+  };
+  const actionRow = (iconName, label, sub, fn) => el('.opt-row.action', { onclick: () => { ov.remove(); fn(); } },
+    [el('.opt-ic', { html: ic(iconName) }), el('.opt-text', {}, [el('.opt-label', {}, label), el('.opt-sub', {}, sub)]), el('.opt-go', { html: '›' })]);
+  const card = el('.help-card.options-card', { style: { maxWidth: '340px', width: '92%' } }, [
+    el('h2', { style: { fontSize: '20px' }, html: ic('bars') + ' Options' }),
+    el('.opt-group', {}, [
+      toggleRow('bars', 'Battle stats on board', 'Show each champion’s last-fight damage & tanked, right on its tile', battleStatsOn, () => { try { localStorage.setItem('warbound_battlestats', battleStatsOn() ? '0' : '1'); } catch {} Sfx.click(); }),
+      toggleRow('eye', 'Stats while dragging', 'Show a champion’s full stats while you drag it', dragStatsOn, () => { try { localStorage.setItem('warbound_dragstats', dragStatsOn() ? '0' : '1'); } catch {} Sfx.click(); }),
+      toggleRow('sound', 'Sound', 'Music & sound effects', soundOn, () => { audioResume(); setSound(!soundOn()); if (soundOn()) Sfx.click(); }),
+    ]),
+    el('.opt-group', {}, [
+      actionRow('sword', 'Last battle report', 'Damage dealt & tanked per champion, full list', showStats),
+      actionRow('codex', 'Codex', 'Browse every champion, synergy & augment', () => showCodex('units')),
+      actionRow('help', 'How to play', 'The basics, again', showHelp),
+    ]),
+    el('.opt-group', {}, [el('button.btn.opt-quit', { onclick: askQuit }, [iconEl('back'), el('span', { style: { marginLeft: '6px' } }, 'Quit to main menu')])]),
+    el('button.btn.primary.go', { onclick: done }, 'Done'),
+  ]);
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) done(); } }, card);
+  document.body.append(ov);
+}
 
 // Explain the economy with the player's CURRENT live values.
 // Shop odds grid: for each level (1–9), the % chance a shop slot rolls each cost tier (rarity).

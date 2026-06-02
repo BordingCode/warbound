@@ -62,6 +62,18 @@
 .unit .bar.mana { height: 2.5px; }
 .unit .bar.mana .fill { background: var(--mana); transition: transform .12s linear; }
 .unit .bar.mana.full { box-shadow: 0 0 5px var(--mana); }
+
+/* opt-in on-screen battle stats: last fight's dealt ⚔ / tanked 🛡, pinned under the champion */
+.unit .unit-bstat {
+  position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%); z-index: 4;
+  display: flex; align-items: center; gap: 2px; pointer-events: none; white-space: nowrap;
+  padding: 1px 4px; border-radius: 6px; background: #0b0f17e0; box-shadow: 0 0 0 1px #0009;
+  font-size: 8px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.unit .unit-bstat .ub-d, .unit .unit-bstat .ub-t { display: inline-flex; }
+.unit .unit-bstat .ub-d .ic { width: 8px; height: 8px; color: var(--dt-physical); }
+.unit .unit-bstat .ub-t { margin-left: 3px; }
+.unit .unit-bstat .ub-t .ic { width: 8px; height: 8px; color: var(--hp); }
 .unit .bar.mana.full .fill { background: #cfe6ff; }
 
 .unit .item-dots { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; z-index: 2; }

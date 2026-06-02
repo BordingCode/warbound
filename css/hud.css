@@ -650,3 +650,34 @@
 .honor-toast .ht-name { font-weight: 800; font-size: 15px; color: var(--ink); }
 .honor-toast .ht-bounty { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--gold); font-size: 15px; padding-left: 6px; border-left: 1px solid var(--line); }
 .honor-toast .ht-bounty .ic { width: 16px; height: 16px; }
+
+/* ---------- Options & menu window (single HUD button) ---------- */
+.options-card { text-align: left; }
+.options-card h2 { display: flex; align-items: center; gap: 8px; }
+.options-card h2 .ic { width: 20px; height: 20px; }
+.opt-group { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.opt-group + .opt-group { border-top: 1px solid var(--line); padding-top: 12px; }
+.opt-row { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: var(--radius-sm);
+  background: var(--bg-1); border: 1px solid var(--line); cursor: pointer; transition: background .12s, border-color .12s; }
+.opt-row:hover { background: var(--bg-2); }
+.opt-row .opt-ic { flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--bg-2); color: var(--ink-dim); }
+.opt-row .opt-ic .ic { width: 17px; height: 17px; }
+.opt-row .opt-text { flex: 1; min-width: 0; }
+.opt-row .opt-label { font-weight: 800; font-size: 14px; }
+.opt-row .opt-sub { font-size: 11px; color: var(--ink-dim); line-height: 1.3; }
+.opt-row .opt-go { color: var(--ink-faint); font-size: 22px; font-weight: 700; line-height: 1; }
+.opt-row.toggle.on { border-color: color-mix(in srgb, var(--gold) 50%, var(--line)); }
+.opt-row.toggle.on .opt-ic { background: color-mix(in srgb, var(--gold) 26%, var(--bg-2)); color: var(--gold); }
+/* the switch */
+.opt-switch { flex: 0 0 auto; width: 40px; height: 22px; border-radius: 999px; background: var(--bg-3); position: relative; transition: background .15s; }
+.opt-switch .opt-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--ink-dim); transition: transform .15s, background .15s; }
+.opt-switch.on { background: var(--gold-deep); }
+.opt-switch.on .opt-knob { transform: translateX(18px); background: #fff; }
+/* quit + confirm */
+.btn.opt-quit { width: 100%; justify-content: center; display: inline-flex; align-items: center; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+.btn.opt-quit:hover { background: color-mix(in srgb, var(--danger) 14%, var(--bg-1)); }
+.btn.opt-quit .ic { width: 16px; height: 16px; }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 800; display: inline-flex; align-items: center; }
+.btn.danger:hover { filter: brightness(1.08); }
+.btn.danger .ic { width: 16px; height: 16px; }
+.opt-confirm { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
