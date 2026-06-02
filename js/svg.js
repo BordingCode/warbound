@@ -198,6 +198,13 @@ export function championInner(def, paletteOverride) {
 
 // ── Boss CREATURE art (viewBox 0 0 100 120, ground ~y110). Distinct monster silhouettes,
 // keyed by def.shape, tinted by def.accent. NOT the humanoid champion rig. ──
+// Local colour shade: positive pct lightens, negative darkens (clamped 0..255).
+function shade(c, pct) {
+  const n = parseInt((c || '#888888').slice(1, 7), 16);
+  const f = 1 + pct / 100;
+  const ch = [n >> 16 & 255, n >> 8 & 255, n & 255].map((x) => Math.max(0, Math.min(255, Math.round(x * f))));
+  return '#' + ch.map((x) => x.toString(16).padStart(2, '0')).join('');
+}
 function creatureInner(def) {
   const c = def.accent || '#9aa6b8';
   const shadow = '<ellipse cx="50" cy="111" rx="34" ry="6.5" fill="#00000055"/>';
@@ -241,6 +248,46 @@ function creatureInner(def) {
       `<path d="M52 25 l-3 -9 M63 27 l5 -8" stroke="#ffd24a" stroke-width="2.6" stroke-linecap="round"/>` +
       `<circle cx="55" cy="29" r="2.6" fill="#ffe14a"/>` +
       `<path d="M40 35 q-9 0 -13 4 q7 2 11 0 z" fill="#ffb347"/>`,
+    spider: () => shadow +
+      // eight jointed legs splayed around a bulbous body + a smaller head with cluster eyes
+      [[-1, 0], [-1, 14], [1, 0], [1, 14]].map(([dir, off]) =>
+        `<path d="M50 80 q${dir * 22} ${-8 + off} ${dir * 34} ${10 + off}" stroke="#3a2233" stroke-width="3.5" fill="none" stroke-linecap="round"/>`).join('') +
+      `<ellipse cx="50" cy="84" rx="26" ry="22" fill="${c}" opacity=".95"/>` +
+      `<path d="M40 72 q10 -6 20 0" stroke="#ffffff" stroke-width="2.5" fill="none" opacity=".3" stroke-linecap="round"/>` +
+      `<ellipse cx="50" cy="58" rx="13" ry="11" fill="${shade(c, -18)}"/>` +
+      `<circle cx="45" cy="56" r="2.6" fill="#1a0f14"/><circle cx="55" cy="56" r="2.6" fill="#1a0f14"/>` +
+      `<circle cx="42" cy="61" r="1.6" fill="#1a0f14"/><circle cx="58" cy="61" r="1.6" fill="#1a0f14"/>` +
+      `<path d="M44 64 q6 4 12 0" stroke="#1a0f14" stroke-width="2" fill="none"/>`,
+    treant: () => shadow +
+      // gnarled bark trunk with two limb-arms, a mossy crown and glowing knot-eyes
+      `<path d="M30 110 Q26 70 34 50 Q40 36 50 36 Q60 36 66 50 Q74 70 70 110 Z" fill="${shade(c, -34)}"/>` +
+      `<path d="M44 108 Q42 78 46 56 M56 108 Q58 78 54 56" stroke="#2c2014" stroke-width="2.4" fill="none" opacity=".6"/>` +
+      `<path d="M34 64 Q16 58 12 40 Q22 48 36 52 Z" fill="${shade(c, -28)}"/>` +
+      `<path d="M66 64 Q84 58 88 40 Q78 48 64 52 Z" fill="${shade(c, -28)}"/>` +
+      `<ellipse cx="50" cy="40" rx="30" ry="20" fill="${c}"/>` +
+      `<ellipse cx="32" cy="46" rx="13" ry="11" fill="${shade(c, 12)}"/><ellipse cx="68" cy="46" rx="13" ry="11" fill="${shade(c, 12)}"/>` +
+      `<circle cx="43" cy="70" r="4" fill="#ffd24a"/><circle cx="57" cy="70" r="4" fill="#ffd24a"/>` +
+      `<circle cx="43" cy="70" r="1.7" fill="#3a2a10"/><circle cx="57" cy="70" r="1.7" fill="#3a2a10"/>` +
+      `<path d="M42 84 q8 6 16 0" stroke="#2c2014" stroke-width="2.4" fill="none" stroke-linecap="round"/>`,
+    frost: () => shadow +
+      // a crystalline ice colossus — faceted shard body, jagged crown, frozen glow eyes
+      `<path d="M50 30 L34 52 L30 104 L70 104 L66 52 Z" fill="${c}" opacity=".94"/>` +
+      `<path d="M50 30 L34 52 L50 60 Z" fill="#ffffff" opacity=".5"/>` +
+      `<path d="M50 30 L66 52 L50 60 Z" fill="${shade(c, -20)}" opacity=".7"/>` +
+      `<path d="M30 104 L50 60 L70 104 Z" fill="${shade(c, -12)}" opacity=".5"/>` +
+      `<path d="M40 30 l4 -14 l5 12 l5 -16 l5 18 l6 -10" stroke="${shade(c, 20)}" stroke-width="3" fill="none" stroke-linejoin="round"/>` +
+      `<path d="M16 78 l12 6 M84 78 l-12 6" stroke="${c}" stroke-width="5" stroke-linecap="round"/>` +
+      `<circle cx="43" cy="62" r="3.4" fill="#eaffff"/><circle cx="57" cy="62" r="3.4" fill="#eaffff"/>` +
+      `<circle cx="43" cy="62" r="1.5" fill="#2b6f8c"/><circle cx="57" cy="62" r="1.5" fill="#2b6f8c"/>`,
+    void: () => shadow +
+      // an eldritch maw — a dark tendrilled mass with a ring of eyes around a gaping fanged mouth
+      [0, 1, 2, 3, 4].map((i) => { const a = -2.0 + i * 1.0; return `<path d="M50 80 q${Math.cos(a) * 30} ${Math.sin(a) * 26} ${Math.cos(a) * 40} ${20 + Math.sin(a) * 30}" stroke="${shade(c, -30)}" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>`; }).join('') +
+      `<circle cx="50" cy="74" r="30" fill="#160a22"/>` +
+      `<circle cx="50" cy="74" r="30" fill="none" stroke="${c}" stroke-width="2.5" opacity=".7"/>` +
+      [[34, 60], [50, 52], [66, 60], [30, 78], [70, 78]].map(([x, y]) =>
+        `<circle cx="${x}" cy="${y}" r="3.6" fill="${c}"/><circle cx="${x}" cy="${y}" r="1.5" fill="#0b0410"/>`).join('') +
+      `<ellipse cx="50" cy="86" rx="15" ry="10" fill="#0b0410"/>` +
+      `<path d="M37 84 l4 6 l4 -6 l5 7 l5 -7 l4 6 l4 -6" stroke="${c}" stroke-width="2.2" fill="none" stroke-linejoin="round"/>`,
   };
   return (S[def.shape] || S.slime)();
 }

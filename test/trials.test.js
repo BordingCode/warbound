@@ -14,7 +14,7 @@ const TEAM = [U('wyrm_archer', 3, 7, 3), U('knight_captain', 2, 6, 3), U('bone_g
   U('court_mage', 4, 7, 2), U('lich', 1, 7, 2), U('field_medic', 6, 7, 2), U('grove_healer', 0, 7, 2)];
 
 console.log('\n=== THE TRIALS: bosses load, fight, and escalate ===');
-ok('5 trials defined', TRIAL_COUNT === 5, `${TRIAL_COUNT} bosses`);
+ok('9 trials defined', TRIAL_COUNT === 9, `${TRIAL_COUNT} bosses`);
 
 const wr = [];
 for (let i = 0; i < TRIAL_COUNT; i++) {
@@ -33,16 +33,17 @@ for (let i = 0; i < TRIAL_COUNT; i++) {
 }
 
 ok('Trials I–IV are clearable by a realistic round-5 team', wr.slice(0, 4).every((x) => x >= 0.5), wr.slice(0, 4).map((x) => (x * 100).toFixed(0) + '%').join(' '));
-ok('Final boss (Ember Wyrm) is the hardest', wr[TRIAL_COUNT - 1] <= Math.min(...wr.slice(0, 4)) + 1e-9, `wyrm ${(wr[TRIAL_COUNT - 1] * 100).toFixed(0)}% ≤ earlier trials`);
-// The Wyrm must be BEATABLE by a strong, geared build (not impossible) — model gear via a flat aug bundle.
+ok('The gauntlet escalates (final boss is the hardest)', wr[TRIAL_COUNT - 1] <= Math.min(...wr.slice(0, TRIAL_COUNT - 1)) + 1e-9, `final ${(wr[TRIAL_COUNT - 1] * 100).toFixed(0)}% ≤ all earlier trials`);
+// The FINAL boss (The Void Maw) must be BEATABLE by a strong, geared late-gauntlet build (not
+// impossible) — model the much-stronger board a player reaches by trial 9 + items/augments/gear.
 {
-  const STRONG = [U('dragon_knight', 3, 7, 2), U('wyrm_archer', 5, 7, 3), U('lich', 1, 7, 3),
-    U('knight_captain', 2, 6, 3), U('bone_guard', 3, 5, 3), U('field_medic', 6, 7, 2), U('grove_healer', 0, 7, 2), U('court_mage', 4, 7, 2)];
-  const gear = { flat: { ad: 0.18, ap: 40, hp: 0.15, armor: 15, mr: 15 } };   // items + augments + Armory gear
+  const STRONG = [U('dragon_knight', 3, 7, 3), U('wyrm_archer', 5, 7, 3), U('lich', 1, 7, 3),
+    U('knight_captain', 2, 6, 3), U('bone_guard', 3, 5, 3), U('field_medic', 6, 7, 3), U('grove_healer', 0, 7, 3), U('court_mage', 4, 7, 3)];
+  const gear = { flat: { ad: 0.30, ap: 70, hp: 0.30, armor: 25, mr: 25 } };   // items + augments + Armory gear, late gauntlet
   const board = getTrialBoard(TRIAL_COUNT - 1);
   let w = 0; const N = 24;
   for (let s = 1; s <= N; s++) if (simulate(STRONG.map((u) => ({ ...u })), board.units.map((u) => ({ ...u })), s * 17 + 3, { aug: { player: gear, enemy: board.gimmick || null } }).result.winner === 'player') w++;
-  ok('Ember Wyrm is beatable by a strong geared build', w / N >= 0.45, `geared winrate ${(w / N * 100).toFixed(0)}%`);
+  ok('The Void Maw is beatable by a strong geared build', w / N >= 0.45, `geared winrate ${(w / N * 100).toFixed(0)}%`);
 }
 // a creature must NOT leak into the player economy
 import('../js/data/units.js').then((m) => {

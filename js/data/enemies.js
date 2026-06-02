@@ -106,8 +106,16 @@ const TRIALS = [
     minions: [['bone_guard', 3, 2, 3], ['lich', 2, 6, 0], ['skeleton_archer', 2, 1, 1], ['wraith', 2, 6, 2]] },
   { id: 'bone_hydra',  name: 'Bone Hydra', tier: 'Trial IV', gimmickName: 'Many Heads', gimmickDesc: 'Bites your whole front line at once, and REGROWS two more heads at half health. Spread your board and out-sustain it.', col: 4, row: 2,
     minions: [['bone_guard', 2, 2, 3], ['bone_guard', 2, 6, 3], ['skeleton_archer', 2, 1, 1]] },
-  { id: 'ember_wyrm',  name: 'Ember Wyrm', tier: 'FINAL TRIAL', gimmickName: 'Wyrmfire', gimmickDesc: 'Breathes fire across your BACK line and ENRAGES below half HP (huge attack speed + a meteor storm). Protect your carries and end it fast.', col: 4, row: 0,
+  { id: 'ember_wyrm',  name: 'Ember Wyrm', tier: 'Trial V', gimmickName: 'Wyrmfire', gimmickDesc: 'Breathes fire across your BACK line and ENRAGES below half HP (huge attack speed + a meteor storm). Protect your carries and end it fast.', col: 4, row: 0,
     minions: [['knight_captain', 2, 2, 3], ['wyrm_archer', 2, 1, 1], ['court_mage', 2, 6, 0], ['bone_guard', 3, 6, 3]] },
+  { id: 'venom_broodmother', name: 'Venom Broodmother', tier: 'Trial VI', gimmickName: 'Brood', gimmickDesc: 'Sprays corroding venom (a lingering poison) over your clustered units and HATCHES a brood of spiderlings when wounded. Spread out and burst the mother.', col: 4, row: 1,
+    minions: [['skeleton_archer', 3, 1, 1], ['skeleton_archer', 3, 6, 1], ['bone_guard', 3, 2, 3], ['bone_guard', 3, 6, 3]] },
+  { id: 'elder_treant', name: 'Elder Treant', tier: 'Trial VII', gimmickName: 'Entangle', gimmickDesc: 'Roots STUN your whole front line, it reflects punishing thorns, and it slowly knits its bark back together. Bring ability/magic burst — autos bounce and it out-heals chip damage.', col: 4, row: 2,
+    minions: [['thornguard', 3, 2, 3], ['wood_ranger', 3, 1, 1], ['grove_healer', 3, 6, 0], ['moon_priestess', 2, 6, 1]] },
+  { id: 'frost_monarch', name: 'Frost Monarch', tier: 'Trial VIII', gimmickName: 'Deep Freeze', gimmickDesc: 'A glacial nova FREEZES (deep slow) and strips Magic Resist across your board, then it walls up behind a huge shield and quickens. Kill it before the ice sets in.', col: 4, row: 0,
+    minions: [['lich', 3, 6, 0], ['bone_guard', 3, 2, 3], ['knight_captain', 3, 5, 3], ['crossbowman', 3, 1, 1]] },
+  { id: 'void_maw', name: 'The Void Maw', tier: 'FINAL TRIAL', gimmickName: 'Unmaking', gimmickDesc: 'Drains and BURNS your team’s mana, rots them with void-fire, then below half phases out (dodge) and rains meteors while tearing open void-spawn. The last and hardest wall.', col: 4, row: 1,
+    minions: [['warlock', 3, 6, 0], ['wraith', 3, 5, 2], ['dragon_knight', 2, 2, 3], ['pit_summoner', 2, 1, 1]] },
 ];
 export const TRIAL_COUNT = TRIALS.length;
 export function getTrialBoard(index) {

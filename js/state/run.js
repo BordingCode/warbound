@@ -227,6 +227,18 @@ export function fuseAll(run) {
   run.board = run.board.filter(Boolean);
 }
 
+// Gold returned for selling a unit at its current star (incl. the small upgrade premium).
+export function sellValueOf(defId, star) {
+  const def = UNITS_BY_ID[defId];
+  if (!def) return 0;
+  const copies = star === 1 ? 1 : star === 2 ? 3 : 9;
+  return star === 1 ? def.cost : def.cost * copies - (copies - 1);
+}
+// Find an owned unit (board or bench) by uid, for sell-value lookups.
+export function findUnit(run, uid) {
+  return run.board.find((u) => u && u.uid === uid) || run.bench.find((u) => u && u.uid === uid) || null;
+}
+
 export function sellUid(run, uid) {
   const find = (arr) => arr.findIndex((u) => u && u.uid === uid);
   let u = null;
@@ -236,7 +248,7 @@ export function sellUid(run, uid) {
   if (!u) return false;
   const def = UNITS_BY_ID[u.defId];
   const copies = u.star === 1 ? 1 : u.star === 2 ? 3 : 9;
-  const value = u.star === 1 ? def.cost : def.cost * copies - (copies - 1); // small upgrade premium
+  const value = sellValueOf(u.defId, u.star); // small upgrade premium baked in
   run.gold += value;
   run.pool[u.defId] = (run.pool[u.defId] || 0) + copies;
   if (u.items && u.items.length) for (const id of u.items) run.items.push({ iid: newUid(), id });  // items returned

@@ -293,6 +293,44 @@ export const UNITS = [
   mk('banner_sergeant','Banner Sergeant','human',  'summoner', 3, A.banner_sergeant),
 ];
 
+// Plain-language description of each champion's 3★ ULTIMATE upgrade — the qualitative
+// force-multiplier the engine adds when star===3 (verbs.concat(ult.verbs); 3★-gated passives;
+// wood_ranger's focus shred). Kept in sync with the `ult` data above and ABILITIES_SPEC.md.
+export const ULT3 = {
+  knight_captain: 'Adjacent allies gain +25% Attack Speed for 3s.',
+  court_mage: 'The nuke also burns 30 mana from the target.',
+  crossbowman: 'All targets hit are slowed 25% for 2s.',
+  royal_blade: 'On a kill, instantly re-casts on a new target (once per fight).',
+  field_medic: 'Also cleanses the ally and grants 1.5s crowd-control immunity.',
+  bone_guard: 'Also leeches 18% of its attack damage as health.',
+  lich: 'Also shreds 30 Magic Resist from everything hit for 4s.',
+  skeleton_archer: 'Kills raise a Risen skeleton (up to 2 per fight).',
+  wraith: 'On a kill, resets its attack and gains +40% Attack Speed for 3s.',
+  necromancer: 'Also raises a greater wight with double stats.',
+  thornguard: 'Stun becomes a 1.25s knock-up and taunts adjacent foes for 2s.',
+  moon_priestess: 'The bolt chains to 2 more foes (×0.6 each).',
+  wood_ranger: 'Its locked-on focus also shreds the target’s Armor by 25.',
+  shadow_dancer: 'After striking, gains +40% dodge and +40% Attack Speed for 3s.',
+  grove_healer: 'Heal splashes 50% to adjacent allies and adds 12 HP/s regen for 3s.',
+  spirit_caller: 'Spirits gain +30% dodge and a slowing aura (−15% to nearby foes).',
+  hellguard: 'Also burns 25 mana and cuts healing 40% on all hit for 3s.',
+  warlock: 'Adds a 60/s burning DoT for 3s and burns 30 mana.',
+  fel_archer: 'Each hit also burns 12 mana (team-wide cast denial).',
+  imp_assassin: 'On a kill, burns 40 mana and slows the 2 nearest foes 30%.',
+  pit_summoner: 'Also calls 3 meteors (120 magic each) on random foes.',
+  beast_hunter: 'Also marks the lowest-HP foe so the team hits it 40% harder.',
+  bramble_brute: 'Gains ramping Attack Speed and +25% thorns.',
+  pack_stalker: 'Hits everything next to its target (×0.6); kills grant +30% AS.',
+  druid_healer: 'Shields the 3 most-wounded allies; shielded allies gain +20% AS.',
+  beastmaster: 'Summons stronger wolves with a 15% lifesteal aura.',
+  dragon_knight: 'The breath shoves foes back 1 cell and cuts their healing 40% for 3s.',
+  dragon_sage: 'Adds 4 meteors (100 magic each) and burns 25 mana.',
+  wyrm_archer: 'Looses a second volley and slows the entire enemy team 20%.',
+  storm_shaman: 'Leaves a 60/s burning field for 3s.',
+  plague_priest: 'Sweeps a 16 HP/s regen over the whole warband for 3s.',
+  banner_sergeant: 'Also conscripts a heavy footman with double stats.',
+};
+
 import { CREATURES } from './creatures.js';
 // UNITS_BY_ID includes boss creatures for COMBAT/render lookup only. The player economy (pool,
 // shop, draft, Codex) iterates the UNITS array, which excludes creatures — so bosses never appear

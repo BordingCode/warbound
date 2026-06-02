@@ -1,7 +1,7 @@
 // Warbound — game loop. Planning phase (interactive shop/bench/board + drag) → combat
 // (sim + timeline playback) → resolve → next round, until 10 wins or 0 lives.
 import { el, $, $$ } from './dom.js';
-import { UNITS, UNITS_BY_ID, statsForStar, STAR_MULT } from './data/units.js';
+import { UNITS, UNITS_BY_ID, statsForStar, STAR_MULT, ULT3 } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG, getArtSet, setArtSet } from './champ-art.js';
 import { ic, iconEl, crest, rankMedal } from './icons.js';
@@ -407,6 +407,8 @@ function renderPlanning() {
     onSell: (uid) => { act(() => Run.sellUid(run, uid)); Sfx.sell(); },
     onEquip: (iid, col, row) => { const u = run.board.find((b) => b.col === col && b.row === row); if (u && Run.equipItem(run, iid, u.uid)) { Sfx.fuse(); act(() => {}); } },
     onInspect: (uid) => showInspect(uid),
+    onGrab: (uid) => { const u = Run.findUnit(run, uid); const sz = $('#sellZone'); if (u && sz) sz.innerHTML = ic('sell') + ` Sell <b style="color:var(--gold)">+${Run.sellValueOf(u.defId, u.star)}⛁</b>`; },
+    onRelease: () => { const sz = $('#sellZone'); if (sz) sz.innerHTML = ic('sell') + ' Sell'; },
   });
   // make board units + bench units draggable
   units.querySelectorAll('.unit').forEach((n) => {
@@ -513,7 +515,7 @@ function showAugmentInfo(id) {
 
 function showInspect(uid) {
   const u = run.board.find((b) => b.uid === uid) || run.bench.find((b) => b && b.uid === uid);
-  if (u) showUnitInfo(UNITS_BY_ID[u.defId], u.star, u.items);
+  if (u) showUnitInfo(UNITS_BY_ID[u.defId], u.star, u.items, { sell: Run.sellValueOf(u.defId, u.star) });
 }
 // the ability's headline output number at a given star (so the upgrade benefit is visible).
 function abilityValue(def, star) {
@@ -569,7 +571,7 @@ function abilityDesc(def, star) {
 }
 // Reusable champion detail sheet (used by inspect, shop (i), and the codex).
 // Shows a per-STAR scaling table (HP / Attack / Ability across ★1–★3) so the upgrade payoff is clear.
-function showUnitInfo(def, star = 1, items = []) {
+function showUnitInfo(def, star = 1, items = [], opts = {}) {
   const s = statsForStar(def, star);
   Sfx.click();
   const STARS = [1, 2, 3];
@@ -595,6 +597,9 @@ function showUnitInfo(def, star = 1, items = []) {
         el('.istat', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Mana'), el('span', {}, def.maxMana)]),
       ]),
       el('.iability', {}, [el('b', { html: ic('burst') + ' ' + def.ability.name + ' ' }), el('span', { style: { color: 'var(--ink-dim)' } }, abilityDesc(def, star))]),
+      // 3★ ultimate — the qualitative force-multiplier; lit gold once the unit reaches ★★★.
+      ULT3[def.defId] ? el(`.iult${star >= 3 ? ' active' : ''}`, {}, [el('b', {}, '★★★ '), el('span', {}, ULT3[def.defId])]) : null,
+      opts.sell != null ? el('.isell', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Sell value'), el('span', { html: `<b style="color:var(--gold)">+${opts.sell}⛁</b>` })]) : null,
       (items && items.length) ? el('.iitems', {}, ['Items: ', items.map((id) => itemLabel(id)).join(', ')]) : null,
       el('button.btn.primary.go', { onclick: () => ov.remove() }, 'Close'),
     ]));

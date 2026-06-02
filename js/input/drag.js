@@ -3,7 +3,7 @@
 // Uses pointer capture + a top-level ghost so it isn't clipped; snaps to tiles.
 import { el } from '../dom.js';
 
-export function createDragController({ boardWrap, sellZone, onPlace, onBench, onSell, onEquip, onInspect }) {
+export function createDragController({ boardWrap, sellZone, onPlace, onBench, onSell, onEquip, onInspect, onGrab, onRelease }) {
   const dragLayer = document.getElementById('drag-layer');
   let active = null; // { uid, kind, ghost, pointerId, srcEl, startX, startY, startT }
 
@@ -38,6 +38,7 @@ export function createDragController({ boardWrap, sellZone, onPlace, onBench, on
     dragLayer.append(ghost);
     moveGhost(ghost, e.clientX, e.clientY);
     srcEl.classList.add('dragging');
+    if (kind !== 'item' && onGrab) onGrab(uid, kind);   // e.g. show this unit's sell value on the sell zone
     active = { uid, kind, ghost, pointerId: e.pointerId, srcEl, startX: e.clientX, startY: e.clientY, startT: performance.now() };
   }
   function moveGhost(ghost, x, y) { ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
@@ -51,6 +52,7 @@ export function createDragController({ boardWrap, sellZone, onPlace, onBench, on
     if (!active || e.pointerId !== active.pointerId) return;
     const { uid, kind, ghost, srcEl, startX, startY, startT } = active;
     ghost.remove(); srcEl.classList.remove('dragging'); clearHighlights();
+    if (kind !== 'item' && onRelease) onRelease();   // restore the sell zone's default label
     const x = e.clientX, y = e.clientY;
     active = null;
     if (cancelled) return;

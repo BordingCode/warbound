@@ -45,12 +45,46 @@ export const CREATURES_LIST = [
       verbs: [{ op: 'phys', target: 'nearestN', count: 4, mult: 1.0, adRatio: 2.2 }, { op: 'shred', stat: 'armor', amount: 25, dur: 4, target: 'nearestN', count: 4 }],
       passive: { on: 'lowHp', threshold: 0.55, verbs: [{ op: 'summon', count: 2, hp: 3400, ad: 150 }] } }),
 
-  // 5 — EMBER WYRM (FINAL): breathes fire across your back line; ENRAGES below half HP.
+  // 5 — EMBER WYRM: breathes fire across your back line; ENRAGES below half HP.
   boss('ember_wyrm', 'Ember Wyrm', 'wyrm', '#ff6a3c',
     { hp: 22000, ad: 230, as: 0.7, armor: 44, mr: 44, range: 3, maxMana: 80, startMana: 25, manaPer: 8 },
     { name: 'Inferno Breath', type: 'magic', target: 'mostEnemies', ap: 300,
       verbs: [{ op: 'magic', target: 'mostEnemies', count: 4, ap: 300 }, { op: 'dot', dps: 75, dur: 3, target: 'mostEnemies', count: 4 }],
       passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'buffAS', amount: 0.65, dur: 99, target: 'self' }, { op: 'meteors', n: 4, ap: 180, radius: 1 }] } }),
+
+  // 6 — VENOM BROODMOTHER: sprays corroding venom over a cluster; HATCHES a brood of spiderlings
+  //      when wounded. Sustained poison punishes a clumped board.
+  boss('venom_broodmother', 'Venom Broodmother', 'spider', '#b6ff5a',
+    { hp: 24000, ad: 200, as: 0.75, armor: 40, mr: 40, range: 2, maxMana: 75, startMana: 25, manaPer: 9 },
+    { name: 'Venom Spray', type: 'magic', target: 'mostEnemies', ap: 300,
+      verbs: [{ op: 'magic', target: 'mostEnemies', count: 4, ap: 300 }, { op: 'dot', dps: 110, dur: 3, target: 'mostEnemies', count: 4 }, { op: 'slow', pct: 0.25, dur: 2, target: 'mostEnemies', count: 4 }],
+      passive: { on: 'lowHp', threshold: 0.55, verbs: [{ op: 'summon', count: 3, hp: 2400, ad: 120 }] } }),
+
+  // 7 — ELDER TREANT: an immovable ancient — entangling roots STUN your front line, it reflects
+  //      heavy thorns and slowly knits its bark back together (regen). Out-damage the heal.
+  boss('elder_treant', 'Elder Treant', 'treant', '#7bbf63',
+    { hp: 34000, ad: 240, as: 0.5, armor: 70, mr: 50, range: 1, maxMana: 80, startMana: 20, manaPer: 8 },
+    { name: 'Entangling Roots', type: 'physical', target: 'cluster', adRatio: 2.4,
+      verbs: [{ op: 'phys', target: 'cluster', radius: 1, adRatio: 2.4 }, { op: 'stun', dur: 1.4, target: 'cluster' }],
+      passive: [{ on: 'spawn', verbs: [{ op: 'thorns', amount: 0.5, dur: 999, target: 'self' }] },
+                { on: 'spawn', verbs: [{ op: 'regen', perSec: 240, dur: 999, target: 'self' }] }] }),
+
+  // 8 — FROST MONARCH: a glacial nova FREEZES (deep slow) and shreds resist across the board; it
+  //      armours up behind a vast shield and quickens as the ice spreads. Burst it before it walls.
+  boss('frost_monarch', 'Frost Monarch', 'frost', '#8fdcff',
+    { hp: 28000, ad: 210, as: 0.7, armor: 50, mr: 60, range: 3, maxMana: 80, startMana: 25, manaPer: 8 },
+    { name: 'Glacial Nova', type: 'magic', target: 'cluster', ap: 360,
+      verbs: [{ op: 'magic', target: 'cluster', radius: 2, ap: 360 }, { op: 'slow', pct: 0.4, dur: 2.5, target: 'cluster' }, { op: 'shred', stat: 'mr', amount: 30, dur: 4, target: 'cluster' }],
+      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'shield', target: 'self', amount: 6000 }, { op: 'buffAS', amount: 0.45, dur: 99, target: 'self' }] } }),
+
+  // 9 — THE VOID MAW (FINAL): unmaking incarnate — drains and burns the team's mana, sears them
+  //      with void-rot, then below half phases out (dodge) and rains meteors while clawing reality
+  //      open for void-spawn. The hardest wall in the gauntlet.
+  boss('void_maw', 'The Void Maw', 'void', '#c77bff',
+    { hp: 36000, ad: 250, as: 0.8, armor: 55, mr: 55, range: 2, maxMana: 70, startMana: 30, manaPer: 9 },
+    { name: 'Unmaking', type: 'magic', target: 'mostEnemies', ap: 360,
+      verbs: [{ op: 'magic', target: 'mostEnemies', count: 5, ap: 360 }, { op: 'manaBurn', amount: 35, target: 'mostEnemies', count: 5 }, { op: 'dot', dps: 90, dur: 3, target: 'mostEnemies', count: 5 }],
+      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'dodge', amount: 0.4, dur: 6, target: 'self' }, { op: 'meteors', n: 5, ap: 200, radius: 1 }, { op: 'summon', count: 2, hp: 3200, ad: 160 }] } }),
 ];
 
 export const CREATURES = Object.fromEntries(CREATURES_LIST.map((c) => [c.defId, c]));

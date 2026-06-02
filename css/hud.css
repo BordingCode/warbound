@@ -140,6 +140,11 @@
 .istats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 10px 0; font-size: 13px; }
 .istat { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
 .iability { font-size: 12.5px; line-height: 1.4; background: var(--bg-1); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; margin-bottom: 8px; }
+/* 3★ ultimate line — subtle until the unit is actually ★★★, then lit gold */
+.iult { font-size: 12px; line-height: 1.4; border: 1px dashed var(--line); border-radius: 7px; padding: 6px 10px; margin-bottom: 8px; color: var(--ink-dim); }
+.iult b { color: var(--gold); letter-spacing: .04em; }
+.iult.active { border-style: solid; border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); color: var(--ink); }
+.isell { display: flex; justify-content: space-between; font-size: 13px; font-variant-numeric: tabular-nums; padding: 4px 2px; margin-bottom: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
 .iitems { font-size: 12px; color: var(--ink-dim); margin-bottom: 12px; }
 
 /* trait detail */
