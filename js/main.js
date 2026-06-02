@@ -408,6 +408,7 @@ function renderPlanning() {
     onBench: (uid) => act(() => Run.benchUnit(run, uid)),
     onSell: (uid) => { act(() => Run.sellUid(run, uid)); Sfx.sell(); },
     onEquip: (iid, col, row) => { const u = run.board.find((b) => b.col === col && b.row === row); if (u && Run.equipItem(run, iid, u.uid)) { Sfx.fuse(); act(() => {}); } },
+    onEquipUnit: (iid, uid) => { if (Run.equipItem(run, iid, uid)) { Sfx.fuse(); act(() => {}); } },   // equip onto the champion under the pointer (forgiving drop)
     onInspect: (uid) => showInspect(uid),
     onGrab: (uid, kind) => {
       if (kind !== 'item') { const u = Run.findUnit(run, uid); const sz = $('#sellZone'); if (u && sz) sz.innerHTML = ic('sell') + ` Sell <b style="color:var(--gold)">+${Run.sellValueOf(u.defId, u.star)}⛁</b>`; }

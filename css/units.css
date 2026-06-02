@@ -74,6 +74,8 @@
 
 /* drag state */
 .unit.dragging { opacity: .35; }
+/* highlighted while an item is dragged over it — the champion that would receive/forge the item */
+.unit.equip-target { filter: drop-shadow(0 0 8px var(--gold)) drop-shadow(0 0 3px var(--gold)); }
 .drag-ghost {
   position: fixed; z-index: 1000; pointer-events: none;
   width: 56px; height: 67px; transform: translate(-50%, -60%);

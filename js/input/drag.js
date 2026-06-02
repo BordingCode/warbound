@@ -3,7 +3,7 @@
 // Uses pointer capture + a top-level ghost so it isn't clipped; snaps to tiles.
 import { el } from '../dom.js';
 
-export function createDragController({ boardWrap, sellZone, onPlace, onBench, onSell, onEquip, onInspect, onGrab, onRelease, onDragOver }) {
+export function createDragController({ boardWrap, sellZone, onPlace, onBench, onSell, onEquip, onEquipUnit, onInspect, onGrab, onRelease, onDragOver }) {
   const dragLayer = document.getElementById('drag-layer');
   let active = null; // { uid, kind, ghost, pointerId, srcEl, startX, startY, startT }
 
@@ -16,10 +16,17 @@ export function createDragController({ boardWrap, sellZone, onPlace, onBench, on
   }
   function clearHighlights() {
     boardWrap.querySelectorAll('.tile.drop-ok,.tile.drop-bad').forEach((t) => t.classList.remove('drop-ok', 'drop-bad'));
+    document.querySelectorAll('.unit.equip-target').forEach((u) => u.classList.remove('equip-target'));
     if (sellZone) sellZone.classList.remove('hot');
   }
   function highlight(clientX, clientY) {
     clearHighlights();
+    // dragging an ITEM: highlight the champion under the pointer (items equip onto a unit, not a tile)
+    if (active && active.kind === 'item') {
+      const id = unitUnder(clientX, clientY, null);
+      if (id) { const n = document.querySelector(`.units .unit[data-uid="${id}"]`); if (n) n.classList.add('equip-target'); }
+      return;
+    }
     if (sellZone) {
       const sr = sellZone.getBoundingClientRect();
       if (clientX >= sr.left && clientX <= sr.right && clientY >= sr.top && clientY <= sr.bottom) { sellZone.classList.add('hot'); return; }
@@ -73,6 +80,10 @@ export function createDragController({ boardWrap, sellZone, onPlace, onBench, on
     const moved = Math.hypot(x - startX, y - startY);
     if (kind !== 'item' && moved < 9 && performance.now() - startT < 280) { if (onInspect) onInspect(uid, kind); return; }
     if (kind === 'item') {                       // dropping an item onto a unit
+      // prefer the champion actually under the pointer (forgiving — works even if the drop
+      // lands slightly off the unit's own tile); fall back to the tile beneath.
+      const overId = unitUnder(x, y, null);
+      if (overId && onEquipUnit) { onEquipUnit(uid, overId); return; }
       const tile = tileAt(x, y);
       if (tile && onEquip) onEquip(uid, tile.col, tile.row);
       return;
