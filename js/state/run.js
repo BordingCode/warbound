@@ -227,12 +227,15 @@ export function fuseAll(run) {
   run.board = run.board.filter(Boolean);
 }
 
-// Gold returned for selling a unit at its current star (incl. the small upgrade premium).
+// Gold returned for selling a unit at its current star. A ★★ unit is worth 3 copies and a ★★★
+// 9 copies, minus a small flat sell tax per tier (1 / 2) — so a higher star ALWAYS sells for more
+// than a lower one (the old `copies-1` tax over-charged cheap units: a cost-1 ★★ sold for just 1).
 export function sellValueOf(defId, star) {
   const def = UNITS_BY_ID[defId];
   if (!def) return 0;
   const copies = star === 1 ? 1 : star === 2 ? 3 : 9;
-  return star === 1 ? def.cost : def.cost * copies - (copies - 1);
+  const tax = star === 1 ? 0 : star === 2 ? 1 : 2;
+  return def.cost * copies - tax;
 }
 // Find an owned unit (board or bench) by uid, for sell-value lookups.
 export function findUnit(run, uid) {
