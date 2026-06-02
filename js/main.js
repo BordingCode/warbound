@@ -1212,10 +1212,11 @@ function showHonors(backTo) {
     const list = HONORS.filter((h) => h.cat === cat.id);
     const cards = list.map((h) => {
       const have = !!earned[h.id];
-      return el(`.honor-card${have ? ' earned' : ' locked'}`, { style: { '--hc': cat.color }, title: have ? 'Earned' : 'Locked' }, [
+      const masked = h.secret && !have;   // a hidden honour: name/desc/bounty stay "???" until earned
+      return el(`.honor-card${have ? ' earned' : ' locked'}${masked ? ' secret' : ''}`, { style: { '--hc': cat.color }, title: masked ? 'Hidden — discover it through play' : (have ? 'Earned' : 'Locked') }, [
         el('.hc-medal', { html: ic(have ? h.icon : 'lock') }),
-        el('.hc-text', {}, [el('.hc-name', {}, h.name), el('.hc-desc', {}, h.desc)]),
-        el('.hc-bounty', { title: `${h.bounty} Spoils bounty` }, [iconEl('spoils', 'hc-sp'), el('span', {}, `${h.bounty}`)]),
+        el('.hc-text', {}, [el('.hc-name', {}, masked ? '???' : h.name), el('.hc-desc', {}, masked ? 'A hidden honour — uncover it through play.' : h.desc)]),
+        el('.hc-bounty', { title: masked ? 'Hidden bounty' : `${h.bounty} Spoils bounty` }, [iconEl('spoils', 'hc-sp'), el('span', {}, masked ? '?' : `${h.bounty}`)]),
       ]);
     });
     return el('.honor-group', {}, [

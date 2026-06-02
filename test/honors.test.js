@@ -14,6 +14,10 @@ function ok(name, cond) { cond ? pass++ : (fail++, fails.push(name)); process.st
   ok('honors: every honour has name/desc/icon/cat', HONORS.every((h) => h.name && h.desc && h.icon && h.cat));
   ok('honors: HONOR_BY_ID resolves', HONOR_BY_ID['first_realm'] && HONOR_BY_ID['clear_trials']);
   ok('honors: TOTAL_BOUNTY sums the bounties', TOTAL_BOUNTY === HONORS.reduce((s, h) => s + h.bounty, 0));
+  // secret honours: the hidden-content feats are flagged (masked on the board until earned)
+  ok('secret: the hidden Astral Throne feat is secret', HONOR_BY_ID['astral'].secret === true);
+  ok('secret: the ultimate forge tier feat is secret', HONOR_BY_ID['forge_godforged'].secret === true);
+  ok('secret: ordinary feats are NOT secret', !HONOR_BY_ID['first_realm'].secret && !HONOR_BY_ID['clear_trials'].secret && !HONOR_BY_ID['reach_master'].secret);
 }
 
 // ---- claimHonor: pays the bounty ONCE, idempotent ----

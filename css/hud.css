@@ -626,6 +626,8 @@
 .honor-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg-1); border: 1px solid var(--line); min-width: 0; }
 .honor-card.earned { border-color: color-mix(in srgb, var(--hc) 55%, var(--line)); background: linear-gradient(90deg, color-mix(in srgb, var(--hc) 12%, var(--bg-1)), var(--bg-1)); }
 .honor-card.locked { opacity: .55; }
+.honor-card.secret { border-style: dashed; border-color: var(--ink-faint); }
+.honor-card.secret .hc-name { letter-spacing: .18em; color: var(--ink-dim); }
 .honor-card .hc-medal { flex: 0 0 auto; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 9px; background: var(--bg-2); }
 .honor-card.earned .hc-medal { background: color-mix(in srgb, var(--hc) 28%, var(--bg-2)); color: var(--hc); box-shadow: 0 0 12px color-mix(in srgb, var(--hc) 40%, transparent); }
 .honor-card .hc-medal .ic { width: 20px; height: 20px; }
