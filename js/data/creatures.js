@@ -107,10 +107,10 @@ export const CREATURES_LIST = [
   //       and SHATTERS armour across a wide cluster, then below half it walls behind a vast shield,
   //       enrages, rains the sky down and tears open spawn. The absolute end of the gauntlet.
   boss('worldbreaker', 'The Worldbreaker', 'titan', '#c8b0ff',
-    { hp: 50000, ad: 270, as: 0.58, armor: 78, mr: 60, range: 1, maxMana: 90, startMana: 22, manaPer: 9 },
-    { name: 'Cataclysm', type: 'physical', target: 'cluster', adRatio: 2.7,
-      verbs: [{ op: 'phys', target: 'cluster', radius: 1, adRatio: 2.7 }, { op: 'stun', dur: 1.2, target: 'cluster' }, { op: 'shred', stat: 'armor', amount: 40, dur: 4, target: 'cluster' }],
-      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'shield', target: 'self', amount: 7500 }, { op: 'buffAS', amount: 0.5, dur: 99, target: 'self' }, { op: 'meteors', n: 5, ap: 200, radius: 1 }, { op: 'summon', count: 2, hp: 3600, ad: 170 }] } }),
+    { hp: 43000, ad: 250, as: 0.57, armor: 74, mr: 57, range: 1, maxMana: 92, startMana: 22, manaPer: 9 },
+    { name: 'Cataclysm', type: 'physical', target: 'cluster', adRatio: 2.6,
+      verbs: [{ op: 'phys', target: 'cluster', radius: 1, adRatio: 2.6 }, { op: 'stun', dur: 1.1, target: 'cluster' }, { op: 'shred', stat: 'armor', amount: 38, dur: 4, target: 'cluster' }],
+      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'shield', target: 'self', amount: 6000 }, { op: 'buffAS', amount: 0.45, dur: 99, target: 'self' }, { op: 'meteors', n: 5, ap: 190, radius: 1 }, { op: 'summon', count: 2, hp: 3500, ad: 165 }] } }),
 ];
 
 export const CREATURES = Object.fromEntries(CREATURES_LIST.map((c) => [c.defId, c]));
