@@ -335,6 +335,7 @@
 .loadout-row .lr-icon .ic { width: 22px; height: 22px; }
 .loadout-row .lr-text { flex: 1; min-width: 0; }
 .loadout-row .lr-name { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.loadout-row.filled .lr-name { color: var(--rc); }   /* item name tinted to its rarity */
 .loadout-row .lr-eff { font-size: 11px; color: var(--ink-dim); }
 .loadout-row .lr-rar { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
 .loadout-row .lr-rar.dim { color: var(--ink-faint); }
@@ -375,7 +376,7 @@
 .inv-item.eq { box-shadow: 0 0 0 2px var(--gold) inset; }
 .inv-item .ii-rar { font-size: 8px; text-transform: uppercase; letter-spacing: .5px; color: var(--rc); font-weight: 800; }
 .inv-item .ii-icon { font-size: 22px; line-height: 1.1; }
-.inv-item .ii-name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inv-item .ii-name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--rc); }   /* item name tinted to its rarity */
 .inv-item .ii-eff { font-size: 8.5px; color: var(--ink-dim); line-height: 1.2; margin-top: 1px; }
 
 /* chest reveal */
@@ -447,7 +448,7 @@
 .forge-row .fr-icon { width: 34px; height: 34px; display: grid; place-items: center; font-size: 19px; border-radius: 8px;
   background: #0c1119; border: 2px solid var(--rc); color: #fff; }
 .forge-row .fr-text { flex: 1; min-width: 0; }
-.forge-row .fr-name { font-weight: 700; font-size: 13px; }
+.forge-row .fr-name { font-weight: 700; font-size: 13px; color: var(--rc); }   /* name tinted to the input rarity it describes */
 .forge-row .fr-sub { font-size: 11px; color: var(--ink-dim); }
 .forge-row .fr-sub .fr-up { color: var(--uc); font-weight: 700; }
 .forge-row .fr-arrow { font-size: 18px; color: var(--uc); }
