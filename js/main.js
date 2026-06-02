@@ -977,6 +977,8 @@ const REALM_EMBLEMS = [
   '<path d="M2 11l3-1 1-2c1-1 3-1.5 5-1.3-.6.5-1 1.1-1.1 1.8 1.6-.3 3.2.2 4.6 1.3 1.4 1.1 2.3 2.7 2.5 4.6-1.2-1.3-2.5-2-3.9-2.1l1.3 3.4-3.2-2.6c-1.9.6-3.8.2-5.7-1.2.9 0 1.6-.3 2.1-.9-1.3.1-2.4-.3-3.5-1.3z"/><circle cx="9.4" cy="9.8" r=".9" fill="#0c0f17"/>',
   // 5 The Voidreach — void swirl / portal (every horror)
   '<path d="M12 3a9 9 0 109 9 5.5 5.5 0 11-5.5-5.5A9 9 0 0012 3zm0 4.5A4.5 4.5 0 117.5 12 2.7 2.7 0 1012 9.3 4.4 4.4 0 0012 7.5z"/>',
+  // 6 The Astral Throne — radiant crown + sunburst (the secret apotheosis)
+  '<path d="M12 1.5l1.6 3.2 3.2-1-1 3.2 3.2 1.6-3.2 1.6 1 3.2-3.2-1L12 18.5l-1.6-3.2-3.2 1 1-3.2L5 11.5l3.2-1.6-1-3.2 3.2 1z" opacity=".6"/><path d="M5 14l1.8-5 3 3 2.2-4 2.2 4 3-3 1.8 5z"/><rect x="5" y="14" width="14" height="2.6" rx="1"/>',
 ];
 function realmEmblemSVG(i, size = 30) {
   const inner = REALM_EMBLEMS[i] || '<path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7z"/>';  // fallback: star (endless realms)
@@ -988,7 +990,13 @@ function realmEmblemSVG(i, size = 30) {
 function showRealms() {
   audioResume();
   const cleared = Meta.realmsCleared();
-  const count = Math.max(REALMS.length, cleared + 1);
+  // The final realm is a SECRET — hidden entirely until every realm before it is conquered.
+  const secretIdx = REALMS.findIndex((r) => r.secret);
+  const revealSecret = secretIdx >= 0 && cleared >= secretIdx;
+  const count = (cleared >= REALMS.length) ? cleared + 1
+    : (secretIdx < 0) ? Math.max(REALMS.length, cleared + 1)
+    : revealSecret ? REALMS.length : secretIdx;
+  const totalRealms = (secretIdx < 0 || revealSecret) ? REALMS.length : secretIdx;
   const danger = (d) => '▲'.repeat(Math.max(1, Math.min(6, Math.round(d / 2) + 1)));
   const cards = [];
   for (let i = 0; i < count; i++) {
@@ -1018,7 +1026,7 @@ function showRealms() {
       el('h1', {}, 'Conquer the Realms'),
       el('.spoils-pill', { onclick: () => showArmory(), style: { cursor: 'pointer' } }, [iconEl('coffer'), el('span', {}, 'Armory')]),
     ]),
-    el('.arm-tagline', {}, `${cleared} of ${REALMS.length} realms conquered. Beat all 10 warbands of a realm to claim it for good — then march on the next.`),
+    el('.arm-tagline', {}, `${Math.min(cleared, totalRealms)} of ${totalRealms} realms conquered. Beat all 10 warbands of a realm to claim it for good — then march on the next.${revealSecret && cleared < REALMS.length ? ' ✦ A hidden final realm has revealed itself.' : ''}`),
     el('.seed-bar', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } }, [
       el('button.btn', { title: 'A fixed shared challenge — same shops & foes for everyone today', onclick: () => startSolo(true, 0, 'daily-' + new Date().toISOString().slice(0, 10)) }, [el('span', { html: ic('star') }), ' Daily run']),
       el('button.btn', { title: 'Enter a shared seed to replay someone else’s exact run', onclick: () => { const s = prompt('Enter a seed to play a shared run:'); if (s && s.trim()) startSolo(true, 0, s.trim()); } }, [el('span', { html: ic('codex') }), ' Enter seed']),

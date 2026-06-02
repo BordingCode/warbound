@@ -34,6 +34,8 @@ export const REALMS = [
   { name: 'The Inferno',     hint: 'Demon legions — relentless mana-burn',    color: '#ff5a3c', pool: ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'pit_summoner'],            diff: 6 },
   { name: 'The Dragonspire', hint: 'Dragonsworn — overwhelming raw power',    color: '#ffd24a', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'knight_captain'],                 diff: 9 },
   { name: 'The Voidreach',   hint: 'Every horror at its fiercest',            color: '#c79bff', pool: ['dragon_knight', 'warlock', 'lich', 'wraith', 'pit_summoner', 'moon_priestess'],   diff: 13 },
+  // SECRET finale — only revealed once all the realms before it are conquered (see showRealms).
+  { name: 'The Astral Throne', hint: 'Beyond the realms — ascend, if you can', color: '#ffe9a8', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'lich', 'warlock', 'moon_priestess'], diff: 18, secret: true },
 ];
 // realm by index (endless beyond the authored list — diff keeps climbing for completionists).
 export function realmAt(i) {
@@ -92,6 +94,11 @@ export const BOSSES = [
     gimmickName: 'The End', gimmickDesc: 'Every horror at its fiercest — no single counter. Bring your strongest, most rounded board.',
     gimmick: { flat: { ad: 0.18, ap: 50, hp: 0.18 } },
     units: [E('dragon_knight', 3, 3, 3), E('warlock', 3, 4, 0), E('lich', 3, 5, 0), E('wraith', 3, 2, 1), E('pit_summoner', 3, 6, 0), E('moon_priestess', 3, 1, 0), E('bramble_brute', 3, 0, 3)] },
+  // SECRET realm 6 finale — the hardest fight in the game.
+  { realm: 6, name: 'The Ascendant', traitHint: 'BOSS · Apotheosis',
+    gimmickName: 'Apotheosis', gimmickDesc: 'A god-king and its chosen — overwhelming on every axis. There is no counter but a maxed, perfectly-positioned warband.',
+    gimmick: { flat: { ad: 0.25, ap: 70, hp: 0.25, armor: 25, mr: 25 } },
+    units: [E('dragon_knight', 3, 3, 3), E('dragon_sage', 3, 4, 0), E('wyrm_archer', 3, 5, 1), E('lich', 3, 1, 0), E('warlock', 3, 6, 0), E('bramble_brute', 3, 2, 3), E('moon_priestess', 3, 0, 1)] },
 ];
 // ---- THE TRIALS (boss-rush mode): a fixed gauntlet of unique CREATURES (data/creatures.js),
 // one per round, escalating to the Ember Wyrm. Each telegraphs its mechanic on the boss banner.
