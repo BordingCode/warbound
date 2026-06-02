@@ -145,6 +145,30 @@
 .iult b { color: var(--gold); letter-spacing: .04em; }
 .iult.active { border-style: solid; border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); color: var(--ink); }
 .isell { display: flex; justify-content: space-between; font-size: 13px; font-variant-numeric: tabular-nums; padding: 4px 2px; margin-bottom: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+
+/* drag-stats: click-through floating panel shown while dragging a champion/item */
+.drag-stats {
+  position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+  z-index: 1500; pointer-events: none; min-width: 160px; max-width: 86vw;
+  background: color-mix(in srgb, var(--bg-0) 92%, transparent); backdrop-filter: blur(3px);
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px;
+  box-shadow: 0 10px 26px #000a; font-variant-numeric: tabular-nums;
+}
+.drag-stats .ds-name { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
+.drag-stats .ds-name svg, .drag-stats .ds-name span[class] { flex: 0 0 auto; }
+.drag-stats .ds-sub { font-size: 10.5px; color: var(--ink-dim); margin: 1px 0 5px; }
+.drag-stats .ds-row { display: flex; justify-content: space-between; gap: 14px; font-size: 12px; line-height: 1.55; }
+.drag-stats .ds-l { color: var(--ink-dim); }
+.drag-stats .ds-v { color: var(--ink); font-weight: 600; }
+.drag-stats .ds-ability { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--gold); }
+/* comparison (dragging one champion over another) */
+.drag-stats .ds-ctitle { font-size: 10.5px; color: var(--ink-dim); text-align: center; margin-bottom: 4px; }
+.drag-stats .ds-chead, .drag-stats .ds-crow { display: grid; grid-template-columns: 1fr 54px 54px; gap: 6px; font-size: 12px; line-height: 1.6; }
+.drag-stats .ds-chead { font-size: 10.5px; color: var(--ink-dim); border-bottom: 1px solid var(--line); padding-bottom: 2px; margin-bottom: 2px; }
+.drag-stats .ds-cv { text-align: right; font-weight: 600; }
+.drag-stats .ds-chead .ds-cv { font-weight: 700; color: var(--ink); }
+.drag-stats .ds-cv.up { color: #7be08a; }
+.drag-stats .ds-cv.down { color: #ff7a7a; }
 .iitems { font-size: 12px; color: var(--ink-dim); margin-bottom: 12px; }
 
 /* trait detail */
@@ -386,9 +410,8 @@
   animation: spin 8s linear infinite reverse;
   -webkit-mask: radial-gradient(circle at 50% 32%, #000 0%, transparent 64%); mask: radial-gradient(circle at 50% 32%, #000 0%, transparent 64%); }
 /* impact: a brief shake on reveal, plus a breathing aura for the top tiers */
-.reveal-card.impact { animation: rankPop .5s cubic-bezier(.34,1.6,.5,1), revealShake .5s .12s; }
-.reveal-card.rarity-legendary.impact, .reveal-card.rarity-mythic.impact { animation: rankPop .5s cubic-bezier(.34,1.6,.5,1), revealShake .55s .12s, auraPulse 1.9s .6s ease-in-out infinite; }
-@keyframes revealShake { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-6px,3px); } 40% { transform: translate(5px,-4px); } 60% { transform: translate(-4px,-2px); } 80% { transform: translate(3px,2px); } }
+.reveal-card.impact { animation: rankPop .5s cubic-bezier(.34,1.6,.5,1); }
+.reveal-card.rarity-legendary.impact, .reveal-card.rarity-mythic.impact { animation: rankPop .5s cubic-bezier(.34,1.6,.5,1), auraPulse 1.9s .6s ease-in-out infinite; }
 @keyframes auraPulse { 0%,100% { box-shadow: 0 0 55px color-mix(in srgb, var(--rc) 60%, transparent); } 50% { box-shadow: 0 0 95px color-mix(in srgb, var(--rc) 92%, transparent), 0 0 165px color-mix(in srgb, var(--rc) 46%, transparent); } }
 /* full-screen flash the instant a legendary/mythic lands */
 .reveal-flash { position: fixed; inset: 0; z-index: 1900; pointer-events: none; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rc) 55%, transparent), transparent 60%); animation: revealFlash .7s ease-out forwards; }

@@ -364,7 +364,7 @@ function renderPlanning() {
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Warband stats', onclick: showStats, html: ic('bars') }),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Codex', onclick: () => showCodex('units'), html: ic('codex') }),
-      el(`button.btn#shakeBtn${motionOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Screen shake (turn off if the game feels laggy)', onclick: toggleMotion, html: ic('burst') }),
+      el(`button.btn#dragStatsBtn${dragStatsOn() ? ' primary' : ''}`, { style: { padding: '5px 10px' }, title: 'Show stats while dragging a champion or item', onclick: toggleDragStats, html: ic('eye') }),
       el('button.btn#soundBtn', { style: { padding: '5px 10px' }, title: 'Sound', onclick: toggleSound, html: ic(soundOn() ? 'sound' : 'mute') }),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'How to play', onclick: showHelp }, '?'),
     ]),
@@ -407,8 +407,12 @@ function renderPlanning() {
     onSell: (uid) => { act(() => Run.sellUid(run, uid)); Sfx.sell(); },
     onEquip: (iid, col, row) => { const u = run.board.find((b) => b.col === col && b.row === row); if (u && Run.equipItem(run, iid, u.uid)) { Sfx.fuse(); act(() => {}); } },
     onInspect: (uid) => showInspect(uid),
-    onGrab: (uid) => { const u = Run.findUnit(run, uid); const sz = $('#sellZone'); if (u && sz) sz.innerHTML = ic('sell') + ` Sell <b style="color:var(--gold)">+${Run.sellValueOf(u.defId, u.star)}⛁</b>`; },
-    onRelease: () => { const sz = $('#sellZone'); if (sz) sz.innerHTML = ic('sell') + ' Sell'; },
+    onGrab: (uid, kind) => {
+      if (kind !== 'item') { const u = Run.findUnit(run, uid); const sz = $('#sellZone'); if (u && sz) sz.innerHTML = ic('sell') + ` Sell <b style="color:var(--gold)">+${Run.sellValueOf(u.defId, u.star)}⛁</b>`; }
+      showDragStats(uid, kind);
+    },
+    onDragOver: (overUid) => updateDragCompare(overUid),
+    onRelease: () => { const sz = $('#sellZone'); if (sz) sz.innerHTML = ic('sell') + ' Sell'; hideDragStats(); },
   });
   // make board units + bench units draggable
   units.querySelectorAll('.unit').forEach((n) => {
@@ -605,6 +609,71 @@ function showUnitInfo(def, star = 1, items = [], opts = {}) {
     ]));
   document.body.append(ov);
 }
+
+// ---------- Drag stats: a floating, click-through panel that shows the dragged champion/item's
+// stats while you drag, and a dragged-vs-target comparison when you hover one champion over
+// another. Gated by the HUD "eye" toggle (dragStatsOn). Wired via the drag controller's
+// onGrab / onDragOver / onRelease callbacks. ----------
+let _dragCard = null;   // the mounted panel (null when not dragging)
+let _dragInfo = null;   // { kind:'unit', def, star } for the dragged champion (for comparisons)
+
+const DSTAT_ROWS = [['hp', 'Health'], ['ad', 'Attack'], ['as', 'Atk spd'], ['armor', 'Armor'], ['mr', 'Magic res'], ['range', 'Range'], ['maxMana', 'Mana']];
+function dstatRaw(def, star, k) { if (k === 'hp' || k === 'ad') return statsForStar(def, star)[k]; if (k === 'as') return def.as; return def[k]; }
+function dstatDisp(def, star, k) { const v = dstatRaw(def, star, k); return k === 'as' ? v.toFixed(2) : String(v); }
+// readable item-mod lines, e.g. {ad:0.18} -> "+18% Attack Damage"
+const DMOD_LABEL = { ad: 'Attack Damage', as: 'Attack Speed', ap: 'Ability Power', hp: 'Health', armor: 'Armor', mr: 'Magic Resist', critChance: 'Crit Chance', critDmg: 'Crit Damage', thorns: 'Thorns', vamp: 'Lifesteal', regen: 'Regen', shield: 'Shield', revive: 'Revive' };
+function dragModLines(mods) { return Object.entries(mods).map(([k, v]) => `+${(v < 1 && v > -1) ? Math.round(v * 100) + '%' : v} ${DMOD_LABEL[k] || k}`); }
+
+function unitStatCol(def, star) {
+  return el('.ds-col', {}, [
+    el('.ds-name', { html: championSVG(def, { size: 22 }) + `<span>${def.name}${star > 1 ? ' ' + '★'.repeat(star) : ''}</span>` }),
+    el('.ds-sub', {}, `Cost ${def.cost}⛁ · ${def.range === 1 ? 'melee' : 'ranged ' + def.range}`),
+    ...DSTAT_ROWS.map(([k, label]) => el('.ds-row', {}, [el('span.ds-l', {}, label), el('span.ds-v', {}, dstatDisp(def, star, k))])),
+    el('.ds-ability', {}, [el('b', {}, def.ability.name)]),
+  ]);
+}
+function unitCompareCol(dDef, dStar, oDef, oStar) {
+  const head = el('.ds-chead', {}, [el('span.ds-l', {}, 'Stat'),
+    el('span.ds-cv', {}, dDef.name.split(' ')[0]), el('span.ds-cv', {}, oDef.name.split(' ')[0])]);
+  const rows = DSTAT_ROWS.map(([k, label]) => {
+    const dv = dstatRaw(dDef, dStar, k), ov = dstatRaw(oDef, oStar, k);
+    const cls = dv > ov ? ' up' : dv < ov ? ' down' : '';
+    return el('.ds-crow', {}, [el('span.ds-l', {}, label),
+      el(`span.ds-cv${cls}`, {}, dstatDisp(dDef, dStar, k)), el('span.ds-cv', {}, dstatDisp(oDef, oStar, k))]);
+  });
+  return el('.ds-compare', {}, [el('.ds-ctitle', {}, 'Dragging ▸ vs ◂ target'), head, ...rows]);
+}
+
+function showDragStats(uid, kind) {
+  if (!dragStatsOn()) return;
+  hideDragStats();
+  let body = null;
+  if (kind === 'item') {
+    const it = (run.items || []).find((x) => x.iid === uid); const d = it && itemDef(it.id);
+    if (!d) return;
+    const tg = d.traitGrant ? Object.keys(d.traitGrant)[0] : null;
+    body = el('.ds-col', {}, [
+      el('.ds-name', { html: ic(d.icon) + `<span>${d.name}</span>` }),
+      ...(d.mods ? dragModLines(d.mods).map((t) => el('.ds-row', {}, [el('span.ds-l', {}, t)])) : []),
+      tg ? el('.ds-row', {}, [el('span.ds-l', {}, `+1 ${TRAITS[tg] ? TRAITS[tg].name : tg} synergy`)]) : null,
+    ]);
+  } else {
+    const u = Run.findUnit(run, uid); if (!u) return;
+    const def = UNITS_BY_ID[u.defId]; if (!def) return;
+    _dragInfo = { kind: 'unit', def, star: u.star, uid };
+    body = unitStatCol(def, u.star);
+  }
+  _dragCard = el('.drag-stats', {}, [body]);
+  document.body.append(_dragCard);
+}
+function updateDragCompare(overUid) {
+  if (!_dragCard || !_dragInfo || _dragInfo.kind !== 'unit') return;
+  const overU = overUid ? Run.findUnit(run, overUid) : null;
+  const overDef = overU ? UNITS_BY_ID[overU.defId] : null;
+  if (overDef && overU.uid !== _dragInfo.uid) _dragCard.replaceChildren(unitCompareCol(_dragInfo.def, _dragInfo.star, overDef, overU.star));
+  else _dragCard.replaceChildren(unitStatCol(_dragInfo.def, _dragInfo.star));
+}
+function hideDragStats() { if (_dragCard) { _dragCard.remove(); _dragCard = null; } _dragInfo = null; }
 // Trait detail: every breakpoint's effect (active one highlighted) + which champions have it.
 // Warband stats as a tidy overlay opened from the top bar (snapshot: live during a fight, else last battle).
 function showStats() {
@@ -709,8 +778,12 @@ function setSpeed(s) { combatSpeed = s; try { localStorage.setItem('warbound_spe
 function highlightSpeed() { for (const [s] of SPEEDS) { const b = $(`#spd${spdId(s)}`); if (b) b.classList.toggle('primary', combatSpeed === s); } }
 function setBanner(t) { const b = $('.phase-banner'); if (b) b.textContent = t; }
 function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soundBtn'); if (b) b.innerHTML = ic(soundOn() ? 'sound' : 'mute'); if (soundOn()) Sfx.click(); }
-function motionOn() { try { return localStorage.getItem('warbound_shake') !== '0'; } catch { return true; } }
-function toggleMotion() { try { localStorage.setItem('warbound_shake', motionOn() ? '0' : '1'); } catch {} Sfx.click(); renderPlanning(); }
+// Screen shake was removed (laggy). `motionOn()` now only gates the non-shake juice
+// (confetti / reveal flashes), which stays on unless the OS asks for reduced motion.
+function motionOn() { try { return !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return true; } }
+// On-screen stats while dragging a champion/item (with a dragged-vs-target comparison). Toggle in HUD.
+function dragStatsOn() { try { return localStorage.getItem('warbound_dragstats') !== '0'; } catch { return true; } }
+function toggleDragStats() { try { localStorage.setItem('warbound_dragstats', dragStatsOn() ? '0' : '1'); } catch {} Sfx.click(); renderPlanning(); }
 
 // Explain the economy with the player's CURRENT live values.
 // Shop odds grid: for each level (1–9), the % chance a shop slot rolls each cost tier (rarity).
@@ -960,7 +1033,7 @@ function endScreen(ladderSummary) {
     const isTrials = run.mode === 'trials';
     const won = run.won;
     if (isTrials) {
-      if (won) { launchConfetti(5200); head = 'TRIALS CLEARED'; sub = 'You slew every boss of the gauntlet — slime, golem, wraith, hydra and the Ember Wyrm. A true champion.'; }
+      if (won) { launchConfetti(5200); head = 'TRIALS CLEARED'; sub = `You slew every boss of the gauntlet — all ${TRIAL_COUNT}, from the Gloom Slime to the Void Maw itself. A true champion.`; }
       else { head = 'DEFEATED'; sub = `The bosses bested you — ${run.wins}/${TRIAL_COUNT} slain. Gear up in the Armory and face them again.`; }
     } else {
       const realm = realmAt(run.realm || 0);

@@ -5,11 +5,10 @@
 // Cheap, GPU-friendly screen shake. Translate-only (no rotate -> no re-clip/repaint of the
 // rounded, shadowed board), promotes its own layer with translate3d + will-change, decays
 // fast, and is fully skippable (reduced-motion or the user's toggle).
-export function shakeEnabled() {
-  try { if (localStorage.getItem('warbound_shake') === '0') return false; } catch {}
-  try { if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false; } catch {}
-  return true;
-}
+// Screen shake is permanently OFF — it caused noticeable lag on lower-powered devices.
+// Returning false here makes every Shake instance inert (disabled), so all shake.add()
+// calls are no-ops and combat routes to the lighter, shake-free VFX fallbacks.
+export function shakeEnabled() { return false; }
 export class Shake {
   constructor(targetEl) {
     this.el = targetEl;
