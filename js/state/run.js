@@ -374,6 +374,16 @@ export function load() {
     run.items = run.items || [];
     run.freeRerollsUsed = run.freeRerollsUsed || 0;
     ensureRng(run);
+    // uids ('u<n>') come from a module counter that resets to 1 on every page load. A reloaded
+    // run already holds uids u1..uN, so without this a freshly bought unit would reuse an existing
+    // uid — causing the wrong unit to animate, or a unit to vanish (find-by-uid hit the wrong one).
+    // Bump the counter past every uid/iid already in the save.
+    const uidNum = (s) => { const m = /^u(\d+)$/.exec(s || ''); return m ? +m[1] : 0; };
+    let hi = 0;
+    for (const u of run.board || []) hi = Math.max(hi, uidNum(u && u.uid));
+    for (const u of run.bench || []) hi = Math.max(hi, uidNum(u && u.uid));
+    for (const it of run.items || []) hi = Math.max(hi, uidNum(it && it.iid));
+    if (hi >= uidCounter) uidCounter = hi + 1;
     return run;
   } catch { return null; }
 }
