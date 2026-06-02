@@ -450,6 +450,10 @@ export class CombatPlayer {
       case 'projectile': this._projectile(e.from, e.to, e.kind); break;
       case 'damage': {
         const lethal = e.hp <= 0;
+        // Sudden-death drain hits EVERY unit ~30×/s — rendering a number+spark+flash per hit per
+        // unit floods the DOM and nearly freezes the game. Draw it cheaply: just the HP bar (+ a
+        // light flash only on the killing blow). No floating numbers, sparks, squash, or stats.
+        if (e.sd) { this._setHP(e.id, e.hp); if (lethal && n) this._flash(n.el, 0.6, 90); break; }
         const crit = e.src >= 0 && this.critPending.delete(e.src);
         if (n) { this._flash(n.el, lethal ? 1 : crit ? 0.95 : 0.8, lethal ? 150 : 110); this._squash(n.el, lethal ? 1.3 : crit ? 1.26 : 1.18, lethal ? 0.72 : 0.84); }
         this._setHP(e.id, e.hp);

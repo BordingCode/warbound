@@ -188,7 +188,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     if (u.mana >= u.maxMana) { u.mana -= u.maxMana; u.manaLockUntil = now + 1.0; cast(u, now); }
   }
 
-  function applyDamage(target, raw, type, source, now) {
+  function applyDamage(target, raw, type, source, now, sd) {
     if (!target.alive) return 0;
     if (type === 'physical' && source && rng.chance(effDodge(target, now))) { ev(now, 'dodge', { id: target.id }); runPassive(target, 'dodge', now, source); return 0; }
     // mitigate by EFFECTIVE resist (armor/mr shred folded in); true/heal ignore resist.
@@ -206,7 +206,9 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     }
     target.hp -= post;
     gainMana(target, manaFromDamage(raw, post), now);
-    ev(now, 'damage', { id: target.id, src: source ? source.id : -1, amount: post, hp: Math.max(0, target.hp), dmgType: type });
+    const dmgEv = { id: target.id, src: source ? source.id : -1, amount: post, hp: Math.max(0, target.hp), dmgType: type };
+    if (sd) dmgEv.sd = 1;   // sudden-death drain: the renderer draws this cheaply (no number/spark spam)
+    ev(now, 'damage', dmgEv);
     // thorns: reflect a fraction of physical damage back as true damage (no loop)
     const refThorns = effThorns(target, now);
     if (type === 'physical' && source && refThorns > 0 && source.alive) {
@@ -575,7 +577,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     // regardless of HP pool size (flat damage can't chew through 3★ tank stacks).
     if (now > SUDDEN_DEATH_T) {
       const frac = (0.05 + 0.03 * (now - SUDDEN_DEATH_T)) * DT;  // grows each second
-      for (const u of units.filter((x) => x.alive).sort(byId)) applyDamage(u, u.maxHp * frac, 'true', null, now);
+      for (const u of units.filter((x) => x.alive).sort(byId)) applyDamage(u, u.maxHp * frac, 'true', null, now, true);
     }
   }
 
