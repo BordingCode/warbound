@@ -93,6 +93,10 @@ function applyTraits(units, board, traitBonus = {}) {
   const active = activeTraits(defs, traitBonus);
   const get = (t) => (active[t] && active[t].bonus) || null;
   for (const u of units) {
+    // a unit "has" a trait if it's its natural origin/klass OR an Emblem granted it (full TFT
+    // emblems: the wearer truly becomes that class/origin and gets the class-specific buff too).
+    const granted = u.items && u.items.length ? traitGrantsFor(u.items) : [];
+    const has = (t) => u.klass === t || u.origin === t || granted.includes(t);
     // whole-team
     const human = get('human'); if (human) u.manaRegen = Math.max(u.manaRegen, human.manaRegen);
     const knight = get('knight'); if (knight) u.block = Math.max(u.block, knight.block);
@@ -100,14 +104,14 @@ function applyTraits(units, board, traitBonus = {}) {
     const elf = get('elf'); if (elf) { u.dodge = Math.max(u.dodge, elf.dodge); u.shield += elf.shield; if (elf.as) u.asStacks += elf.as; }   // elven precision: flat attack speed at the top breakpoint (offensive kicker)
     const dragon = get('dragon'); if (dragon) { u.mr += dragon.mr; if (dragon.adPct) u.ad = Math.round(u.ad * (1 + dragon.adPct)); if (dragon.ap) u.apBonus += dragon.ap; }   // dragons hit as hard as they're tough
     const beast = get('beast'); if (beast && active.beast.tier >= 6) u.ferocity = Math.max(u.ferocity, beast.ferocity);
-    // tagged-only
-    if (u.klass === 'mage') { const m = get('mage'); if (m) u.apBonus += m.ap; }
-    if (u.klass === 'assassin') { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; } }
-    if (u.klass === 'ranger') { const r = get('ranger'); if (r) u.rangerAS = r.rangerAS; }
-    if (u.klass === 'beast' || u.origin === 'beast') { const b = get('beast'); if (b) { u.ferocity = Math.max(u.ferocity, b.ferocity); if (b.armor) u.armor += b.armor; } }   // beasts ramp AS AND wear thicker hide (survive to ramp)
-    if (u.origin === 'undead') { const ud = get('undead'); if (ud) { u.revivePct = Math.max(u.revivePct, ud.revivePct); if (ud.vamp) u.vamp += ud.vamp; } }   // undead leech: sustain kicker so the rainbow board has an offensive edge
-    if (u.origin === 'demon') { const d = get('demon'); if (d) { u.burnOnHit = d.burn; u.manaBurnOnHit = d.manaBurn; } }
-    if (u.klass === 'summoner') { const s = get('summoner'); if (s) u.summonPower = s.summonPower; }
+    // class/origin-tagged — now honoured for Emblem-granted traits too
+    if (has('mage')) { const m = get('mage'); if (m) u.apBonus += m.ap; }
+    if (has('assassin')) { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; } }
+    if (has('ranger')) { const r = get('ranger'); if (r) u.rangerAS = r.rangerAS; }
+    if (has('beast')) { const b = get('beast'); if (b) { u.ferocity = Math.max(u.ferocity, b.ferocity); if (b.armor) u.armor += b.armor; } }   // beasts ramp AS AND wear thicker hide (survive to ramp)
+    if (has('undead')) { const ud = get('undead'); if (ud) { u.revivePct = Math.max(u.revivePct, ud.revivePct); if (ud.vamp) u.vamp += ud.vamp; } }   // undead leech: sustain kicker so the rainbow board has an offensive edge
+    if (has('demon')) { const d = get('demon'); if (d) { u.burnOnHit = d.burn; u.manaBurnOnHit = d.manaBurn; } }
+    if (has('summoner')) { const s = get('summoner'); if (s) u.summonPower = s.summonPower; }
   }
 }
 
