@@ -360,7 +360,7 @@ function renderPlanning() {
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       run.mode === 'ladder'
         ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
-        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: run.mode === 'trials' ? 'Slay all 5 bosses' : `${realmAt(run.realm || 0).name} · conquer all 10` }, `${run.wins}/${run.winTarget || Run.WIN_TARGET}`)]),
+        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: run.mode === 'trials' ? `Slay all ${TRIAL_COUNT} bosses` : `${realmAt(run.realm || 0).name} · conquer all 10` }, `${run.wins}/${run.winTarget || Run.WIN_TARGET}`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Warband stats', onclick: showStats, html: ic('bars') }),
       el('button.btn', { style: { padding: '5px 10px' }, title: 'Codex', onclick: () => showCodex('units'), html: ic('codex') }),
@@ -1260,7 +1260,7 @@ function chooseMode() {
           el('span.ab-spoils', {}, `${Meta.load().spoils} Spoils`),
         ]),
       ]),
-      card(' trials', 'burst', 'The Trials', 'A boss rush: face a gauntlet of unique monsters — slime, golem, wraith, hydra and the Ember Wyrm — each with its own deadly mechanic. Build a team, learn each fight, slay them all.', () => startTrials(true)),
+      card(' trials', 'burst', 'The Trials', `A boss rush: face a gauntlet of ${TRIAL_COUNT} unique monsters — from the Gloom Slime up to the Void Maw — each with its own deadly mechanic. Build a team, learn each fight, slay them all.`, () => startTrials(true)),
       ladderCard,
     ]),
     el('.art-toggle', { onclick: () => { setArtSet(getArtSet() === 'detailed' ? 'classic' : 'detailed'); Sfx.click(); chooseMode(); } }, [
