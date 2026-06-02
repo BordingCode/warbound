@@ -279,9 +279,13 @@
 
 /* ---- warlord pick screen ---- */
 .warlord-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 380px; max-height: 62svh; overflow-y: auto; padding: 2px; }
-.warlord-pick { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px; cursor: pointer; transition: transform .12s, border-color .12s, background .12s; }
-.warlord-pick:hover { transform: translateY(-2px); border-color: var(--gold); background: var(--bg-3); }
-.warlord-pick .wp-emoji { font-size: 24px; }
+.warlord-pick { --wc: var(--gold); background: linear-gradient(160deg, color-mix(in srgb, var(--wc) 12%, var(--bg-2)), var(--bg-2)); border: 1px solid var(--line); border-top: 2px solid color-mix(in srgb, var(--wc) 70%, var(--line)); border-radius: 12px; padding: 10px; cursor: pointer; transition: transform .12s, border-color .12s, background .12s; }
+.warlord-pick:hover { transform: translateY(-2px); border-color: var(--wc); background: linear-gradient(160deg, color-mix(in srgb, var(--wc) 20%, var(--bg-3)), var(--bg-3)); }
+/* champion portrait avatar in a colour-tinted ring */
+.warlord-pick .wp-portrait { width: 58px; height: 58px; margin: 0 auto 2px; display: grid; place-items: center; border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--wc) 30%, transparent), transparent 70%);
+  border: 1px solid color-mix(in srgb, var(--wc) 45%, transparent); overflow: hidden; }
+.warlord-pick .wp-portrait svg { width: 52px; height: auto; margin-bottom: -8px; }
 .warlord-pick .wp-name { font-size: 13px; font-weight: 800; margin: 2px 0; }
 .warlord-pick .wp-power { font-size: 10.5px; color: var(--ink-dim); line-height: 1.3; }
 .warlord-pick .wp-power b { color: var(--gold); }

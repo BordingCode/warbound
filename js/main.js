@@ -1148,10 +1148,12 @@ function teamTraitBonus() {
 function startLadder() { chooseWarlord(); }
 function chooseWarlord() {
   Run.clearSave(); clearLobby(); run = Run.freshRun(); run.mode = 'menu'; lobby = null;
-  const card = (s) => { const p = Bots.POWERS[s.id]; return el('.warlord-pick', { onclick: () => beginLadder(s.id) }, [
-    el('.wp-emoji', { html: crest(s.color, s.sigil, 28) }), el('.wp-name', {}, s.name),
-    el('.wp-power', {}, [el('b', {}, p.name + ': '), el('span', {}, p.desc)]),
-  ]); };
+  const card = (s) => { const p = Bots.POWERS[s.id]; const cdef = UNITS_BY_ID[s.champ];
+    return el('.warlord-pick', { style: { '--wc': s.color }, onclick: () => beginLadder(s.id) }, [
+      el('.wp-portrait', { html: cdef ? championSVG(cdef, { size: 56 }) : crest(s.color, s.sigil, 28) }),
+      el('.wp-name', {}, s.name),
+      el('.wp-power', {}, [el('b', {}, p.name + ': '), el('span', {}, p.desc)]),
+    ]); };
   const rk = Rank.currentRank();
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '10px', padding: '14px' } }, [
     el('h1', { style: { fontSize: '26px', margin: '0', textAlign: 'center' } }, 'Choose your Warlord'),

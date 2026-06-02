@@ -69,15 +69,16 @@ for (const u of UNITS) for (const t of [u.origin, u.klass]) (traitPool[t] = trai
 
 // ---- the rival warlords (fantasy-flavoured styles) ----
 // each warlord is shown as a heraldic CREST (sigil letter on a tinted shield), not an emoji.
+// `champ` = a representative champion whose portrait is the warlord's "face" in the picker.
 export const STYLES = [
-  { id: 'warlord', name: 'Warlord Gorn',       sigil: 'G', color: '#ff7a3c', desc: 'Levels fast, fields a big warband', levelBias: 1.2,  econFloor: 0,  pref: null,       reroll: 0.1 },
-  { id: 'baron',   name: 'Baron Goldhand',     sigil: 'B', color: '#ffce5c', desc: 'Hoards gold, spikes hard late',     levelBias: 1.0,  econFloor: 50, pref: null,       reroll: 0.05 },
-  { id: 'gambit',  name: 'Gambit the Mad',     sigil: 'M', color: '#ff7eb6', desc: 'Rerolls relentlessly for 3-stars',  levelBias: 0.85, econFloor: 18, pref: 'lowcost', reroll: 0.9 },
-  { id: 'undead',  name: 'Necrarch the Risen', sigil: 'N', color: '#8cff9e', desc: 'Undead horde',                      levelBias: 1.0,  econFloor: 22, pref: 'undead',  reroll: 0.5 },
-  { id: 'elf',     name: 'Sylvaen Dawnblade',  sigil: 'S', color: '#54e6c0', desc: 'Elf evasion',                       levelBias: 1.0,  econFloor: 22, pref: 'elf',     reroll: 0.5 },
-  { id: 'demon',   name: "Mal'akar the Fell",  sigil: 'K', color: '#ff5a3c', desc: 'Demon burn',                        levelBias: 1.0,  econFloor: 22, pref: 'demon',   reroll: 0.5 },
-  { id: 'knight',  name: 'Dame Ironwall',      sigil: 'I', color: '#b9c4d0', desc: 'Knight wall',                       levelBias: 0.95, econFloor: 25, pref: 'knight',  reroll: 0.4 },
-  { id: 'mage',    name: 'Archmagus Vorne',    sigil: 'V', color: '#c79bff', desc: 'Mage burst',                        levelBias: 1.0,  econFloor: 22, pref: 'mage',    reroll: 0.5 },
+  { id: 'warlord', name: 'Warlord Gorn',       sigil: 'G', color: '#ff7a3c', champ: 'bramble_brute',  desc: 'Levels fast, fields a big warband', levelBias: 1.2,  econFloor: 0,  pref: null,       reroll: 0.1 },
+  { id: 'baron',   name: 'Baron Goldhand',     sigil: 'B', color: '#ffce5c', champ: 'dragon_knight',  desc: 'Hoards gold, spikes hard late',     levelBias: 1.0,  econFloor: 50, pref: null,       reroll: 0.05 },
+  { id: 'gambit',  name: 'Gambit the Mad',     sigil: 'M', color: '#ff7eb6', champ: 'pack_stalker',   desc: 'Rerolls relentlessly for 3-stars',  levelBias: 0.85, econFloor: 18, pref: 'lowcost', reroll: 0.9 },
+  { id: 'undead',  name: 'Necrarch the Risen', sigil: 'N', color: '#8cff9e', champ: 'necromancer',    desc: 'Undead horde',                      levelBias: 1.0,  econFloor: 22, pref: 'undead',  reroll: 0.5 },
+  { id: 'elf',     name: 'Sylvaen Dawnblade',  sigil: 'S', color: '#54e6c0', champ: 'moon_priestess', desc: 'Elf evasion',                       levelBias: 1.0,  econFloor: 22, pref: 'elf',     reroll: 0.5 },
+  { id: 'demon',   name: "Mal'akar the Fell",  sigil: 'K', color: '#ff5a3c', champ: 'warlock',        desc: 'Demon burn',                        levelBias: 1.0,  econFloor: 22, pref: 'demon',   reroll: 0.5 },
+  { id: 'knight',  name: 'Dame Ironwall',      sigil: 'I', color: '#b9c4d0', champ: 'knight_captain', desc: 'Knight wall',                       levelBias: 0.95, econFloor: 25, pref: 'knight',  reroll: 0.4 },
+  { id: 'mage',    name: 'Archmagus Vorne',    sigil: 'V', color: '#c79bff', champ: 'dragon_sage',    desc: 'Mage burst',                        levelBias: 1.0,  econFloor: 22, pref: 'mage',    reroll: 0.5 },
 ];
 
 // Signature powers — one per warlord (and the player picks one at run start). Each is a
