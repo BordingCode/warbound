@@ -14,7 +14,7 @@ const TEAM = [U('wyrm_archer', 3, 7, 3), U('knight_captain', 2, 6, 3), U('bone_g
   U('court_mage', 4, 7, 2), U('lich', 1, 7, 2), U('field_medic', 6, 7, 2), U('grove_healer', 0, 7, 2)];
 
 console.log('\n=== THE TRIALS: bosses load, fight, and escalate ===');
-ok('9 trials defined', TRIAL_COUNT === 9, `${TRIAL_COUNT} bosses`);
+ok('12 trials defined', TRIAL_COUNT === 12, `${TRIAL_COUNT} bosses`);
 
 const wr = [];
 for (let i = 0; i < TRIAL_COUNT; i++) {
@@ -43,7 +43,7 @@ ok('The gauntlet escalates (final boss is the hardest)', wr[TRIAL_COUNT - 1] <= 
   const board = getTrialBoard(TRIAL_COUNT - 1);
   let w = 0; const N = 24;
   for (let s = 1; s <= N; s++) if (simulate(STRONG.map((u) => ({ ...u })), board.units.map((u) => ({ ...u })), s * 17 + 3, { aug: { player: gear, enemy: board.gimmick || null } }).result.winner === 'player') w++;
-  ok('The Void Maw is beatable by a strong geared build', w / N >= 0.45, `geared winrate ${(w / N * 100).toFixed(0)}%`);
+  ok('The final trial is beatable by a strong geared build', w / N >= 0.45, `geared winrate ${(w / N * 100).toFixed(0)}%`);
 }
 // a creature must NOT leak into the player economy
 import('../js/data/units.js').then((m) => {

@@ -85,6 +85,32 @@ export const CREATURES_LIST = [
     { name: 'Unmaking', type: 'magic', target: 'mostEnemies', ap: 360,
       verbs: [{ op: 'magic', target: 'mostEnemies', count: 5, ap: 360 }, { op: 'manaBurn', amount: 35, target: 'mostEnemies', count: 5 }, { op: 'dot', dps: 90, dur: 3, target: 'mostEnemies', count: 5 }],
       passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'dodge', amount: 0.4, dur: 6, target: 'self' }, { op: 'meteors', n: 5, ap: 200, radius: 1 }, { op: 'summon', count: 2, hp: 3200, ad: 160 }] } }),
+
+  // 10 — ABYSSAL KRAKEN: a deep-sea horror — a maelstrom crushes a wide cluster and DROWNS them
+  //       (heal-cut + knockback), and it hatches grasping tentacle-spawn when wounded. New element
+  //       (water) past the Void Maw — the gauntlet's first "post-final" abyssal terror.
+  boss('abyssal_kraken', 'Abyssal Kraken', 'kraken', '#2ea0c0',
+    { hp: 40000, ad: 250, as: 0.7, armor: 55, mr: 50, range: 2, maxMana: 80, startMana: 25, manaPer: 8 },
+    { name: 'Maelstrom', type: 'magic', target: 'cluster', ap: 400,
+      verbs: [{ op: 'magic', target: 'cluster', radius: 2, ap: 400 }, { op: 'healCut', pct: 0.6, dur: 3, target: 'cluster' }, { op: 'knockback', cells: 1, target: 'cluster' }],
+      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'summon', count: 2, hp: 3000, ad: 150 }] } }),
+
+  // 11 — THUNDER ROC: a living storm with wings — chains lightning across your whole team and STUNS
+  //       them, attacks blisteringly fast, and whips up a meteor-storm of hail below half. Air/shock.
+  boss('thunder_roc', 'Thunder Roc', 'roc', '#ffe14a',
+    { hp: 42000, ad: 235, as: 0.9, armor: 48, mr: 55, range: 3, maxMana: 70, startMana: 30, manaPer: 9 },
+    { name: 'Chain Lightning', type: 'magic', target: 'mostEnemies', ap: 360,
+      verbs: [{ op: 'magic', target: 'mostEnemies', count: 5, ap: 360 }, { op: 'stun', dur: 0.9, target: 'mostEnemies', count: 5 }],
+      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'buffAS', amount: 0.7, dur: 99, target: 'self' }, { op: 'meteors', n: 5, ap: 190, radius: 1 }] } }),
+
+  // 12 — THE WORLDBREAKER (TRUE FINAL): a colossus of stone and starlight — a cataclysmic slam stuns
+  //       and SHATTERS armour across a wide cluster, then below half it walls behind a vast shield,
+  //       enrages, rains the sky down and tears open spawn. The absolute end of the gauntlet.
+  boss('worldbreaker', 'The Worldbreaker', 'titan', '#c8b0ff',
+    { hp: 50000, ad: 270, as: 0.58, armor: 78, mr: 60, range: 1, maxMana: 90, startMana: 22, manaPer: 9 },
+    { name: 'Cataclysm', type: 'physical', target: 'cluster', adRatio: 2.7,
+      verbs: [{ op: 'phys', target: 'cluster', radius: 1, adRatio: 2.7 }, { op: 'stun', dur: 1.2, target: 'cluster' }, { op: 'shred', stat: 'armor', amount: 40, dur: 4, target: 'cluster' }],
+      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'shield', target: 'self', amount: 7500 }, { op: 'buffAS', amount: 0.5, dur: 99, target: 'self' }, { op: 'meteors', n: 5, ap: 200, radius: 1 }, { op: 'summon', count: 2, hp: 3600, ad: 170 }] } }),
 ];
 
 export const CREATURES = Object.fromEntries(CREATURES_LIST.map((c) => [c.defId, c]));

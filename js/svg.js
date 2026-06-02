@@ -291,6 +291,34 @@ function creatureInner(def) {
         `<circle cx="${x}" cy="${y}" r="3.6" fill="${c}"/><circle cx="${x}" cy="${y}" r="1.5" fill="#0b0410"/>`).join('') +
       `<ellipse cx="50" cy="86" rx="15" ry="10" fill="#0b0410"/>` +
       `<path d="M37 84 l4 6 l4 -6 l5 7 l5 -7 l4 6 l4 -6" stroke="${c}" stroke-width="2.2" fill="none" stroke-linejoin="round"/>`,
+    kraken: () => shadow +
+      // a bulbous mantle head with huge eyes over a fan of grasping tentacles
+      [[-1, 0], [-1, 9], [-1, 18], [1, 0], [1, 9], [1, 18]].map(([dir, off]) =>
+        `<path d="M50 80 q${dir * (10 + off)} ${6 + off * 0.6} ${dir * (16 + off)} ${24 + off} q${dir * 3} 5 ${dir * -2} 8" stroke="${shade(c, -16)}" stroke-width="${5 - off * 0.12}" fill="none" stroke-linecap="round" opacity=".9"/>`).join('') +
+      `<path d="M30 74 Q26 40 50 38 Q74 40 70 74 Q60 84 50 84 Q40 84 30 74 Z" fill="${c}"/>` +
+      `<path d="M38 50 Q50 44 62 50" stroke="#ffffff" stroke-width="3" fill="none" opacity=".3" stroke-linecap="round"/>` +
+      `<circle cx="41" cy="62" r="7.5" fill="#fff"/><circle cx="59" cy="62" r="7.5" fill="#fff"/>` + eye(41, 63, '#0b2230') + eye(59, 63, '#0b2230') +
+      `<circle cx="41" cy="61" r="1.4" fill="#bfefff"/><circle cx="59" cy="61" r="1.4" fill="#bfefff"/>`,
+    roc: () => shadow +
+      // a thunderbird: vast spread wings, a plump body, hooked beak head and talons
+      `<path d="M30 60 Q2 44 6 30 Q10 52 34 58 Z" fill="${shade(c, -18)}" opacity=".92"/>` +
+      `<path d="M70 60 Q98 44 94 30 Q90 52 66 58 Z" fill="${shade(c, -18)}" opacity=".92"/>` +
+      `<path d="M24 56 Q8 56 4 48 M76 56 Q92 56 96 48" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>` +
+      `<path d="M50 100 Q33 96 35 70 Q38 50 50 50 Q62 50 65 70 Q67 96 50 100 Z" fill="${c}"/>` +
+      `<path d="M44 102 l-3 8 M56 102 l3 8 M50 103 v8" stroke="#c9a23a" stroke-width="2.4" stroke-linecap="round"/>` +
+      `<ellipse cx="50" cy="44" rx="10" ry="9" fill="${shade(c, 8)}"/>` +
+      `<path d="M50 44 l14 -3 l-12 7 Z" fill="#ffb347"/>` +
+      eye(46, 42, '#0b1020') + `<path d="M48 30 l3 -7 l3 7" stroke="#fff" stroke-width="2" fill="none" opacity=".7"/>`,
+    titan: () => shadow +
+      // a colossal stone-and-starlight construct: blocky shoulders, glowing core + cracks, heavy fists
+      `<rect x="16" y="58" width="16" height="40" rx="5" fill="${shade(c, -30)}"/><rect x="68" y="58" width="16" height="40" rx="5" fill="${shade(c, -30)}"/>` +
+      `<rect x="14" y="92" width="20" height="14" rx="5" fill="${shade(c, -20)}"/><rect x="66" y="92" width="20" height="14" rx="5" fill="${shade(c, -20)}"/>` +
+      `<path d="M26 52 Q50 44 74 52 L80 100 Q50 108 20 100 Z" fill="${shade(c, -10)}"/>` +
+      `<rect x="22" y="46" width="26" height="18" rx="6" fill="${c}"/><rect x="52" y="46" width="26" height="18" rx="6" fill="${c}"/>` +
+      `<rect x="40" y="36" width="20" height="18" rx="5" fill="${shade(c, 6)}"/>` +
+      eye(46, 45, '#fff') + eye(54, 45, '#fff') +
+      `<circle cx="50" cy="76" r="10" fill="${shade(c, 18)}"/><circle cx="50" cy="76" r="5" fill="#fff"/>` +
+      `<path d="M34 64 l8 8 M66 92 l-8 -8 M50 88 l0 8 M40 96 l6 -6" stroke="${shade(c, 24)}" stroke-width="2" opacity=".8"/>`,
   };
   return (S[def.shape] || S.slime)();
 }
