@@ -503,13 +503,28 @@
 
 /* Realm select — "Conquer the Realms" */
 .realm-list { display: flex; flex-direction: column; gap: 9px; }
-.realm-card { display: flex; gap: 12px; align-items: stretch; padding: 11px 13px; border-radius: 12px; cursor: pointer;
-  background: linear-gradient(100deg, color-mix(in srgb, var(--rc) 14%, var(--bg-2)), var(--bg-2));
-  border: 1px solid color-mix(in srgb, var(--rc) 45%, var(--line)); transition: transform .08s, box-shadow .15s; }
+/* --d (0..1) = how DRAMATIC this realm looks; later realms ramp gradient/glow/size/aura. */
+.realm-card { --d: 0; position: relative; overflow: hidden; isolation: isolate;
+  display: flex; gap: 12px; align-items: stretch; border-radius: 12px; cursor: pointer;
+  padding: calc(11px + 6px * var(--d)) 13px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--rc) calc(12% + 36% * var(--d)), var(--bg-2)), var(--bg-2));
+  border: 1px solid color-mix(in srgb, var(--rc) calc(40% + 52% * var(--d)), var(--line));
+  box-shadow: 0 0 calc(4px + 24px * var(--d)) color-mix(in srgb, var(--rc) calc(10% + 42% * var(--d)), transparent);
+  transition: transform .08s, box-shadow .15s; }
+/* a diagonal sheen of the realm colour that intensifies with drama */
+.realm-card::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(130% 90% at 10% -10%, color-mix(in srgb, var(--rc) calc(26% * var(--d)), transparent), transparent 62%);
+  opacity: calc(.35 + .65 * var(--d)); }
 .realm-card:active { transform: scale(.99); }
-.realm-card.frontier { border-color: var(--rc); box-shadow: 0 0 16px color-mix(in srgb, var(--rc) 35%, transparent); }
+.realm-card.frontier { border-color: var(--rc); box-shadow: 0 0 calc(16px + 18px * var(--d)) color-mix(in srgb, var(--rc) calc(35% + 40% * var(--d)), transparent); }
 .realm-card.conquered { opacity: .82; }
-.realm-card.locked { opacity: .5; cursor: not-allowed; filter: grayscale(.6); }
+.realm-card.locked { opacity: .58; cursor: not-allowed; filter: grayscale(.4); }   /* still hints the ominous late-realm glow */
+/* epic (late realms): a slow breathing aura. cataclysm (final/endless): stronger + faster. */
+.realm-card.epic::after, .realm-card.cataclysm::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: 12px;
+  pointer-events: none; box-shadow: inset 0 0 22px color-mix(in srgb, var(--rc) 55%, transparent); animation: realmAura 2.8s ease-in-out infinite; }
+.realm-card.cataclysm::after { box-shadow: inset 0 0 30px color-mix(in srgb, var(--rc) 75%, transparent); animation-duration: 1.8s; }
+@keyframes realmAura { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .realm-card.epic::after, .realm-card.cataclysm::after { animation: none; opacity: .7; } }
 .realm-card .rc-side { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 56px; border-right: 1px solid color-mix(in srgb, var(--rc) 30%, var(--line)); padding-right: 10px; }
 .realm-card .rc-num { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-dim); font-weight: 800; }
 /* front/back-line cues on the planning board — a standing hint that positioning matters.
@@ -540,7 +555,7 @@
 .end-reward .er-ico { font-size: 18px; line-height: 0; display: inline-flex; }
 .end-reward .er-sub { font-size: 11px; color: var(--ink-dim); margin-top: 4px; line-height: 1.35; }
 
-.realm-card .rc-emblem { color: var(--rc); display: flex; opacity: .95; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--rc) 45%, transparent)); }
+.realm-card .rc-emblem { color: var(--rc); display: flex; opacity: .95; filter: drop-shadow(0 0 calc(5px + 12px * var(--d)) color-mix(in srgb, var(--rc) calc(45% + 45% * var(--d)), transparent)); }
 .realm-card .rc-mark { color: var(--rc); display: inline-flex; }
 .realm-card .rc-mark .ic { width: 20px; height: 20px; }
 .realm-card .rc-body { flex: 1; min-width: 0; }

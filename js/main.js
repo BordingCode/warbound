@@ -961,8 +961,11 @@ function showRealms() {
   for (let i = 0; i < count; i++) {
     const r = realmAt(i);
     const status = i < cleared ? 'conquered' : i === cleared ? 'frontier' : 'locked';
-    cards.push(el(`.realm-card ${status}`, {
-      style: { '--rc': r.color },
+    // drama escalates 0→1 across the realms — later realms look heavier/glowier/ominous.
+    const drama = Math.min(1, i / (REALMS.length - 1));
+    const dramaClass = drama >= 0.999 ? ' cataclysm' : drama >= 0.6 ? ' epic' : '';
+    cards.push(el(`.realm-card ${status}${dramaClass}`, {
+      style: { '--rc': r.color, '--d': drama.toFixed(3) },
       onclick: status === 'locked' ? null : () => startSolo(true, i),
     }, [
       el('.rc-side', {}, [el('.rc-num', {}, 'Realm ' + r.num), el('.rc-emblem', { html: realmEmblemSVG(i) }), status === 'conquered' ? el('.rc-mark', { html: ic('trophy') }) : status === 'locked' ? el('.rc-mark', { html: ic('lock') }) : null]),
