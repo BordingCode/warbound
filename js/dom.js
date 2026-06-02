@@ -14,7 +14,10 @@ export function el(tag, props = {}, children = []) {
   for (const [k, v] of Object.entries(props)) {
     if (k === 'class') node.className += ' ' + v;
     else if (k === 'dataset') Object.assign(node.dataset, v);
-    else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
+    else if (k === 'style' && typeof v === 'object') for (const [sk, sv] of Object.entries(v)) {
+      // custom properties (--foo) must go through setProperty — Object.assign/[]= silently drops them
+      if (sk.startsWith('--')) node.style.setProperty(sk, sv); else node.style[sk] = sv;
+    }
     else if (k === 'html') node.innerHTML = v;
     else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
     else if (v != null && v !== false) node.setAttribute(k, v === true ? '' : v);
