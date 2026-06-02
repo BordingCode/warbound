@@ -169,6 +169,9 @@
 .drag-stats .ds-chead .ds-cv { font-weight: 700; color: var(--ink); }
 .drag-stats .ds-cv.up { color: #7be08a; }
 .drag-stats .ds-cv.down { color: #ff7a7a; }
+/* item drag: the "forges into X" preview block */
+.drag-stats .ds-forge { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--gold); }
+.drag-stats .ds-forge .ds-ctitle { color: var(--gold); }
 .iitems { font-size: 12px; color: var(--ink-dim); margin-bottom: 12px; }
 
 /* trait detail */

@@ -11,7 +11,7 @@ import { hashSeed } from './rng.js';
 import { CombatPlayer, unitStatsPanel } from './render/player.js';
 import { createDragController } from './input/drag.js';
 import { getEnemyBoard, REALMS, realmAt, bossForRealm, getTrialBoard, TRIAL_COUNT } from './data/enemies.js';
-import { COMPONENTS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS } from './data/items.js';
+import { COMPONENTS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS, combine as combineItems } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import * as Run from './state/run.js';
 import * as Bots from './state/bots.js';
@@ -646,19 +646,24 @@ function unitCompareCol(dDef, dStar, oDef, oStar) {
   return el('.ds-compare', {}, [el('.ds-ctitle', {}, 'Dragging ▸ vs ◂ target'), head, ...rows]);
 }
 
+// one stat column for an item id (used for the dragged item AND the forged-result preview)
+function itemDragCol(id) {
+  const d = itemDef(id); if (!d) return el('.ds-col', {}, []);
+  const tg = d.traitGrant ? Object.keys(d.traitGrant)[0] : null;
+  return el('.ds-col', {}, [
+    el('.ds-name', { html: ic(d.icon) + `<span>${d.name}</span>` }),
+    ...(d.mods ? dragModLines(d.mods).map((t) => el('.ds-row', {}, [el('span.ds-l', {}, t)])) : []),
+    tg ? el('.ds-row', {}, [el('span.ds-l', {}, `+1 ${TRAITS[tg] ? TRAITS[tg].name : tg} synergy`)]) : null,
+  ]);
+}
 function showDragStats(uid, kind) {
   if (!dragStatsOn()) return;
   hideDragStats();
   let body = null;
   if (kind === 'item') {
-    const it = (run.items || []).find((x) => x.iid === uid); const d = it && itemDef(it.id);
-    if (!d) return;
-    const tg = d.traitGrant ? Object.keys(d.traitGrant)[0] : null;
-    body = el('.ds-col', {}, [
-      el('.ds-name', { html: ic(d.icon) + `<span>${d.name}</span>` }),
-      ...(d.mods ? dragModLines(d.mods).map((t) => el('.ds-row', {}, [el('span.ds-l', {}, t)])) : []),
-      tg ? el('.ds-row', {}, [el('span.ds-l', {}, `+1 ${TRAITS[tg] ? TRAITS[tg].name : tg} synergy`)]) : null,
-    ]);
+    const it = (run.items || []).find((x) => x.iid === uid); if (!it || !itemDef(it.id)) return;
+    _dragInfo = { kind: 'item', id: it.id };
+    body = itemDragCol(it.id);
   } else {
     const u = Run.findUnit(run, uid); if (!u) return;
     const def = UNITS_BY_ID[u.defId]; if (!def) return;
@@ -669,8 +674,22 @@ function showDragStats(uid, kind) {
   document.body.append(_dragCard);
 }
 function updateDragCompare(overUid) {
-  if (!_dragCard || !_dragInfo || _dragInfo.kind !== 'unit') return;
+  if (!_dragCard || !_dragInfo) return;
   const overU = overUid ? Run.findUnit(run, overUid) : null;
+  // ITEM drag: if hovering a unit that already holds a component this item combines with,
+  // preview the forged item's stats under the dragged item's stats.
+  if (_dragInfo.kind === 'item') {
+    const children = [itemDragCol(_dragInfo.id)];
+    if (overU) {
+      let forged = null;
+      for (const compId of (overU.items || [])) { const c = combineItems(_dragInfo.id, compId); if (c) { forged = c; break; } }
+      const overDef = UNITS_BY_ID[overU.defId];
+      if (forged) children.push(el('.ds-forge', {}, [el('.ds-ctitle', {}, `▸ on ${overDef ? overDef.name.split(' ')[0] : 'unit'} — forges`), itemDragCol(forged)]));
+    }
+    _dragCard.replaceChildren(...children);
+    return;
+  }
+  // UNIT drag: dragged-vs-target comparison
   const overDef = overU ? UNITS_BY_ID[overU.defId] : null;
   if (overDef && overU.uid !== _dragInfo.uid) _dragCard.replaceChildren(unitCompareCol(_dragInfo.def, _dragInfo.star, overDef, overU.star));
   else _dragCard.replaceChildren(unitStatCol(_dragInfo.def, _dragInfo.star));

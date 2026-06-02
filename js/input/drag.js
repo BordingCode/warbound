@@ -56,7 +56,7 @@ export function createDragController({ boardWrap, sellZone, onPlace, onBench, on
     if (!active || e.pointerId !== active.pointerId) return;
     moveGhost(active.ghost, e.clientX, e.clientY);
     highlight(e.clientX, e.clientY);
-    if (onDragOver && active.kind !== 'item') {
+    if (onDragOver) {   // units: dragged-vs-target compare; items: forge-on-this-unit preview
       const over = unitUnder(e.clientX, e.clientY, active.uid);
       if (over !== active.overUid) { active.overUid = over; onDragOver(over, active.kind); }
     }
