@@ -206,6 +206,9 @@ export class CombatPlayer {
   }
 
   _floatNum(id, text, color, big = false) {
+    // bound cosmetic churn under stress (many units hit at once) — crits always show; the HP bar
+    // updates regardless. Normal play rarely has >40 live fx nodes, so this is invisible then.
+    if (!big && this.fxLayer.childElementCount > 40) return;
     const n = this.nodes.get(id); if (!n) return;
     const m = n.el.style.transform.match(/translate\(([\d.]+)%,\s*([\d.]+)%\)/);
     if (!m) return;
@@ -223,6 +226,7 @@ export class CombatPlayer {
   }
 
   _spark(id, color, n = 3, spread = 22) {
+    if (this.fxLayer.childElementCount > 46) return;   // bound spark churn under heavy simultaneous damage
     const node = this.nodes.get(id); if (!node) return;
     const m = node.el.style.transform.match(/translate\(([\d.]+)%,\s*([\d.]+)%\)/); if (!m) return;
     const cx = (+m[1]) * 0.125 + 6, cy = (+m[2]) * 0.125 + 6;
@@ -455,7 +459,12 @@ export class CombatPlayer {
         // light flash only on the killing blow). No floating numbers, sparks, squash, or stats.
         if (e.sd) { this._setHP(e.id, e.hp); if (lethal && n) this._flash(n.el, 0.6, 90); break; }
         const crit = e.src >= 0 && this.critPending.delete(e.src);
-        if (n) { this._flash(n.el, lethal ? 1 : crit ? 0.95 : 0.8, lethal ? 150 : 110); this._squash(n.el, lethal ? 1.3 : crit ? 1.26 : 1.18, lethal ? 0.72 : 0.84); }
+        // throttle flash+squash per unit: lethal/crit always play; rapid normal hits on the same
+        // unit coalesce (no point queueing 20 overlapping flashes on one fast-attacked tank).
+        if (n && (lethal || crit || this.fightMs - (n._fxAt || -999) > 70)) {
+          n._fxAt = this.fightMs;
+          this._flash(n.el, lethal ? 1 : crit ? 0.95 : 0.8, lethal ? 150 : 110); this._squash(n.el, lethal ? 1.3 : crit ? 1.26 : 1.18, lethal ? 0.72 : 0.84);
+        }
         this._setHP(e.id, e.hp);
         if (e.amount > 0) {
           const col = crit ? 'var(--gold)' : (DT_COLORS[e.dmgType] || 'var(--dt-physical)');
