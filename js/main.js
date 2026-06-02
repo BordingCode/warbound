@@ -588,7 +588,14 @@ function showUnitInfo(def, star = 1, items = [], opts = {}) {
   const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
     el('.help-card', { style: { maxWidth: '320px' } }, [
       el('h2', { style: { fontSize: '19px' } }, `${def.name} ${star > 1 ? '★'.repeat(star) : ''}`),
-      el('.unit-traits', {}, [TRAITS[def.origin], TRAITS[def.klass]].map((t) => el('.trait-chip.active', { onclick: () => showTraitInfo(t === TRAITS[def.origin] ? def.origin : def.klass) }, [el('span.dot', { style: { background: t.color } }), el('span', {}, t.name)]))),
+      el('.unit-traits', {}, (() => {
+        const natural = [def.origin, def.klass];
+        const granted = [...new Set(traitGrantsFor(items || []))].filter((t) => !natural.includes(t));   // emblem-granted, not already natural
+        const chip = (tid, viaEmblem) => { const t = TRAITS[tid]; if (!t) return null;
+          return el(`.trait-chip.active${viaEmblem ? ' granted' : ''}`, { onclick: () => showTraitInfo(tid), title: viaEmblem ? `${t.name} — granted by an Emblem` : '' },
+            [el('span.dot', { style: { background: t.color } }), el('span', {}, t.name), viaEmblem ? el('span.ce', { html: ic('crown') }) : null]); };
+        return [...natural.map((t) => chip(t, false)), ...granted.map((t) => chip(t, true))].filter(Boolean);
+      })()),
       el('.sub', {}, `Cost ${def.cost}⛁ · ${def.range === 1 ? 'melee' : 'ranged ' + def.range}`),
       // per-star scaling — the upgrade benefit, with the current star highlighted
       el('.star-scaling', {}, [

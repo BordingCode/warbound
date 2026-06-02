@@ -34,6 +34,10 @@
 .trait-chip.active { opacity: 1; }
 .trait-chip .dot { width: 10px; height: 10px; border-radius: 3px; }
 .trait-chip .cnt { font-variant-numeric: tabular-nums; color: var(--ink-dim); }
+/* emblem-granted trait chip: gold dashed outline + a small crown marker */
+.trait-chip.granted { border-style: dashed; border-color: color-mix(in srgb, var(--gold) 70%, var(--line)); }
+.trait-chip.granted .ce { display: inline-flex; color: var(--gold); }
+.trait-chip.granted .ce .ic, .trait-chip.granted .ce svg { width: 12px; height: 12px; }
 .trait-chip.tier-1 { border-color: var(--tier-bronze); }
 .trait-chip.tier-2 { border-color: var(--tier-silver); }
 .trait-chip.tier-3 { border-color: var(--tier-gold); box-shadow: 0 0 8px #ffce5c40; }
