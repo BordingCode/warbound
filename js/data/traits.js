@@ -23,15 +23,15 @@ export const TRAITS = {
     name: 'Elf', axis: 'origin', kind: 'behaviour', color: '#54e6c0',
     desc: 'Elves slip past blows and start shielded.',
     breakpoints: [2, 4],
-    bonuses: { 2: { dodge: 0.20, shield: 120 }, 4: { dodge: 0.38, shield: 240, as: 0.30 } },
-    bonusText: { 2: '20% dodge + 120 shield', 4: '38% dodge + 240 shield + 30% atk speed' },
+    bonuses: { 2: { dodge: 0.21, shield: 130 }, 4: { dodge: 0.37, shield: 250, as: 0.31 } },
+    bonusText: { 2: '21% dodge + 130 shield', 4: '37% dodge + 250 shield + 31% atk speed' },
   },
   demon: {
     name: 'Demon', axis: 'origin', kind: 'behaviour', color: '#ff5a3c',
     desc: 'Every Demon attack sears its target: bonus magic damage on each hit AND it drains the enemy\'s mana, delaying the ability they\'re charging. A strong soft-counter to caster-heavy enemy boards.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { burn: 88, manaBurn: 9 }, 4: { burn: 144, manaBurn: 15 }, 6: { burn: 204, manaBurn: 24 } },
-    bonusText: { 2: '+88 magic dmg & −9 enemy mana per hit', 4: '+144 magic dmg & −15 enemy mana per hit', 6: '+204 magic dmg & −24 enemy mana per hit' },
+    bonuses: { 2: { burn: 96, manaBurn: 10 }, 4: { burn: 154, manaBurn: 16 }, 6: { burn: 216, manaBurn: 25 } },
+    bonusText: { 2: '+96 magic dmg & −10 enemy mana per hit', 4: '+154 magic dmg & −16 enemy mana per hit', 6: '+216 magic dmg & −25 enemy mana per hit' },
   },
   beast: {
     name: 'Beast', axis: 'origin', kind: 'behaviour', color: '#ffb15a',
@@ -44,8 +44,8 @@ export const TRAITS = {
     name: 'Dragon', axis: 'origin', kind: 'behaviour', color: '#ffd24a',
     desc: 'Few but mighty — dragons shrug off magic.',
     breakpoints: [1, 2],
-    bonuses: { 1: { mr: 28, adPct: 0.16, ap: 50 }, 2: { mr: 50, adPct: 0.24, ap: 92 } },
-    bonusText: { 1: '+28 MR, +16% AD, +50 AP', 2: '+50 MR, +24% AD, +92 AP (near-immune to spells)' },
+    bonuses: { 1: { mr: 30, adPct: 0.19, ap: 60 }, 2: { mr: 54, adPct: 0.29, ap: 110 } },
+    bonusText: { 1: '+30 MR, +19% AD, +60 AP', 2: '+54 MR, +29% AD, +110 AP (near-immune to spells)' },
   },
 
   // ---------- CLASSES ----------
@@ -53,8 +53,8 @@ export const TRAITS = {
     name: 'Knight', axis: 'class', kind: 'glue', color: '#b9c4d0',
     desc: 'A wall that ignores a flat chunk of every hit.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { block: 12 }, 4: { block: 23 }, 6: { block: 43 } },
-    bonusText: { 2: 'Ignore 12 dmg/hit', 4: 'ignore 23', 6: 'ignore 43' },
+    bonuses: { 2: { block: 9 }, 4: { block: 15 }, 6: { block: 26 } },
+    bonusText: { 2: 'Ignore 9 dmg/hit', 4: 'ignore 15', 6: 'ignore 26' },
   },
   mage: {
     name: 'Mage', axis: 'class', kind: 'glue', color: '#c79bff',
@@ -88,8 +88,8 @@ export const TRAITS = {
     name: 'Summoner', axis: 'class', kind: 'behaviour', color: '#ffcf5a',
     desc: 'Summoned creatures hit harder and last longer.',
     breakpoints: [2, 4],
-    bonuses: { 2: { summonPower: 0.18 }, 4: { summonPower: 0.45 } },
-    bonusText: { 2: '+18% summon HP/dmg', 4: '+45% summon HP/dmg' },
+    bonuses: { 2: { summonPower: 0.14 }, 4: { summonPower: 0.36 } },
+    bonusText: { 2: '+14% summon HP/dmg', 4: '+36% summon HP/dmg' },
   },
 };
 
