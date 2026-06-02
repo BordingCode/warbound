@@ -884,7 +884,9 @@ function showHelp() {
     ['eye', '<b>Tap a champion</b> to inspect its stats & ability. Watch the dimmed enemy preview to counter them.'],
     run.mode === 'ladder'
       ? ['trophy', '<b>Last warband standing wins.</b> You and 7 rival warlords share one champion pool. Lose a fight and your <b>HP</b> drops — when it hits 0 you\'re out. Outlast everyone to win.']
-      : ['trophy', 'Beat all <b>10 warbands</b> to <b>conquer the realm</b> (survive on <b>5 lives</b>). Each realm conquered unlocks the next, harder one.'],
+      : run.mode === 'trials'
+        ? ['trophy', `Slay all <b>${TRIAL_COUNT} boss monsters</b> of the gauntlet (survive on <b>5 lives</b>). Each boss has its own deadly mechanic — learn it, then build to beat it.`]
+        : ['trophy', 'Beat all <b>10 warbands</b> to <b>conquer the realm</b> (survive on <b>5 lives</b>). Each realm conquered unlocks the next, harder one.'],
   ];
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'How to play'),
@@ -1135,9 +1137,16 @@ function endScreen(ladderSummary) {
       el('span', {}, 'Seed: '), el('code', { style: { color: 'var(--gold)' } }, run.seedStr),
       el('button.btn', { style: { padding: '3px 8px', marginLeft: '6px', fontSize: '11px' }, onclick: (e) => { try { navigator.clipboard.writeText(run.seedStr); } catch {} e.target.textContent = 'Copied'; } }, 'Copy seed'),
     ]) : null,
-    el('.end-btns', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } }, [
+    el('.end-btns', { style: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' } }, run.mode === 'ladder' ? [
       extraBtn,
-      el(`button.btn${extraBtn ? '' : '.primary'}`, { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => (run.mode === 'ladder' ? chooseMode() : showRealms()) }, run.mode === 'ladder' ? '↻ Main menu' : 'Realms'),
+      el('button.btn', { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => chooseMode() }, '↻ Main menu'),
+    ] : [
+      // non-ladder (Warpath / Trials): retry/next + reach the Armory (spend earned Spoils) + Menu.
+      // 'Realms' only for Warpath — it's the realm map, unrelated to the Trials gauntlet.
+      extraBtn,
+      run.mode === 'solo' ? el('button.btn', { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => showRealms() }, 'Realms') : null,
+      el('button.btn', { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => showArmory() }, [iconEl('coffer'), el('span', { style: { marginLeft: '6px' } }, 'Armory')]),
+      el('button.btn', { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => chooseMode() }, 'Menu'),
     ]),
   ]);
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', textAlign: 'center', gap: '14px' } }, [card]));
