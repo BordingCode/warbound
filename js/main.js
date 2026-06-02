@@ -388,8 +388,10 @@ function renderPlanning() {
     el('.combat-ctl', {}, [
       el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, 'Ready'),
       ...SPEEDS.map(([s, lbl]) => el(`button.btn#spd${spdId(s)}`, { onclick: () => setSpeed(s) }, lbl)),
-      el('.sell-zone#sellZone', { style: { marginLeft: 'auto' }, html: ic('sell') + ' Sell' }),
     ]),
+    // Full-width Sell drop bar — always on-screen and the WHOLE bar is the drop target, so it
+    // stays droppable even when grabbing a unit swaps the label to "Sell +N⛁" (no resize/shift).
+    el('.sell-zone#sellZone', { html: ic('sell') + ' Sell' }),
     buildItemsTray(),
     buildBenchEl(),
     buildShopEl(),
