@@ -551,6 +551,11 @@
 /* character-art toggle on the main menu */
 .art-toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; cursor: pointer; padding: 6px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-2); user-select: none; }
 .art-toggle:active { transform: scale(.98); }
+.install-pill { display: inline-flex; gap: 7px; align-items: center; font-size: 12.5px; font-weight: 700; cursor: pointer;
+  padding: 9px 16px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--line));
+  background: color-mix(in srgb, var(--gold) 12%, var(--bg-2)); color: var(--gold); user-select: none; }
+.install-pill:active { transform: scale(.98); }
+.install-pill .ic { width: 16px; height: 16px; }
 
 /* warband-stats overlay (opened from the top-bar bars button) */
 .wstat-list { display: flex; flex-direction: column; gap: 6px; max-height: 46svh; overflow-y: auto; margin: 8px 0 4px; }

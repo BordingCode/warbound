@@ -803,6 +803,17 @@ function toggleSound() { audioResume(); setSound(!soundOn()); const b = $('#soun
 // Screen shake was removed (laggy). `motionOn()` now only gates the non-shake juice
 // (confetti / reveal flashes), which stays on unless the OS asks for reduced motion.
 function motionOn() { try { return !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return true; } }
+// ---- install-as-app (PWA) ----
+function isStandalone() { try { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch { return false; } }
+function promptInstall() {
+  const p = window.__installPrompt;
+  if (p && p.prompt) { p.prompt(); if (p.userChoice) p.userChoice.finally(() => { window.__installPrompt = null; }); return; }
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  modal2('Install Warbound', iOS
+    ? 'In Safari, tap the Share button (a square with an upward arrow), then “Add to Home Screen”. Warbound then opens full-screen like a real app — and works offline.'
+    : 'Open your browser’s menu (⋮ or the install icon in the address bar) and choose “Install app” / “Add to Home screen”. Warbound then opens full-screen like a real app — and works offline.');
+}
+
 // On-screen stats while dragging a champion/item (with a dragged-vs-target comparison). Toggle in HUD.
 function dragStatsOn() { try { return localStorage.getItem('warbound_dragstats') !== '0'; } catch { return true; } }
 function toggleDragStats() { try { localStorage.setItem('warbound_dragstats', dragStatsOn() ? '0' : '1'); } catch {} Sfx.click(); renderPlanning(); }
@@ -1379,6 +1390,8 @@ function chooseMode() {
       el('span', { style: { fontWeight: 800, color: 'var(--gold)' } }, getArtSet() === 'detailed' ? 'Detailed' : 'Classic'),
       el('span', { style: { color: 'var(--ink-faint)' } }, '· tap to switch'),
     ]),
+    // Install-as-app: hidden once the game is already running as an installed app.
+    isStandalone() ? null : el('.install-pill', { onclick: () => { Sfx.click(); promptInstall(); } }, [el('span', { html: ic('spoils') }), el('span', {}, 'Install app on this device')]),
   ]));
 }
 
