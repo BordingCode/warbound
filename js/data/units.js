@@ -144,10 +144,11 @@ const A = {
     passive: [{ on: 'spawn', verbs: [v.lifesteal(0.18, 999, 'self')] }, { on: 'lowHp', threshold: 0.35, verbs: [v.shieldSelf(500)] }],
     ult: { verbs: [{ op: 'enableOnKill' }], onKill: [v.resetAtk('self'), v.buffAS(0.4, 3, 'self')] } },
   // PASSIVE — Corpse Harvest: raises a Risen whenever an ally falls (budget 2/fight).
+  // Risen: bony bruiser — tanky, slow, standard melee.
   necromancer: { name: 'Raise Dead', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ count: 2, hp: 950, ad: 115 })],
+    verbs: [v.summon({ kind: 'risen', count: 2, hp: 1040, ad: 108, armor: 22 })],
     passive: { on: 'allyDeath', verbs: [v.raiseCorpse(700, 95)] },
-    ult: { verbs: [v.summon({ count: 1, hp: 950, ad: 115, statMult: 2 }), v.summon({ count: 1, hp: 950, ad: 115 })] } },
+    ult: { verbs: [v.summon({ kind: 'risen', count: 1, hp: 1040, ad: 108, armor: 22, statMult: 2 }), v.summon({ kind: 'risen', count: 1, hp: 1040, ad: 108, armor: 22 })] } },
 
   // Elf
   thornguard: { name: 'Bramble Bash', type: 'physical', target: 'current', adRatio: 2.1, stun: 1.0,
@@ -166,10 +167,10 @@ const A = {
   grove_healer: { name: 'Verdant Mend', type: 'heal', target: 'lowestAllyHP', ap: 260,
     verbs: [v.heal({ ap: 260 })],
     ult: { verbs: [v.heal({ ap: 130, target: 'adjacentAllies' }), v.regen(12, 3, 'lowestAllyHP')] } },
-  // Ethereal summons: spirit_caller's base spirits already dodge (vs other summoners' solid bodies).
+  // Spirit: ethereal wisp — phases through blows (dodge), average damage, no body to armour.
   spirit_caller: { name: 'Call Spirits', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ count: 2, hp: 950, ad: 115, dodge: 0.20 })],
-    ult: { verbs: [v.summon({ count: 2, hp: 950, ad: 115, dodge: 0.30, slowAura: 0.15 })] } },
+    verbs: [v.summon({ kind: 'spirit', count: 2, hp: 820, ad: 110, armor: 0, dodge: 0.20 })],
+    ult: { verbs: [v.summon({ kind: 'spirit', count: 2, hp: 820, ad: 110, armor: 0, dodge: 0.30, slowAura: 0.15 })] } },
 
   // Demon
   // PASSIVE — Soul Tithe: each auto pays 2% own max HP to sear the target (can never self-kill).
@@ -186,9 +187,9 @@ const A = {
   imp_assassin: { name: 'Backstab', type: 'physical', target: 'lowestEnemyHP', adRatio: 2.6,
     verbs: [v.exec({ adRatio: 2.6 })], passive: { on: 'kill', verbs: [v.gainManaSelf(40)] },
     ult: { verbs: [{ op: 'enableOnKill' }], onKill: [v.manaBurn(40, 'nearestN', 0), v.slow(0.30, 2, 'nearestN')], onKillN: 2 } },
-  // Volatile spawn: pit_summoner's imps DETONATE for AoE magic when they die.
+  // Imp: volatile glass-cannon — frail, but DETONATES for AoE magic on death.
   pit_summoner: { name: 'Open the Pit', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ count: 2, hp: 950, ad: 115, explode: 140 })], ult: { verbs: [v.meteors({ n: 3, ap: 120, radius: 1 })] } },
+    verbs: [v.summon({ kind: 'imp', count: 2, hp: 720, ad: 96, armor: 8, explode: 160 })], ult: { verbs: [v.meteors({ n: 3, ap: 120, radius: 1 })] } },
 
   // Beast
   // PASSIVE — Hunter's Mark: marks the enemy CARRY (highest cost×star); the WHOLE team's autos
@@ -206,10 +207,10 @@ const A = {
   druid_healer: { name: 'Wild Aegis', type: 'shield', target: 'lowestAllyHP', ap: 300,
     verbs: [v.shield({ ap: 300 })],
     ult: { verbs: [{ op: 'shield', target: 'lowestNAllies', n: 3, ap: 210 }, v.buffAS(0.2, 3, 'shielded')] } },
-  // Enraged base pack: beastmaster's wolves already ramp attack speed (vs other summoners' bodies).
+  // Wolf: fast feral skirmisher — quick attacks that ramp (rage), but squishier than other summons.
   beastmaster: { name: 'Summon Pack', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ count: 2, hp: 950, ad: 115, rage: 0.04 })],
-    ult: { verbs: [v.summon({ count: 2, hp: 950, ad: 115, rage: 0.05, lifestealAura: 0.15 })] } },
+    verbs: [v.summon({ kind: 'wolf', count: 2, hp: 770, ad: 122, as: 0.92, armor: 10, rage: 0.04 })],
+    ult: { verbs: [v.summon({ kind: 'wolf', count: 2, hp: 770, ad: 122, as: 0.92, armor: 10, rage: 0.05, lifestealAura: 0.15 })] } },
 
   // Dragon (elite, expensive)
   // 3★ was a duplicate of Lich's Frost Nova (cluster magic + slow + MR-shred). Re-flavoured to a
@@ -237,9 +238,10 @@ const A = {
     ult: { verbs: [v.regen(16, 3, 'allies')] } },
   // Human-SUMMONER: disciplined ranks + a mana engine. PASSIVE — Rally: every muster also shields
   // the soldiers beside the banner. 3★ ult: conscripts a heavy (double-stat) footman.
+  // Soldier: armoured line-holder — sturdy, well-armoured, marches in with a shield up; low damage.
   banner_sergeant: { name: 'Muster the Ranks', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ count: 2, hp: 950, ad: 115 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
-    ult: { verbs: [v.summon({ count: 1, hp: 950, ad: 115, statMult: 2 })] } },
+    verbs: [v.summon({ kind: 'soldier', count: 2, hp: 1080, ad: 104, armor: 28, shieldStart: 240 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
+    ult: { verbs: [v.summon({ kind: 'soldier', count: 1, hp: 1080, ad: 104, armor: 28, shieldStart: 240, statMult: 2 })] } },
 };
 
 export const UNITS = [

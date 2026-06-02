@@ -295,6 +295,68 @@ function creatureInner(def) {
   return (S[def.shape] || S.slime)();
 }
 
+// ── Summoned-minion art: each summoner conjures a DISTINCT creature (not the old shared blob),
+// so you read at a glance whose summon it is. viewBox 0 0 100 120, feet ~y110. Wrapped in a full
+// <svg> with a .champ-body group (player.js animates that group). ──
+function summonInner(kind) {
+  const shadow = '<ellipse cx="50" cy="110" rx="24" ry="5.5" fill="#00000055"/>';
+  const eye = (x, y, c) => `<circle cx="${x}" cy="${y}" r="2.4" fill="${c}"/>`;
+  const K = {
+    // Necromancer — gaunt risen skeleton: skull, ribs, bone limbs (undead green-bone).
+    risen: () => shadow +
+      `<path d="M42 78 l-3 30 h6 l2 -28 Z M58 78 l3 30 h-6 l-2 -28 Z" fill="#c9d6ba"/>` +
+      `<rect x="44" y="50" width="12" height="30" rx="4" fill="#d8e6cc"/>` +
+      `<path d="M40 56 h20 M40 62 h20 M40 68 h20" stroke="#8a9a7c" stroke-width="2"/>` +
+      `<path d="M44 54 l-16 8 M56 54 l16 8" stroke="#d8e6cc" stroke-width="4" stroke-linecap="round"/>` +
+      `<circle cx="50" cy="38" r="13" fill="#e4efd8"/><path d="M44 50 h12 v4 h-12 z" fill="#e4efd8"/>` +
+      eye(45, 37, '#7be58a') + eye(55, 37, '#7be58a') +
+      `<path d="M45 44 h10" stroke="#1a2417" stroke-width="1.6"/>`,
+    // Spirit Caller — ethereal wisp: translucent, wavy tattered bottom, glowing eyes, no legs.
+    spirit: () => `<ellipse cx="50" cy="108" rx="16" ry="4" fill="#00000033"/>` +
+      `<path d="M50 30 Q30 34 28 66 Q26 92 33 104 Q39 94 44 104 Q50 94 56 104 Q61 94 67 104 Q74 92 72 66 Q70 34 50 30 Z" fill="#bff0e0" opacity=".7"/>` +
+      `<path d="M50 30 Q34 33 32 54 L68 54 Q66 33 50 30 Z" fill="#2f7d6b" opacity=".55"/>` +
+      eye(43, 50, '#eafffb') + eye(57, 50, '#eafffb') +
+      `<path d="M50 64 q-7 5 0 10 q7 -5 0 -10" fill="#9affe9" opacity=".5"/>`,
+    // Pit Summoner — little horned imp: red body, horns, bat wings, tail, clawed hands.
+    imp: () => shadow +
+      `<path d="M40 70 Q24 64 18 50 Q30 56 40 60 Z" fill="#7a1f14" opacity=".9"/>` +
+      `<path d="M60 70 Q76 64 82 50 Q70 56 60 60 Z" fill="#7a1f14" opacity=".9"/>` +
+      `<path d="M40 104 l-3 -28 h26 l-3 28 q-10 4 -20 0 Z" fill="#d23b2a"/>` +
+      `<ellipse cx="50" cy="58" rx="15" ry="14" fill="#ff5e44"/>` +
+      `<path d="M42 48 q-6 -12 -1 -16 q4 7 7 12 Z M58 48 q6 -12 1 -16 q-4 7 -7 12 Z" fill="#5a1414"/>` +
+      eye(45, 58, '#ffe14a') + eye(55, 58, '#ffe14a') +
+      `<path d="M44 64 q6 4 12 0" stroke="#5a1414" stroke-width="1.8" fill="none"/>` +
+      `<path d="M62 100 q14 6 16 -6 q-2 -8 -8 -6" stroke="#d23b2a" stroke-width="3" fill="none" stroke-linecap="round"/>`,
+    // Beastmaster — four-legged wolf: low feral silhouette, snout, ear, bushy tail (amber-grey).
+    wolf: () => shadow +
+      `<path d="M26 96 v12 M38 98 v10 M62 98 v10 M74 96 v12" stroke="#5a4632" stroke-width="6" stroke-linecap="round"/>` +
+      `<path d="M24 84 Q50 70 78 84 Q82 96 70 98 Q50 92 30 98 Q18 96 24 84 Z" fill="#b9966a"/>` +
+      `<path d="M22 86 Q10 80 6 70 Q14 78 24 80 Z" fill="#9a7a52"/>` +
+      `<ellipse cx="76" cy="74" rx="13" ry="11" fill="#c4a276"/>` +
+      `<path d="M70 64 l-3 -10 l8 6 Z M82 64 l3 -10 l-8 6 Z" fill="#8a6a44"/>` +
+      `<path d="M85 76 q8 1 11 -2 q-3 5 -11 5 Z" fill="#c4a276"/>` +
+      eye(80, 72, '#ffd24a') +
+      `<circle cx="89" cy="78" r="1.8" fill="#1a1008"/>`,
+    // Banner Sergeant — armoured footman: helmet, shield up, short sword, steel-blue plate.
+    soldier: () => shadow +
+      `<path d="M43 78 l-2 30 h7 l1 -28 Z M57 78 l2 30 h-7 l-1 -28 Z" fill="#5e6f88"/>` +
+      `<path d="M37 56 Q50 48 63 56 L66 84 Q50 90 34 84 Z" fill="#8ea3c4"/>` +
+      `<path d="M37 56 Q50 51 63 56 L62 64 Q50 59 38 64 Z" fill="#aebfda"/>` +
+      `<rect x="60" y="58" width="5" height="26" rx="2" fill="#cfd8e6"/>` +   // sword
+      `<path d="M24 58 l12 4 v16 q0 9 -12 12 q0 0 0 0 v-32 Z" fill="#6f86b0"/>` +  // shield
+      `<path d="M30 64 v18 M24 73 h12" stroke="#ffd95c" stroke-width="1.8" opacity=".85"/>` +
+      `<circle cx="50" cy="40" r="11" fill="#d8b48a"/>` +
+      `<path d="M38 40 Q50 24 62 40 L61 50 Q50 54 39 50 Z" fill="#9fb4d6"/>` +
+      `<path d="M50 23 q9 -5 3 7 q-2 2 -3 1 z" fill="#ffd95c"/>` +
+      `<rect x="45" y="42" width="10" height="3" rx="1" fill="#0d1320" opacity=".7"/>`,
+  };
+  return (K[kind] || K.risen)();
+}
+export function summonSVG(kind, { size = 60, cls = '' } = {}) {
+  return `<svg class="champ ${cls}" viewBox="0 0 100 120" width="${size}" height="${size * 1.2}" xmlns="http://www.w3.org/2000/svg">
+            <g class="champ-body">${summonInner(kind)}</g></svg>`;
+}
+
 // Full standalone SVG string (used for previews / shop cards). `palette` recolors pieces.
 export function championSVG(def, { size = 80, cls = '', palette = null } = {}) {
   return `<svg class="champ ${cls}" viewBox="0 0 100 120" width="${size}" height="${size * 1.2}"

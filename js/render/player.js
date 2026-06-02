@@ -3,6 +3,7 @@
 // Pausable / speed-scalable / skippable because it only animates `events`.
 import { el } from '../dom.js';
 import { championSVG } from '../champ-art.js';
+import { summonSVG } from '../svg.js';
 import { UNITS_BY_ID } from '../data/units.js';
 import { Sfx } from '../audio/audio.js';
 import { Shake } from './fx.js';
@@ -88,9 +89,8 @@ export class CombatPlayer {
     const node = el(`.unit.team-${e.team}`, { dataset: { star: e.star, id: e.id } });
     node.style.transform = `translate(${e.col * 100}%, ${e.row * 100}%)`;
     node.style.zIndex = e.row + 1;          // Y-sort: lower rows draw on top
-    const art = def ? championSVG(def, { size: 60 }) :
-      // summoned creature — wrap in .champ-body so attack/idle animations work (else null.animate crash)
-      `<svg class="champ" viewBox="0 0 100 120"><g class="champ-body"><ellipse cx="50" cy="115" rx="22" ry="5" fill="#0006"/><circle cx="50" cy="60" r="26" fill="#6a7a8a"/><circle cx="42" cy="54" r="4" fill="#1a1a1a"/><circle cx="58" cy="54" r="4" fill="#1a1a1a"/></g></svg>`;
+    // summoned creature — distinct art per summon kind (wolf/imp/spirit/risen/soldier)
+    const art = def ? championSVG(def, { size: 60 }) : summonSVG(e.summonKind || 'risen', { size: 60 });
     node.append(
       el('.base'),
       e.star > 1 ? el('.stars', {}, '★'.repeat(e.star)) : el('.stars'),

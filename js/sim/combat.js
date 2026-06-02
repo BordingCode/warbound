@@ -308,7 +308,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       case 'meteors': meteors(u, vb, now, killed); break;
       case 'heal': for (const t of targets) heal(t, (vb.ap || u.ability.ap || 0) * (STAR_MULT[u.star] || 1) + u.apBonus, now); break;
       case 'shield': for (const t of targets) { const amt = Math.round(vb.amount != null ? vb.amount : (vb.ap || u.ability.ap || 0) * (STAR_MULT[u.star] || 1) + u.apBonus); t.shield += amt; ev(now, 'shield', { id: t.id, amount: amt }); } break;
-      case 'summon': for (let k = 0; k < (vb.count || 1); k++) pendingSummons.push({ u, now, hp: vb.hp || 950, ad: vb.ad || 115, statMult: vb.statMult || 1, dodge: vb.dodge || 0, slowAura: vb.slowAura || 0, rage: vb.rage || 0, lifestealAura: vb.lifestealAura || 0, explode: vb.explode || 0 }); break;
+      case 'summon': for (let k = 0; k < (vb.count || 1); k++) pendingSummons.push({ u, now, kind: vb.kind || 'risen', hp: vb.hp || 950, ad: vb.ad || 115, as: vb.as || 0, armor: vb.armor != null ? vb.armor : 15, shieldStart: vb.shieldStart || 0, statMult: vb.statMult || 1, dodge: vb.dodge || 0, slowAura: vb.slowAura || 0, rage: vb.rage || 0, lifestealAura: vb.lifestealAura || 0, explode: vb.explode || 0 }); break;
       case 'stun': for (const t of targets) if (applyCC(t, vb.dur, now)) { t.stunUntil = now + vb.dur; ev(now, 'cc', { id: t.id, kind: 'stun', dur: vb.dur }); } break;
       case 'knockup': for (const t of targets) if (applyCC(t, vb.dur, now)) { t.stunUntil = Math.max(t.stunUntil, now + vb.dur); ev(now, 'cc', { id: t.id, kind: 'knockup', dur: vb.dur }); } break;
       case 'knockback': for (const t of targets) doKnockback(u, t, vb.cells || 1, now); break;
@@ -425,7 +425,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       }
       case 'heal': { const t = lowestHP(units, u.team, false); if (t) heal(t, ap, now); break; }
       case 'shield': { const t = lowestHP(units, u.team, false); if (t) { t.shield += Math.round(ap); ev(now, 'shield', { id: t.id, amount: Math.round(ap) }); } break; }
-      case 'summon': pendingSummons.push({ u, now, hp: 950, ad: 115, statMult: 1, dodge: 0, slowAura: 0, rage: 0, lifestealAura: 0 }); break;
+      case 'summon': pendingSummons.push({ u, now, kind: 'risen', hp: 950, ad: 115, as: 0, armor: 15, shieldStart: 0, statMult: 1, dodge: 0, slowAura: 0, rage: 0, lifestealAura: 0 }); break;
     }
   }
 
@@ -482,12 +482,15 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       if (!free) continue;
       const sm = (p.statMult || 1) * (1 + (u.summonPower || 0)) * (STAR_MULT[u.star] || 1);   // summon strength scales with star + ult statMult
       const baseHp = Math.round((p.hp || 950) * sm), baseAd = Math.round((p.ad || 115) * sm);
+      const kind = p.kind || 'risen';
+      const sAs = p.as || 0.7;   // each summon kind has its own attack speed (wolf is fast, others 0.7)
+      const sName = { risen: 'Risen', spirit: 'Spirit', imp: 'Imp', wolf: 'Wolf', soldier: 'Soldier' }[kind] || 'Risen';
       const s = {
-        id: nextId++, team: u.team, defId: 'summon', name: 'Risen', star: 1, origin: '_', klass: '_',
+        id: nextId++, team: u.team, defId: 'summon', summonKind: kind, name: sName, star: 1, origin: '_', klass: '_',
         col: free.col, row: free.row, hp: baseHp, maxHp: baseHp,
-        ad: baseAd, as: 0.7, armor: 15, mr: 15, range: 1,
-        mana: 0, maxMana: 9999, manaPer: 0, manaLockUntil: Infinity, attackCd: 1 / 0.7, ability: null, apBonus: 0,
-        alive: true, shield: 0, stunUntil: -1, block: 0, critChance: 0, critDmg: 0.4, dodge: p.dodge || 0, healAmp: 0, regen: 0,
+        ad: baseAd, as: sAs, armor: p.armor != null ? p.armor : 15, mr: 15, range: 1,
+        mana: 0, maxMana: 9999, manaPer: 0, manaLockUntil: Infinity, attackCd: 1 / sAs, ability: null, apBonus: 0,
+        alive: true, shield: Math.round((p.shieldStart || 0) * sm), stunUntil: -1, block: 0, critChance: 0, critDmg: 0.4, dodge: p.dodge || 0, healAmp: 0, regen: 0,
         revivePct: 0, revived: true, burnOnHit: 0, manaBurnOnHit: 0, ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0, isSummon: true,
         vamp: 0, thorns: 0, items: [],
         slowPct: 0, slowUntil: -1, shredArmorAmt: 0, shredArmorUntil: -1, shredMrAmt: 0, shredMrUntil: -1,
@@ -501,7 +504,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       };
       if (s.lifestealAura) s.vamp = s.lifestealAura;   // enraged pack drains on its own autos
       units.push(s); occupied.add(idx(s.col, s.row));
-      ev(now, 'spawn', { id: s.id, team: s.team, defId: 'summon', star: 1, col: s.col, row: s.row, hp: s.hp, maxHp: s.maxHp, summon: true });
+      ev(now, 'spawn', { id: s.id, team: s.team, defId: 'summon', summonKind: kind, name: sName, star: 1, col: s.col, row: s.row, hp: s.hp, maxHp: s.maxHp, summon: true });
     }
   }
 
