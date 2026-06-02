@@ -13,6 +13,7 @@ import { createDragController } from './input/drag.js';
 import { getEnemyBoard, REALMS, realmAt, bossForRealm, getTrialBoard, TRIAL_COUNT } from './data/enemies.js';
 import { COMPONENTS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS, combine as combineItems } from './data/items.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
+import { HONORS, HONOR_CATS, HONOR_BY_ID, TOTAL_BOUNTY } from './data/honors.js';
 import * as Run from './state/run.js';
 import * as Bots from './state/bots.js';
 import * as Rank from './state/rank.js';
@@ -350,6 +351,7 @@ function doLock() { if (inCombat) return; run.shopLocked = !run.shopLocked; Run.
 // ---------- planning render ----------
 function renderPlanning() {
   inCombat = false;
+  checkBoardHonors();   // 3★ / 6-stack synergy are board-state honours — re-checked each plan render
   const enemy = getOpponent();
   const boardLimitTxt = `${run.board.length}/${Run.boardLimit(run)}`;
   const { stage, wrap, units } = buildBoardEl();
@@ -1067,6 +1069,9 @@ function endScreen(ladderSummary) {
     stats = [stat('Placement', `#${place} / 8`), stat('Rounds', run.round - 1)];
     // apply the placement to your rank ONCE, and show the result
     if (!run.rankApplied) { run.rankApplied = true; run._rankResult = Rank.applyPlacement(place); Run.save(run); }
+    // War Honors: a 1st place, and reaching each rank tier (idempotent — fires once ever)
+    if (first) claimHonor('ladder_win');
+    { const t = Rank.currentRank().tier; if (t >= 2) claimHonor('reach_gold'); if (t >= 4) claimHonor('reach_diamond'); if (t >= 5) claimHonor('reach_master'); }
     const rr = run._rankResult;
     if (rr) {
       if (rr.promoted) launchConfetti(4000);
@@ -1097,6 +1102,14 @@ function endScreen(ladderSummary) {
     }
     // earn Spoils ONCE (even on a loss) — the meta-progression that eases the climb
     if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
+    // War Honors: Trials progress, realm conquests (read AFTER conquerRealm above), and a flawless run
+    if (isTrials) { if (run.wins >= 1) claimHonor('first_boss'); if (won) claimHonor('clear_trials'); }
+    else if (won) {
+      const c = Meta.realmsCleared();
+      if (c >= 1) claimHonor('first_realm'); if (c >= 3) claimHonor('three_realms');
+      if (c >= 6) claimHonor('all_realms'); if (c >= 7) claimHonor('astral');
+      if (run.losses === 0) claimHonor('flawless');
+    }
     stats = isTrials ? [stat('Bosses slain', `${run.wins}/${TRIAL_COUNT}`), stat('Rounds', run.round - 1)]
                      : [stat('Realm', realmAt(run.realm || 0).name), stat('Warbands', `${run.wins}/10`)];
     const spoilsTotal = Meta.load().spoils;
@@ -1128,6 +1141,100 @@ function endScreen(ladderSummary) {
     ]),
   ]);
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', textAlign: 'center', gap: '14px' } }, [card]));
+}
+
+// ---------- War Honors (one-time achievements across all modes) ----------
+// Claim an honour and, if it's newly earned, celebrate it with a toast (which also tells the
+// player the Spoils bounty just landed). Safe to call repeatedly — Meta.claimHonor is idempotent.
+function claimHonor(id) {
+  const res = Meta.claimHonor(id);
+  if (res) honorToast(res.honor, res.bounty);
+  return res;
+}
+// A small, self-dismissing banner that slides in from the top when an honour is earned.
+let _honorQueue = [];
+function honorToast(honor, bounty) {
+  _honorQueue.push({ honor, bounty });
+  if (_honorQueue.length > 1) return;   // one at a time; the chain re-arms on dismiss
+  showNextHonorToast();
+}
+function showNextHonorToast() {
+  const next = _honorQueue[0];
+  if (!next) return;
+  Sfx.reward(3);
+  if (motionOn()) launchConfetti(1600);
+  const t = el('.honor-toast', {}, [
+    el('.ht-medal', { html: ic(next.honor.icon) }),
+    el('.ht-body', {}, [
+      el('.ht-label', {}, 'Honour earned'),
+      el('.ht-name', {}, next.honor.name),
+    ]),
+    el('.ht-bounty', {}, [iconEl('spoils', 'ht-sp'), el('span', {}, `+${next.bounty}`)]),
+  ]);
+  document.body.append(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => { t.remove(); _honorQueue.shift(); showNextHonorToast(); }, 360);
+  }, 2600);
+}
+// Scan the current planning board for honours that are achieved by board STATE (not by an event):
+// a 3★ champion and a 6+ synergy. Idempotent — claim only fires the first time. Solo/Trials only
+// (the ladder stays free of meta side-effects, and emblems/grants don't apply there).
+function checkBoardHonors() {
+  if (!run || run.mode === 'ladder') return;
+  const units = [...run.board, ...run.bench.filter(Boolean)];
+  if (units.some((u) => u.star >= 3)) claimHonor('three_star');
+  const active = activeTraits(defsWithGrants(run.board), teamTraitBonus());
+  if (Object.values(active).some((info) => info.tier > 0 && info.count >= 6)) claimHonor('six_synergy');
+}
+// One-time retro-credit so a returning player's board never opens at zero (endowed-progress
+// effect), WITHOUT a surprise Spoils windfall: mark already-reached milestones earned, no bounty.
+function syncRetroHonors() {
+  if (Meta.honorInitDone()) return;
+  const cleared = Meta.realmsCleared();
+  if (cleared >= 1) Meta.markHonor('first_realm');
+  if (cleared >= 3) Meta.markHonor('three_realms');
+  if (cleared >= 6) Meta.markHonor('all_realms');
+  if (cleared >= 7) Meta.markHonor('astral');     // the hidden 7th realm (Astral Throne)
+  const tier = Rank.currentRank().tier;            // 0 Bronze … 2 Gold … 4 Diamond … 5 Master
+  if (tier >= 2) Meta.markHonor('reach_gold');
+  if (tier >= 4) Meta.markHonor('reach_diamond');
+  if (tier >= 5) Meta.markHonor('reach_master');
+  Meta.setHonorInit();
+}
+// The War Honors board: a quest-log + trophy case. Grouped by category, earned ones lit, locked
+// ones dimmed with their goal text. A progress bar up top (never at zero for veterans).
+function showHonors(backTo) {
+  const earned = Meta.honorsEarned();
+  const got = HONORS.filter((h) => earned[h.id]).length;
+  const groups = HONOR_CATS.map((cat) => {
+    const list = HONORS.filter((h) => h.cat === cat.id);
+    const cards = list.map((h) => {
+      const have = !!earned[h.id];
+      return el(`.honor-card${have ? ' earned' : ' locked'}`, { style: { '--hc': cat.color }, title: have ? 'Earned' : 'Locked' }, [
+        el('.hc-medal', { html: ic(have ? h.icon : 'lock') }),
+        el('.hc-text', {}, [el('.hc-name', {}, h.name), el('.hc-desc', {}, h.desc)]),
+        el('.hc-bounty', { title: `${h.bounty} Spoils bounty` }, [iconEl('spoils', 'hc-sp'), el('span', {}, `${h.bounty}`)]),
+      ]);
+    });
+    return el('.honor-group', {}, [
+      el('.hg-head', { style: { '--hc': cat.color } }, [el('span.hg-ico', { html: ic(cat.icon) }), el('span', {}, cat.name)]),
+      el('.honor-grid', {}, cards),
+    ]);
+  });
+  $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', gap: '14px', paddingBottom: '40px' } }, [
+    el('.honors-head', {}, [
+      el('h1', { style: { margin: '0' } }, 'War Honors'),
+      el('.sub', { style: { color: 'var(--ink-dim)' } }, 'One-time feats across every mode — each pays a Spoils bounty once.'),
+      el('.honor-prog', {}, [
+        el('.hp-bar', {}, el('.hp-fill', { style: { transform: `scaleX(${got / HONORS.length})` } })),
+        el('.hp-label', {}, `${got} / ${HONORS.length} earned`),
+      ]),
+    ]),
+    el('.honors-wrap', {}, groups),
+    el('button.btn.primary', { style: { fontSize: '15px', padding: '11px 24px' }, onclick: () => (backTo === 'armory' ? showArmory() : chooseMode()) }, '◂ Back'),
+  ]));
 }
 
 // ---------- mode select ----------
@@ -1248,6 +1355,7 @@ function showArmory() {
       el('.arm-header', {}, [
         el('button.btn.icon', { onclick: () => chooseMode(), html: ic('back') }),
         el('h1', {}, 'Armory'),
+        el('button.btn.icon', { title: 'War Honors', onclick: () => { Sfx.click(); showHonors('armory'); }, html: ic('trophy') }),
         el('.spoils-pill', {}, [iconEl('spoils', 'sp-ico'), el('span', {}, m.spoils)]),
       ]),
       // ── Champion: portrait (armour recolours to equipped) + the 5 equipped slots, one clean card ──
@@ -1305,7 +1413,7 @@ function forgePanel(m, rar, render) {
     return el('.forge-row', {
       style: { '--rc': rar(g.rarity).color, '--uc': rar(up).color },
       title: `Consumes two ${rar(g.rarity).name} ${s.name}s`,
-      onclick: () => { const r = Meta.combineItems(g.slot, g.rarity); if (r.ok) revealItem(r.item, render, { autoStash: true }); },
+      onclick: () => { const r = Meta.combineItems(g.slot, g.rarity); if (r.ok) { if (r.item.rarity === 'mythic') claimHonor('forge_mythic'); if (r.item.rarity === 'godforged') claimHonor('forge_godforged'); revealItem(r.item, render, { autoStash: true }); } },
     }, [
       el('.fr-icon', { html: ic(s.icon) }),
       el('.fr-text', {}, [
@@ -1400,6 +1508,11 @@ function chooseMode() {
       card('#ff6a8a', 'burst', 'The Trials', `A boss rush: face a gauntlet of ${TRIAL_COUNT} unique monsters — from the Gloom Slime up to the Void Maw — each with its own deadly mechanic. Build a team, learn each fight, slay them all.`, () => startTrials(true)),
       ladderCard,
     ]),
+    (() => { const got = HONORS.filter((h) => Meta.honorsEarned()[h.id]).length; return el('.honors-bar', { onclick: () => { Sfx.click(); showHonors('menu'); } }, [
+      el('span.hb-ico', { html: ic('trophy') }),
+      el('.hb-text', {}, [el('span.hb-label', {}, 'War Honors'), el('span.hb-sub', {}, 'feats & Spoils bounties across every mode')]),
+      el('span.hb-count', {}, `${got}/${HONORS.length}`),
+    ]); })(),
     el('.art-toggle', { onclick: () => { setArtSet(getArtSet() === 'detailed' ? 'classic' : 'detailed'); Sfx.click(); chooseMode(); } }, [
       el('span', { style: { color: 'var(--ink-dim)' } }, 'Character art:'),
       el('span', { style: { fontWeight: 800, color: 'var(--gold)' } }, getArtSet() === 'detailed' ? 'Detailed' : 'Classic'),
@@ -1412,6 +1525,7 @@ function chooseMode() {
 
 // ---------- boot ----------
 {
+  syncRetroHonors();   // one-time: credit milestones a returning player already reached (no windfall)
   const saved = Run.load();
   if (saved && saved.mode === 'ladder') {
     try { lobby = Bots.deserializeLobby(JSON.parse(localStorage.getItem(LOBBY_KEY) || 'null')); } catch { lobby = null; }
@@ -1431,6 +1545,7 @@ window.__wb = {
   place: (uid, c, r) => act(() => Run.placeOnBoard(run, uid, c, r)),
   giveGold: (n) => act(() => (run.gold += n)),
   inspect: (uid) => showInspect(uid),
+  honor: (id) => claimHonor(id), honors: () => showHonors('menu'),
   end: () => endScreen(),
   sim: (board, round) => simulate(board, getEnemyBoard(round || run.round, null).units.map(({ defId, star, col, row }) => ({ defId, star, col, row })), hashSeed(run.seed, round || run.round), { aug: { player: augmentBundle(run.augments) } }),
 };

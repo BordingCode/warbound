@@ -7,6 +7,7 @@
 // effect all match, so a "Dragon Hoard" obviously gives gold and a "Tome of Mastery"
 // obviously gives XP. Nothing reads as random.
 import { TRAITS } from '../data/traits.js';
+import { HONOR_BY_ID } from '../data/honors.js';
 
 // each slot = one effect family. icon + colour + names all telegraph the effect.
 // vals/names indexed by rarity: [common, rare, epic, legendary, mythic, ascended, celestial, godforged].
@@ -71,6 +72,27 @@ export function realmsCleared() { return load().realmsCleared || 0; }
 // mark realm index `idx` conquered; returns true only if this ADVANCED the frontier (a new conquest).
 export function conquerRealm(idx) { const m = load(); if (idx + 1 > (m.realmsCleared || 0)) { m.realmsCleared = idx + 1; save(m); return true; } return false; }
 export function addSpoils(n) { const m = load(); m.spoils = Math.max(0, m.spoils + Math.round(n)); save(m); return m.spoils; }
+
+// ---- War Honors (one-time achievements; see js/data/honors.js) ----
+export function honorsEarned() { return load().honors || {}; }
+export function hasHonor(id) { return !!(load().honors || {})[id]; }
+// Claim an honour the first time it's achieved: mark it earned AND pay its Spoils bounty ONCE.
+// Returns { honor, bounty, spoils } when newly earned; null if already held or unknown id.
+export function claimHonor(id) {
+  const def = HONOR_BY_ID[id]; if (!def) return null;
+  const m = load(); m.honors = m.honors || {};
+  if (m.honors[id]) return null;
+  m.honors[id] = true;
+  m.spoils = Math.max(0, m.spoils + def.bounty);
+  save(m);
+  return { honor: def, bounty: def.bounty, spoils: m.spoils };
+}
+// Mark an honour earned WITHOUT paying the bounty — used once to retro-credit milestones a
+// returning player already reached before honours existed (endowed-progress: the board never
+// opens at zero, but no surprise Spoils windfall). Returns true if it newly marked it.
+export function markHonor(id) { const m = load(); m.honors = m.honors || {}; if (m.honors[id] || !HONOR_BY_ID[id]) return false; m.honors[id] = true; save(m); return true; }
+export function honorInitDone() { return !!load().honorInit; }
+export function setHonorInit() { const m = load(); m.honorInit = true; save(m); }
 
 // Spoils from a finished solo run — even a loss pays, so the loop bootstraps the hard climb.
 export function spoilsForRun(wins, roundsSurvived, won) {
