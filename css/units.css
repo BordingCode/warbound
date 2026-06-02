@@ -136,6 +136,11 @@
 .vfx-arrow { width: 2.6%; height: 9%; border-radius: 2px; background: linear-gradient(#ffffff, #cdd6e3); box-shadow: 0 0 4px #fff; }
 .vfx-stun { width: 16%; aspect-ratio: 1; border-radius: 50%; border-top: 3px dashed var(--gold); border-bottom: 3px dashed var(--gold); filter: drop-shadow(0 0 5px var(--gold)); }
 .vfx-rune { width: 22%; aspect-ratio: 1; border: 2px solid #9d6bff; border-radius: 5px; background: conic-gradient(from 0deg, #9d6bff44, transparent, #9d6bff44, transparent); box-shadow: 0 0 12px #9d6bff; }
+/* signature-effect shapes (border colour set inline per casting unit) */
+.vfx-reticle { width: 15%; aspect-ratio: 1; border: 3px solid #fff; border-radius: 3px; box-shadow: 0 0 8px currentColor, inset 0 0 6px currentColor; }
+.vfx-shock { width: 20%; aspect-ratio: 2 / 1; border: 3px solid #fff; border-radius: 50%; }
+.vfx-frost { width: 24%; aspect-ratio: 1; border: 2px solid #fff; border-radius: 5px; background: radial-gradient(closest-side, #ffffff44, transparent); }
+.vfx-wave { width: 18%; aspect-ratio: 2 / 1; border: 2px solid #fff; border-radius: 50%; opacity: .8; }
 
 /* ── v2 "Detailed" art: articulated idle so the rig visibly moves its limbs/cape ── */
 .champ-v2 .v2-head, .champ-v2 .v2-cape, .champ-v2 .v2-arm-front, .champ-v2 .v2-arm-back, .champ-v2 .v2-torso, .champ-v2 .v2-leg-l, .champ-v2 .v2-leg-r { transform-box: view-box; }

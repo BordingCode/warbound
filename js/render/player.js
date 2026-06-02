@@ -12,22 +12,25 @@ import { MOVE_INTERVAL } from '../sim/combat.js';
 
 const DT_COLORS = { physical: 'var(--dt-physical)', magic: 'var(--dt-magic)', true: 'var(--dt-true)', heal: 'var(--dt-heal)' };
 
-// Per-unit ability VFX: each hero's spell uses ITS theme colour + a shape variant, so units that
-// share an ability still look distinct (Lich's green blast vs Court Mage's blue ring vs Warlock's
-// red pillar). c = colour key, fx = shape family rendered in _signatureVfx.
+// Per-unit ability VFX. The SHAPE signals what the ability DOES (execute / drain / frost / stomp /
+// summon / volley / nuke …) so the player learns a unit by its cast; the COLOUR is the per-unit
+// signal so same-role neighbours still differ. `fx` = primary effect shape, `fx2` = an optional
+// secondary read (e.g. Wraith = execute THEN life-drain; Knight = stomp THEN team haste-wave).
 const UNIT_FX = {
   // Human
-  knight_captain: { c: '#ffd95c', fx: 'slam' }, court_mage: { c: '#6fb1ff', fx: 'ringBurst' }, crossbowman: { c: '#dfe7f2', fx: 'arrows' }, royal_blade: { c: '#cfe0ff', fx: 'chop' }, field_medic: { c: '#7affc0', fx: 'heal' },
+  knight_captain: { c: '#ffd95c', fx: 'stomp', fx2: 'teamAura' }, court_mage: { c: '#6fb1ff', fx: 'ringBurst' }, crossbowman: { c: '#dfe7f2', fx: 'arrows', fx2: 'frost' }, royal_blade: { c: '#cfe0ff', fx: 'execMark' }, field_medic: { c: '#7affc0', fx: 'heal' },
   // Undead
-  bone_guard: { c: '#d8e6cc', fx: 'slam' }, lich: { c: '#8cff9e', fx: 'shards' }, skeleton_archer: { c: '#b6e0a0', fx: 'arrows' }, wraith: { c: '#b0ffd8', fx: 'chop' }, necromancer: { c: '#6effa0', fx: 'rune' },
+  bone_guard: { c: '#d8e6cc', fx: 'stomp' }, lich: { c: '#8cff9e', fx: 'ringBurst', fx2: 'frost' }, skeleton_archer: { c: '#b6e0a0', fx: 'arrows' }, wraith: { c: '#b0ffd8', fx: 'execMark', fx2: 'drain' }, necromancer: { c: '#6effa0', fx: 'rune' },
   // Elf
-  thornguard: { c: '#7fe6b0', fx: 'slam' }, moon_priestess: { c: '#aef0ff', fx: 'ringBurst' }, wood_ranger: { c: '#8fe07a', fx: 'arrows' }, shadow_dancer: { c: '#9fb0ff', fx: 'chop' }, grove_healer: { c: '#7affc0', fx: 'heal' }, spirit_caller: { c: '#b0ffe0', fx: 'rune' },
+  thornguard: { c: '#7fe6b0', fx: 'stomp' }, moon_priestess: { c: '#aef0ff', fx: 'ringBurst' }, wood_ranger: { c: '#8fe07a', fx: 'arrows' }, shadow_dancer: { c: '#9fb0ff', fx: 'execMark' }, grove_healer: { c: '#7affc0', fx: 'heal' }, spirit_caller: { c: '#b0ffe0', fx: 'rune' },
   // Demon
-  hellguard: { c: '#ff8a4c', fx: 'sweep' }, warlock: { c: '#ff5a3c', fx: 'pillar' }, fel_archer: { c: '#ff7a5c', fx: 'arrows' }, imp_assassin: { c: '#ff9a6c', fx: 'chop' }, pit_summoner: { c: '#ff5e8a', fx: 'rune' },
+  hellguard: { c: '#ff8a4c', fx: 'sweep' }, warlock: { c: '#ff5a3c', fx: 'pillar' }, fel_archer: { c: '#ff7a5c', fx: 'arrows', fx2: 'hexSeal' }, imp_assassin: { c: '#ff9a6c', fx: 'execMark' }, pit_summoner: { c: '#ff5e8a', fx: 'rune' },
   // Beast
-  beast_hunter: { c: '#ffc46a', fx: 'arrows' }, bramble_brute: { c: '#c8e06a', fx: 'sweep' }, pack_stalker: { c: '#ffb15a', fx: 'chop' }, druid_healer: { c: '#9be86a', fx: 'shield' }, beastmaster: { c: '#ffd24a', fx: 'rune' },
+  beast_hunter: { c: '#ffc46a', fx: 'arrows' }, bramble_brute: { c: '#c8e06a', fx: 'sweep' }, pack_stalker: { c: '#ffb15a', fx: 'execMark' }, druid_healer: { c: '#9be86a', fx: 'shield' }, beastmaster: { c: '#ffd24a', fx: 'rune' },
   // Dragon
-  dragon_knight: { c: '#ff7a3c', fx: 'cone' }, dragon_sage: { c: '#c79bff', fx: 'cone' }, wyrm_archer: { c: '#ffce5c', fx: 'arrows' },
+  dragon_knight: { c: '#ff7a3c', fx: 'cone' }, dragon_sage: { c: '#c79bff', fx: 'cone' }, wyrm_archer: { c: '#ffce5c', fx: 'arrows', fx2: 'frost' },
+  // Bridge
+  storm_shaman: { c: '#7fd8ff', fx: 'ringBurst' }, plague_priest: { c: '#aef0b0', fx: 'heal', fx2: 'hexSeal' }, banner_sergeant: { c: '#ffe08a', fx: 'rune', fx2: 'teamAura' },
 };
 
 export class CombatPlayer {
@@ -261,10 +264,12 @@ export class CombatPlayer {
     const defId = this.unitStats.get(e.id) && this.unitStats.get(e.id).defId;
     const cfg = UNIT_FX[defId];
     if (!cfg) return false;
-    const col = cfg.c, kind = cfg.fx, p = t || c;
+    const col = cfg.c, p = t || c;
     const glow = `drop-shadow(0 0 6px ${col})`;
     const fade = (cls, x, y, styles, kf, ms, easing) => { const f = this._fx(cls, x, y, styles); f.animate(kf, { duration: ms / sp, easing }).finished.then(() => f.remove()).catch(() => {}); return f; };
     const tn = e.tgt >= 0 ? this.nodes.get(e.tgt) : null;
+    // draw one primitive; a unit can stack a primary `fx` + a secondary `fx2` (e.g. execute+drain)
+    const draw = (kind) => {
     switch (kind) {
       case 'ringBurst':                // caster magic: expanding coloured ring + bright core
         fade('vfx-ring', p.x, p.y, { borderColor: col, boxShadow: `0 0 10px ${col}` }, [{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.8)', opacity: 0 }], 500, 'cubic-bezier(.2,.7,.3,1)');
@@ -308,9 +313,32 @@ export class CombatPlayer {
       case 'shield':                   // a coloured protective bubble pops in around the ally
         fade('vfx-shield', p.x, p.y, { borderColor: col, boxShadow: `0 0 10px ${col}` }, [{ transform: 'translate(-50%,-50%) scale(.3)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.1)', opacity: .2 }], 420, 'cubic-bezier(.3,1.5,.6,1)');
         break;
+      case 'execMark':                 // EXECUTE: a crosshair reticle snaps onto the victim + a hard flash
+        fade('vfx-reticle', p.x, p.y, { borderColor: col, color: col, filter: glow }, [{ transform: 'translate(-50%,-50%) scale(2.2) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(45deg)', opacity: 1, offset: .5 }, { transform: 'translate(-50%,-50%) scale(.65) rotate(90deg)', opacity: 0 }], 300, 'cubic-bezier(.3,1,.4,1)');
+        if (tn) this._flash(tn.el, 1, 150);
+        if (e.tgt >= 0) this._spark(e.tgt, col, 8, 32);
+        this.shake.add(0.2); this.hitStop(60); break;
+      case 'drain':                    // LIFE/MANA LEECH: orbs stream from the victim back to the caster
+        if (e.tgt >= 0 && c) for (let i = 0; i < 3; i++) { const o = this._fx('vfx-orb', p.x, p.y, { background: col, color: col }); o.animate([{ left: p.x + '%', top: p.y + '%', transform: 'translate(-50%,-50%) scale(1)', opacity: 0 }, { opacity: 1, offset: .2 }, { left: c.x + '%', top: c.y + '%', transform: 'translate(-50%,-50%) scale(.35)', opacity: 0 }], { duration: (420 + i * 70) / sp, easing: 'cubic-bezier(.4,.1,.7,1)', delay: (i * 55) / sp }).finished.then(() => o.remove()).catch(() => {}); }
+        break;
+      case 'stomp':                    // SLAM / KNOCKBACK: a flat ground shock-ring kicks out + victim jolt
+        fade('vfx-shock', p.x, p.y + 4.5, { borderColor: col, filter: glow }, [{ transform: 'translate(-50%,-50%) scaleX(.3) scaleY(.12)', opacity: .9 }, { transform: 'translate(-50%,-50%) scaleX(1.7) scaleY(.55)', opacity: 0 }], 360, 'ease-out');
+        if (tn) this._flash(tn.el, 0.7, 140);
+        this.shake.add(0.2); this.hitStop(55); break;
+      case 'frost':                    // SLOW / FROST: a pale crystal field blooms over the cluster and lingers
+        fade('vfx-frost', p.x, p.y, { borderColor: col, color: col, boxShadow: `0 0 10px ${col}` }, [{ transform: 'translate(-50%,-50%) scale(.3) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1) rotate(30deg)', opacity: .85, offset: .3 }, { transform: 'translate(-50%,-50%) scale(1.05) rotate(40deg)', opacity: .6, offset: .7 }, { transform: 'translate(-50%,-50%) scale(1.12) rotate(45deg)', opacity: 0 }], 720, 'ease-out');
+        if (e.tgt >= 0) this._spark(e.tgt, col, 4, 22); break;
+      case 'hexSeal':                  // DENIAL (mana-burn / heal-cut / shred): a rune-seal clamps + shatters on the victim
+        fade('vfx-rune', p.x, p.y, { width: '15%', border: `2px solid ${col}`, background: `conic-gradient(from 0deg, ${col}55, transparent, ${col}55, transparent)`, filter: glow }, [{ transform: 'translate(-50%,-50%) scale(1.7) rotate(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(.9) rotate(140deg)', opacity: .95, offset: .5 }, { transform: 'translate(-50%,-50%) scale(.65) rotate(260deg)', opacity: 0 }], 460, 'ease-in'); break;
+      case 'teamAura':                 // ALLY BUFF: a soft colour ground-wave radiates from the caster
+        fade('vfx-wave', c.x, c.y + 4.5, { borderColor: col, filter: glow }, [{ transform: 'translate(-50%,-50%) scaleX(.2) scaleY(.1)', opacity: .8 }, { transform: 'translate(-50%,-50%) scaleX(2.6) scaleY(1.1)', opacity: 0 }], 560, 'ease-out'); break;
       default: return false;
     }
     return true;
+    };
+    const ok = draw(cfg.fx);
+    if (cfg.fx2) draw(cfg.fx2);   // optional secondary read (e.g. execute → drain, stomp → team haste)
+    return ok;
   }
 
   // Dota-style per-shape ability visuals
