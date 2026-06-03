@@ -14,6 +14,9 @@ export const PALETTES = {
   demon:  { skin: '#8c3b3b', primary: '#5a1414', secondary: '#2a1414', accent: '#ff5a3c' },
   beast:  { skin: '#caa06a', primary: '#7a4a2a', secondary: '#caa06a', accent: '#ffb15a' },
   dragon: { skin: '#d9c27a', primary: '#6a3fa0', secondary: '#e6c04a', accent: '#ffd24a' },
+  // dwarf = earthy STONE + BRONZE armour (ruddy skin, amber accent) — reads "mountain-forged",
+  // clear of beast's tan-brown via the bronze metal + amber trim.
+  dwarf:  { skin: '#d59a6a', primary: '#5e5048', secondary: '#c8923f', accent: '#e0a35c' },
 };
 
 export const ORIGINS = Object.keys(PALETTES);

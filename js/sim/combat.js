@@ -52,7 +52,7 @@ function makeUnit(entry, team, id, aug = null) {
     attackCd: 1 / (s.as * (1 + im.as)), ability: def.ability, apBonus: im.ap,
     alive: true, shield: im.shield, stunUntil: -1,
     // trait-derived (filled by applyTraits) + item-derived
-    block: 0, dmgRed: 0, critChance: im.critChance, critDmg: 0.4 + im.critDmg, dodge: 0, healAmp: 0, regen: im.regen,
+    block: 0, dmgRed: 0, ccResist: 0, critChance: im.critChance, critDmg: 0.4 + im.critDmg, dodge: 0, healAmp: 0, regen: im.regen,
     revivePct: im.revive, revived: false, burnOnHit: 0, manaBurnOnHit: 0,
     ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0,
     vamp: im.vamp, thorns: im.thorns,
@@ -118,6 +118,9 @@ function applyTraits(units, board, traitBonus = {}) {
     // Paladin: team DEFENCE aura — flat % incoming-damage reduction to every ally (the protective
     // twin of Bard's offence aura). Capped small (≤15%); applied in applyDamage via target.dmgRed.
     if (has('paladin')) { const pl = get('paladin'); if (pl && pl.dmgRed) u.dmgRed = Math.max(u.dmgRed, pl.dmgRed); }
+    // Dwarf: stubborn mountain-folk — heavy armour/MR + TENACITY (ccResist shrinks incoming
+    // stun/slow/taunt/mana-lock duration). The rock-paper-scissors answer to CC-heavy boards.
+    const dwarf = get('dwarf'); if (dwarf) { u.armor += dwarf.armor || 0; u.mr += dwarf.mr || 0; if (dwarf.ccResist) u.ccResist = Math.max(u.ccResist, dwarf.ccResist); }
   }
 }
 
@@ -167,6 +170,10 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
   }
   function effDodge(u, now) { return u.dodge + (now < u.dodgeBuffUntil ? u.dodgeBuffAmt : 0); }
   function effThorns(u, now) { return u.thorns + (now < u.thornsBuffUntil ? u.thornsBuffAmt : 0); }
+  // Dwarf tenacity: scale an incoming CC's DURATION by the target's ccResist (stun/knockup/
+  // taunt/slow/mana-lock). The rock-paper-scissors answer to CC-heavy boards. Positional
+  // knockback (cells) is unaffected — dwarves still get shoved, they just shrug off the lock.
+  function ccDur(t, dur) { return dur * (1 - (t.ccResist || 0)); }
   // CC gate: a unit is immune while ccImmuneUntil is in the future; applying CC re-arms it
   // for 1.5× the CC's duration (spec hard-rule: no perma-lock). Returns true if CC landed.
   function applyCC(t, dur, now) {
@@ -324,13 +331,13 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       case 'heal': for (const t of targets) heal(t, (vb.ap || u.ability.ap || 0) * (STAR_MULT[u.star] || 1) + u.apBonus, now); break;
       case 'shield': for (const t of targets) { const amt = Math.round(vb.amount != null ? vb.amount : (vb.ap || u.ability.ap || 0) * (STAR_MULT[u.star] || 1) + u.apBonus); t.shield += amt; ev(now, 'shield', { id: t.id, amount: amt }); } break;
       case 'summon': for (let k = 0; k < (vb.count || 1); k++) pendingSummons.push({ u, now, kind: vb.kind || 'risen', hp: vb.hp || 950, ad: vb.ad || 115, as: vb.as || 0, armor: vb.armor != null ? vb.armor : 15, shieldStart: vb.shieldStart || 0, statMult: vb.statMult || 1, dodge: vb.dodge || 0, slowAura: vb.slowAura || 0, rage: vb.rage || 0, lifestealAura: vb.lifestealAura || 0, explode: vb.explode || 0 }); break;
-      case 'stun': for (const t of targets) if (applyCC(t, vb.dur, now)) { t.stunUntil = now + vb.dur; ev(now, 'cc', { id: t.id, kind: 'stun', dur: vb.dur }); } break;
-      case 'knockup': for (const t of targets) if (applyCC(t, vb.dur, now)) { t.stunUntil = Math.max(t.stunUntil, now + vb.dur); ev(now, 'cc', { id: t.id, kind: 'knockup', dur: vb.dur }); } break;
+      case 'stun': for (const t of targets) { const d = ccDur(t, vb.dur); if (d > 0.05 && applyCC(t, d, now)) { t.stunUntil = now + d; ev(now, 'cc', { id: t.id, kind: 'stun', dur: d }); } } break;
+      case 'knockup': for (const t of targets) { const d = ccDur(t, vb.dur); if (d > 0.05 && applyCC(t, d, now)) { t.stunUntil = Math.max(t.stunUntil, now + d); ev(now, 'cc', { id: t.id, kind: 'knockup', dur: d }); } } break;
       case 'knockback': for (const t of targets) doKnockback(u, t, vb.cells || 1, now); break;
-      case 'taunt': for (const t of resolveTargets(u, { target: 'cluster', radius: vb.radius || 1 }, primary, now)) if (applyCC(t, vb.dur, now)) { t.tauntTargetId = u.id; t.tauntUntil = now + vb.dur; ev(now, 'cc', { id: t.id, kind: 'taunt', dur: vb.dur }); } break;
-      case 'slow': for (const t of targets) if (t.slowPct <= vb.pct || now >= t.slowUntil) { t.slowPct = Math.max(t.slowPct, vb.pct); t.slowUntil = now + vb.dur; ev(now, 'debuff', { id: t.id, kind: 'slow' }); } break;
+      case 'taunt': for (const t of resolveTargets(u, { target: 'cluster', radius: vb.radius || 1 }, primary, now)) { const d = ccDur(t, vb.dur); if (d > 0.05 && applyCC(t, d, now)) { t.tauntTargetId = u.id; t.tauntUntil = now + d; ev(now, 'cc', { id: t.id, kind: 'taunt', dur: d }); } } break;
+      case 'slow': for (const t of targets) { const d = ccDur(t, vb.dur); if (t.slowPct <= vb.pct || now >= t.slowUntil) { t.slowPct = Math.max(t.slowPct, vb.pct); t.slowUntil = now + d; ev(now, 'debuff', { id: t.id, kind: 'slow' }); } } break;
       case 'shred': for (const t of targets) { if (vb.stat === 'mr') { t.shredMrAmt = Math.max(now < t.shredMrUntil ? t.shredMrAmt : 0, vb.amount); t.shredMrUntil = now + vb.dur; } else { t.shredArmorAmt = Math.max(now < t.shredArmorUntil ? t.shredArmorAmt : 0, vb.amount); t.shredArmorUntil = now + vb.dur; } ev(now, 'debuff', { id: t.id, kind: 'shred' }); } break;
-      case 'manaBurn': for (const t of targets) { t.mana = Math.max(0, t.mana - vb.amount); if (vb.lockDur) t.manaLockUntil = Math.max(t.manaLockUntil, now + Math.min(1.0, vb.lockDur)); ev(now, 'debuff', { id: t.id, kind: 'manaBurn' }); } break;
+      case 'manaBurn': for (const t of targets) { t.mana = Math.max(0, t.mana - vb.amount); if (vb.lockDur) t.manaLockUntil = Math.max(t.manaLockUntil, now + Math.min(1.0, ccDur(t, vb.lockDur))); ev(now, 'debuff', { id: t.id, kind: 'manaBurn' }); } break;
       case 'healCut': for (const t of targets) { t.healCutPct = Math.max(now < t.healCutUntil ? t.healCutPct : 0, vb.pct); t.healCutUntil = now + vb.dur; ev(now, 'debuff', { id: t.id, kind: 'healCut' }); } break;
       case 'dot': for (const t of targets) { if (vb.dps >= t.dotDps || now >= t.dotUntil) { t.dotDps = Math.max(t.dotDps, vb.dps); t.dotUntil = now + vb.dur; t.dotSrcId = u.id; t.dotNextAt = now + DOT_TICK; } ev(now, 'debuff', { id: t.id, kind: 'dot' }); } break;
       case 'mark': for (const t of targets) { t.markMult = vb.mult; t.markUntil = now + vb.dur; ev(now, 'debuff', { id: t.id, kind: 'mark' }); } break;
@@ -435,7 +442,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
         if (ab.target === 'cluster' && target) { for (const t of enemiesNear(target, u.team, units, ab.radius || 1).sort(byId)) applyDamage(t, dmg, 'physical', u, now); }
         else if (ab.target === 'lowestEnemyHP') { const t = lowestHP(units, u.team, true); if (t) applyDamage(t, dmg * 1.3, 'physical', u, now); }
         else if (ab.target === 'mostEnemies') { for (const t of units.filter((t) => t.alive && t.team !== u.team).sort(byId).slice(0, 4)) applyDamage(t, dmg * 0.7, 'physical', u, now); }
-        else if (target) { applyDamage(target, dmg, 'physical', u, now); if (ab.stun) target.stunUntil = now + ab.stun; }
+        else if (target) { applyDamage(target, dmg, 'physical', u, now); if (ab.stun) target.stunUntil = now + ccDur(target, ab.stun); }
         break;
       }
       case 'heal': { const t = lowestHP(units, u.team, false); if (t) heal(t, ap, now); break; }
@@ -505,7 +512,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
         col: free.col, row: free.row, hp: baseHp, maxHp: baseHp,
         ad: baseAd, as: sAs, armor: p.armor != null ? p.armor : 15, mr: 15, range: 1,
         mana: 0, maxMana: 9999, manaPer: 0, manaLockUntil: Infinity, attackCd: 1 / sAs, ability: null, apBonus: 0,
-        alive: true, shield: Math.round((p.shieldStart || 0) * sm), stunUntil: -1, block: 0, dmgRed: 0, critChance: 0, critDmg: 0.4, dodge: p.dodge || 0, healAmp: 0, regen: 0,
+        alive: true, shield: Math.round((p.shieldStart || 0) * sm), stunUntil: -1, block: 0, dmgRed: 0, ccResist: 0, critChance: 0, critDmg: 0.4, dodge: p.dodge || 0, healAmp: 0, regen: 0,
         revivePct: 0, revived: true, burnOnHit: 0, manaBurnOnHit: 0, ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0, isSummon: true,
         vamp: 0, thorns: 0, items: [],
         slowPct: 0, slowUntil: -1, shredArmorAmt: 0, shredArmorUntil: -1, shredMrAmt: 0, shredMrUntil: -1,

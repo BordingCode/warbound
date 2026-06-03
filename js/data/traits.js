@@ -47,6 +47,13 @@ export const TRAITS = {
     bonuses: { 1: { mr: 22, adPct: 0.12, ap: 38 }, 2: { mr: 40, adPct: 0.19, ap: 70 } },
     bonusText: { 1: '+22 MR, +12% AD, +38 AP', 2: '+40 MR, +19% AD, +70 AP (resists spells)' },
   },
+  dwarf: {
+    name: 'Dwarf', axis: 'origin', kind: 'glue', color: '#e0a35c',
+    desc: 'Stubborn mountain-folk — armoured to the teeth and almost impossible to stagger. The hard counter to crowd-control.',
+    breakpoints: [2, 4],
+    bonuses: { 2: { armor: 12, mr: 12, ccResist: 0.35 }, 4: { armor: 24, mr: 24, ccResist: 0.65 } },
+    bonusText: { 2: '+12 Armor/MR & −35% stun/slow duration (team)', 4: '+24 Armor/MR & −65% crowd-control duration (team)' },
+  },
 
   // ---------- CLASSES ----------
   knight: {

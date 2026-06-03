@@ -291,6 +291,29 @@ const A = {
   wyrmguard: { name: 'Aegis of the Wyrm', type: 'shield', target: 'allies', ap: 160,
     verbs: [{ op: 'shield', target: 'allies', ap: 160 }, v.cluster({ radius: 1 })],
     ult: { verbs: [v.regen(12, 4, 'allies'), v.knockback(1, 'cluster')] } },
+
+  // ── Dwarf (NEW origin): stubborn mountain-folk — heavy armour + tenacity (CC resist). Units span
+  // CLASSES (an origin, not a class) so they compose with class badges/roles in the art rig. ──
+  // Dwarf-KNIGHT: an immovable shield wall that locks down a foe.
+  ironbeard: { name: 'Shield Wall', type: 'physical', target: 'current', adRatio: 1.9, stun: 0.7,
+    verbs: [v.phys({ adRatio: 1.9 }), v.shieldSelf(70), v.stun(0.7)],
+    ult: { verbs: [v.taunt(1, 2)] } },
+  // Dwarf-RANGER: a blunderbuss that scatters the front line back.
+  sharpshooter: { name: 'Blunderbuss', type: 'physical', target: 'mostEnemies', adRatio: 2.2,
+    verbs: [v.volley({ adRatio: 2.2 }), v.knockback(1, 'cluster')],
+    ult: { verbs: [v.slow(0.25, 2, 'mostEnemies')] } },
+  // Dwarf-MAGE: rune-blast that cracks magic resist.
+  runeseer: { name: 'Rune Blast', type: 'magic', target: 'cluster', radius: 1, ap: 300,
+    verbs: [v.cluster({ radius: 1 }), v.shred('mr', 25, 3, 'cluster')],
+    ult: { verbs: [v.stun(1.0, 'cluster')] } },
+  // Dwarf-PALADIN: the Unbreakable — a holy bruiser that will not be moved or felled.
+  oathkeeper: { name: 'Unbreakable', type: 'physical', target: 'current', adRatio: 2.2, ap: 200,
+    verbs: [v.phys({ adRatio: 2.2 }), v.magic({ ap: 200 }), v.shieldSelf(220)],
+    ult: { verbs: [{ op: 'shield', target: 'adjacentAllies', ap: 160 }, v.cleanse('self', 1.5)] } },
+  // Dwarf-KNIGHT (elite capstone): the Mountain King — an avalanche that buries the enemy cluster.
+  mountain_king: { name: 'Avalanche', type: 'physical', target: 'cluster', radius: 1, adRatio: 2.4,
+    verbs: [v.cleave({ adRatio: 2.4 }), v.knockback(1, 'cluster'), v.stun(0.8, 'cluster')],
+    ult: { verbs: [v.taunt(2, 2.5), v.shieldSelf(400)] } },
 };
 
 export const UNITS = [
@@ -356,6 +379,13 @@ export const UNITS = [
   mk('dawnblade',    'Dawnblade',    'elf',    'paladin', 3, A.dawnblade),
   mk('death_knight', 'Death Knight', 'undead', 'paladin', 4, A.death_knight),
   mk('wyrmguard',    'Wyrmguard',    'dragon', 'paladin', 5, A.wyrmguard, { hpx: 1.30, adx: 1.18 }),
+
+  // ---- Dwarf (NEW origin — heavy armour + crowd-control resistance, across existing classes) ----
+  mk('ironbeard',     'Ironbeard',     'dwarf', 'knight',  1, A.ironbeard),
+  mk('sharpshooter',  'Sharpshooter',  'dwarf', 'ranger',  2, A.sharpshooter),
+  mk('runeseer',      'Runeseer',      'dwarf', 'mage',    3, A.runeseer),
+  mk('oathkeeper',    'Oathkeeper',    'dwarf', 'paladin', 4, A.oathkeeper),
+  mk('mountain_king', 'Mountain King', 'dwarf', 'knight',  5, A.mountain_king, { hpx: 1.34, adx: 1.22 }),
 ];
 
 // Plain-language description of each champion's 3★ ULTIMATE upgrade — the qualitative
@@ -404,6 +434,11 @@ export const ULT3 = {
   dawnblade: 'The smite splashes 120 holy damage to the cluster and cleanses the bearer.',
   death_knight: 'The smite cuts healing 40% and grants the Death Knight +30% Attack Speed for 3s.',
   wyrmguard: 'The aegis also pours 12 HP/s regen for 4s and the smite knocks the cluster back.',
+  ironbeard: 'Also taunts adjacent foes for 2s.',
+  sharpshooter: 'All targets hit are also slowed 25% for 2s.',
+  runeseer: 'The blast also stuns the whole cluster for 1s.',
+  oathkeeper: 'Shields adjacent allies for 160 and cleanses itself (1.5s CC immunity).',
+  mountain_king: 'Taunts all foes within 2 cells for 2.5s and gains a 400 shield.',
 };
 
 import { CREATURES } from './creatures.js';

@@ -60,6 +60,12 @@ const ART2 = {
   dawnblade:       { accent: '#fff0c0', cape: '#2f7d6b', weapon: 'sword',     build: 'normal', head: 'helm',  plume: '#fff0c0', shield: true, sig: ['sash'] },
   death_knight:    { accent: '#9effc0', cape: '#16261c', weapon: 'greatsword', build: 'broad', head: 'helm',  sig: ['ribcage'] },
   wyrmguard:       { accent: '#ffd24a', cape: null,      weapon: 'greatsword', build: 'broad', head: 'helm', wings: true, plume: '#ffd24a', shield: true, sig: ['scales'] },
+  // Dwarves — stocky 'broad' build + a braided beard; bronze/stone palette (PALETTES.dwarf).
+  ironbeard:       { accent: '#e0a35c', cape: null,      weapon: 'mace',      build: 'broad', head: 'helm',  shield: true, sig: ['beard'] },
+  sharpshooter:    { accent: '#e0a35c', cape: null,      weapon: 'crossbow',  build: 'broad', head: 'cap',    sig: ['beard', 'quiver'] },
+  runeseer:        { accent: '#ffcf7a', cape: null,      weapon: 'orbstaff',  build: 'broad', head: 'hood',   sig: ['beard'] },
+  oathkeeper:      { accent: '#ffe7a0', cape: null,      weapon: 'mace',      build: 'broad', head: 'helm',  plume: '#ffe7a0', shield: true, sig: ['beard'] },
+  mountain_king:   { accent: '#ffd24a', cape: '#5a3a1a', weapon: 'axe',       build: 'broad', head: 'helm',  plume: '#ffd24a', shield: true, sig: ['beard', 'crown'] },
 };
 const DEFAULT_HEAD = { knight: 'helm', mage: 'hat', ranger: 'hood', assassin: 'hood', healer: 'circlet', summoner: 'hood', bard: 'cap', paladin: 'helm' };
 // Plate-armoured classes wear the metal torso/arms (vs the robe everyone else gets).
@@ -195,6 +201,7 @@ function sigPiece(key, def, p, a) {
     case 'pitrune': return `<g opacity=".8"><ellipse cx="50" cy="127" rx="22" ry="6" fill="none" stroke="${ac}" stroke-width="1.6"/><path d="M40 127 h20 M50 122 l-7 9 M50 122 l7 9" stroke="${ac}" stroke-width="1.1" opacity=".7"/></g>`;
     case 'banner': return `<rect x="67" y="34" width="2.4" height="66" rx="1" fill="#6a4632"/><path d="M69.4 37 h18 l-4 6.5 l4 6.5 h-18 Z" fill="${a.cape || ac}"/><path d="M75 40 v9 M71 44.5 h8" stroke="${ac}" stroke-width="1" opacity=".7"/>`;
     case 'tatters': return `<path d="M34 104 q-4 12 -8 16 M42 108 q-2 12 -5 18 M50 108 q0 12 0 19 M58 108 q2 12 5 18 M66 104 q4 12 8 16" stroke="${ac}" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>`;
+    case 'beard': { const bd = shade(p.skin, 30); return `<path d="M39 44 Q50 50 61 44 Q62 58 54 64 Q50 67 46 64 Q38 58 39 44 Z" fill="${bd}"/><path d="M44 49 v13 M50 51 v15 M56 49 v13" stroke="${shade(bd, 22)}" stroke-width=".9" opacity=".75"/><ellipse cx="50" cy="64" rx="2.2" ry="1.4" fill="${ac}"/>`; }
     default: return '';
   }
 }
