@@ -54,8 +54,16 @@ const ART2 = {
   moonsinger:      { accent: '#aef0ff', cape: '#2f7d6b', weapon: 'lute',      build: 'slim',  head: 'circlet', sig: ['moon'] },
   discordant:      { accent: '#ff6a8a', cape: '#5a1414', weapon: 'lute',      build: 'normal', head: 'horns',  sig: ['tail'] },
   wyrmsong_herald: { accent: '#ffd24a', cape: '#6a3fa0', weapon: 'lute',      build: 'normal', head: 'hood', wings: true, sig: ['scales'] },
+  // Paladins — plate torso (PLATE set) + shield + the holy sunburst class badge (classMark).
+  squire:          { accent: '#ffe7a0', cape: null,      weapon: 'mace',      build: 'broad', head: 'helm',  plume: '#ffe7a0', shield: true, sig: ['epaulets'] },
+  oathbreaker:     { accent: '#ff8a4c', cape: '#5a1414', weapon: 'sword',     build: 'broad', head: 'horns', shield: true, sig: ['tail'] },
+  dawnblade:       { accent: '#fff0c0', cape: '#2f7d6b', weapon: 'sword',     build: 'normal', head: 'helm',  plume: '#fff0c0', shield: true, sig: ['sash'] },
+  death_knight:    { accent: '#9effc0', cape: '#16261c', weapon: 'greatsword', build: 'broad', head: 'helm',  sig: ['ribcage'] },
+  wyrmguard:       { accent: '#ffd24a', cape: null,      weapon: 'greatsword', build: 'broad', head: 'helm', wings: true, plume: '#ffd24a', shield: true, sig: ['scales'] },
 };
-const DEFAULT_HEAD = { knight: 'helm', mage: 'hat', ranger: 'hood', assassin: 'hood', healer: 'circlet', summoner: 'hood', bard: 'cap' };
+const DEFAULT_HEAD = { knight: 'helm', mage: 'hat', ranger: 'hood', assassin: 'hood', healer: 'circlet', summoner: 'hood', bard: 'cap', paladin: 'helm' };
+// Plate-armoured classes wear the metal torso/arms (vs the robe everyone else gets).
+const PLATE = new Set(['knight', 'paladin']);
 
 // ---- gradients (namespaced per def so multiple heroes on screen don't collide) ----
 function grads(def, p) {
@@ -117,7 +125,7 @@ function shieldSVG(def, p, ac) {
 }
 function torso(def, p, a, build) {
   const robe = `url(#g2-${def.defId}-robe)`, metal = `url(#g2-${def.defId}-metal)`;
-  if (def.klass === 'knight') {
+  if (PLATE.has(def.klass)) {
     return `<g class="v2-torso"><path d="M34 58 Q50 50 66 58 L70 96 Q50 102 30 96 Z" fill="${metal}"/>
       <path d="M44 60 h12 l-2 38 h-8 Z" fill="${robe}"/>
       <path d="M34 58 Q50 53 66 58 L64 67 Q50 62 36 67 Z" fill="${tint(p.secondary, 30)}"/></g>`;
@@ -128,12 +136,11 @@ function torso(def, p, a, build) {
     <path d="M46 58 q4 26 0 ${botY - 60} M54 58 q-4 26 0 ${botY - 60}" stroke="${a.accent}" stroke-width="1.5" fill="none" opacity=".45"/></g>`;
 }
 function backArm(def, p, a) {
-  const fill = def.klass === 'knight' ? `url(#g2-${def.defId}-metal)` : `url(#g2-${def.defId}-robe)`;
   const sh = a.shield ? shieldSVG(def, p, a.accent) : '';
-  return `<g class="v2-arm-back"><rect x="64" y="60" width="8" height="30" rx="4" fill="${shade(def.klass === 'knight' ? p.secondary : p.primary, 16)}"/></g>${sh}`;
+  return `<g class="v2-arm-back"><rect x="64" y="60" width="8" height="30" rx="4" fill="${shade(PLATE.has(def.klass) ? p.secondary : p.primary, 16)}"/></g>${sh}`;
 }
 function frontArm(def, p, a) {
-  const fill = def.klass === 'knight' ? `url(#g2-${def.defId}-metal)` : `url(#g2-${def.defId}-robe)`;
+  const fill = PLATE.has(def.klass) ? `url(#g2-${def.defId}-metal)` : `url(#g2-${def.defId}-robe)`;
   const hand = `<circle cx="26" cy="90" r="3.3" fill="url(#g2-${def.defId}-skin)"/>`;
   return `<g class="v2-arm-front"><rect x="24" y="60" width="8" height="30" rx="4" fill="${fill}"/>${hand}${weaponSVG(a.weapon, def, p, a.accent)}</g>`;
 }
@@ -218,12 +225,23 @@ function classMark(def, p, a, layer) {
     const note = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><ellipse cx="0" cy="6" rx="2.4" ry="1.8" fill="${ac}" transform="rotate(-20 0 6)"/><rect x="1.7" y="-7" width="1.3" height="12" rx=".5" fill="${ac}"/><path d="M3 -7 q5 1 4 6 q-2 -3 -4 -2 z" fill="${ac}"/></g>`;
     return `<g class="v2-classmark" opacity=".92">${note(72, 30, 1)}${note(84, 40, 0.78)}</g>`;
   }
+  if (def.klass === 'paladin' && layer === 'back') {          // radiant holy sunburst behind the crusader
+    const cx = 50, cy = 30, r0 = 14, r1 = 24, w = 0.17; let rays = '';
+    for (let i = 0; i < 12; i++) {
+      const A0 = (i / 12) * 6.2832;
+      const x1 = cx + Math.cos(A0 - w) * r0, y1 = cy + Math.sin(A0 - w) * r0;
+      const x2 = cx + Math.cos(A0) * r1, y2 = cy + Math.sin(A0) * r1;
+      const x3 = cx + Math.cos(A0 + w) * r0, y3 = cy + Math.sin(A0 + w) * r0;
+      rays += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)} L${x3.toFixed(1)} ${y3.toFixed(1)} Z" fill="${ac}"/>`;
+    }
+    return `<g class="v2-classmark" opacity=".5">${rays}</g>`;
+  }
   return '';
 }
 
 export function championInnerV2(def) {
   const base = PALETTES[def.origin] || PALETTES.human;
-  const a = ART2[def.defId] || { accent: base.accent, weapon: ({ knight: 'sword', mage: 'orbstaff', ranger: 'bow', assassin: 'daggers', healer: 'staff', summoner: 'skullstaff', bard: 'lute' })[def.klass] || 'sword', build: (def.klass === 'assassin' || def.klass === 'ranger') ? 'slim' : 'normal', head: DEFAULT_HEAD[def.klass] };
+  const a = ART2[def.defId] || { accent: base.accent, weapon: ({ knight: 'sword', mage: 'orbstaff', ranger: 'bow', assassin: 'daggers', healer: 'staff', summoner: 'skullstaff', bard: 'lute', paladin: 'sword' })[def.klass] || 'sword', build: (def.klass === 'assassin' || def.klass === 'ranger') ? 'slim' : 'normal', head: DEFAULT_HEAD[def.klass] };
   const p = Object.assign({}, base, { accent: a.accent || base.accent, cape: a.cape || base.primary });
   const build = a.build || 'normal';
   return [

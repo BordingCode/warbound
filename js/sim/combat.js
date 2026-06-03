@@ -52,7 +52,7 @@ function makeUnit(entry, team, id, aug = null) {
     attackCd: 1 / (s.as * (1 + im.as)), ability: def.ability, apBonus: im.ap,
     alive: true, shield: im.shield, stunUntil: -1,
     // trait-derived (filled by applyTraits) + item-derived
-    block: 0, critChance: im.critChance, critDmg: 0.4 + im.critDmg, dodge: 0, healAmp: 0, regen: im.regen,
+    block: 0, dmgRed: 0, critChance: im.critChance, critDmg: 0.4 + im.critDmg, dodge: 0, healAmp: 0, regen: im.regen,
     revivePct: im.revive, revived: false, burnOnHit: 0, manaBurnOnHit: 0,
     ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0,
     vamp: im.vamp, thorns: im.thorns,
@@ -115,6 +115,9 @@ function applyTraits(units, board, traitBonus = {}) {
     // Bard: team OFFENCE aura — flat attack speed (via asStacks, folded through the single effAS
     // cap) + ability power to EVERY ally. The offensive twin of the Healer's defensive aura.
     if (has('bard')) { const bd = get('bard'); if (bd) { if (bd.as) u.asStacks += bd.as; if (bd.ap) u.apBonus += bd.ap; } }
+    // Paladin: team DEFENCE aura — flat % incoming-damage reduction to every ally (the protective
+    // twin of Bard's offence aura). Capped small (≤15%); applied in applyDamage via target.dmgRed.
+    if (has('paladin')) { const pl = get('paladin'); if (pl && pl.dmgRed) u.dmgRed = Math.max(u.dmgRed, pl.dmgRed); }
   }
 }
 
@@ -197,6 +200,9 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     // mitigate by EFFECTIVE resist (armor/mr shred folded in); true/heal ignore resist.
     let post = (type === 'true' || type === 'heal') ? raw : raw * (100 / (100 + effResist(target, type, now)));
     if (type !== 'true') post = Math.max(0, post - target.block);
+    // Paladin aura: flat % incoming-damage reduction to the WHOLE team — distinct from Knight's
+    // FLAT per-hit block above (% vs flat: strong vs big hits, where flat block is weak). Non-true only.
+    if (type !== 'true' && type !== 'heal' && target.dmgRed) post = post * (1 - target.dmgRed);
     // shield soak
     if (target.shield > 0) { const s = Math.min(target.shield, post); target.shield -= s; post -= s; }
     post = Math.round(post);
@@ -227,7 +233,11 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
 
   function heal(target, amt, now) {
     if (!target.alive) return;
-    const cut = now < target.healCutUntil ? target.healCutPct : 0;
+    let cut = now < target.healCutUntil ? target.healCutPct : 0;
+    // Grievous wounds in sudden death: healing withers as overtime ramps, so a sustain stack
+    // (tanky frontline + healers, lifesteal, regen) can't out-heal the drain and stalemate to a
+    // draw. Guarantees every fight terminates regardless of sustain.
+    if (now > SUDDEN_DEATH_T) cut = Math.max(cut, Math.min(0.95, 0.3 + 0.12 * (now - SUDDEN_DEATH_T)));
     amt = Math.round(amt * (1 + (target.healAmp || 0)) * (1 - cut));
     if (amt <= 0) return;
     target.hp = Math.min(target.maxHp, target.hp + amt);
@@ -495,7 +505,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
         col: free.col, row: free.row, hp: baseHp, maxHp: baseHp,
         ad: baseAd, as: sAs, armor: p.armor != null ? p.armor : 15, mr: 15, range: 1,
         mana: 0, maxMana: 9999, manaPer: 0, manaLockUntil: Infinity, attackCd: 1 / sAs, ability: null, apBonus: 0,
-        alive: true, shield: Math.round((p.shieldStart || 0) * sm), stunUntil: -1, block: 0, critChance: 0, critDmg: 0.4, dodge: p.dodge || 0, healAmp: 0, regen: 0,
+        alive: true, shield: Math.round((p.shieldStart || 0) * sm), stunUntil: -1, block: 0, dmgRed: 0, critChance: 0, critDmg: 0.4, dodge: p.dodge || 0, healAmp: 0, regen: 0,
         revivePct: 0, revived: true, burnOnHit: 0, manaBurnOnHit: 0, ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0, isSummon: true,
         vamp: 0, thorns: 0, items: [],
         slowPct: 0, slowUntil: -1, shredArmorAmt: 0, shredArmorUntil: -1, shredMrAmt: 0, shredMrUntil: -1,

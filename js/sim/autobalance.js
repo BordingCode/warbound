@@ -115,6 +115,7 @@ const COMPS = {
   'Summoner': ['necromancer', 'pit_summoner', 'beastmaster', 'bone_guard', 'thornguard', 'field_medic'],
   'Dragon': ['dragon_knight', 'dragon_sage', 'knight_captain', 'bone_guard', 'moon_priestess', 'grove_healer'],
   'Bard': ['moonsinger', 'dirgesinger', 'skeleton_archer', 'crossbowman', 'bone_guard', 'thornguard'],
+  'Paladin': ['squire', 'oathbreaker', 'dawnblade', 'skeleton_archer', 'court_mage', 'field_medic'],
 };
 function roundRobin() {
   const names = Object.keys(COMPS);

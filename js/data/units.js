@@ -24,6 +24,7 @@ const ROLE = {
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
   summoner: { hpx: 1.12, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
   bard:     { hpx: 0.95, adx: 0.66, range: 2, manaPer: 9, startMana: 0.40 },   // support: low damage, casts often to keep the team-buff songs up
+  paladin:  { hpx: 1.30, adx: 1.16, range: 1, manaPer: 8, startMana: 0.30 },   // holy frontline: sturdy BRUISER that smites (real damage + bonus magic), not a pure wall
 };
 
 // `tune` = optional per-unit balance overrides: { hpx, adx } multipliers.
@@ -266,6 +267,30 @@ const A = {
   wyrmsong_herald: { name: 'Dragonsong', type: 'heal', target: 'allies', ap: 120,
     verbs: [v.buffAS(0.24, 4, 'allies'), v.heal({ target: 'allies', ap: 120 })],
     ult: { verbs: [v.regen(14, 4, 'allies'), v.cleanse('allies', 1.0)] } },
+
+  // ── Paladin (NEW class): the team DAMAGE-REDUCTION aura. Holy melee frontline whose CASTS SMITE
+  // (physical strike + bonus holy magic on the same target) and shield/protect allies. ──
+  // Human-PALADIN: cheap oathsworn line-holder — shield bash that wards itself.
+  squire: { name: 'Shield Bash', type: 'physical', target: 'current', adRatio: 2.1, stun: 0.8,
+    verbs: [v.phys({ adRatio: 2.1 }), v.magic({ ap: 120 }), v.stun(0.8), v.shieldSelf(60)],
+    ult: { verbs: [{ op: 'shield', target: 'adjacentAllies', ap: 110 }] } },
+  // Demon-PALADIN (oathbreaker): a corrupted smite that burns the target's mana as it sears.
+  oathbreaker: { name: 'Fel Smite', type: 'physical', target: 'current', adRatio: 2.3,
+    verbs: [v.phys({ adRatio: 2.3 }), v.magic({ ap: 190 }), v.manaBurn(18)],
+    ult: { verbs: [v.healCut(0.35, 3, 'current'), v.dot(45, 3, 'current')] } },
+  // Elf-PALADIN: radiant dawn-smite — holy burst that also cleanses and shields the bearer.
+  dawnblade: { name: 'Radiant Smite', type: 'magic', target: 'current', adRatio: 2.3, ap: 240,
+    verbs: [v.phys({ adRatio: 2.3 }), v.magic({ ap: 240 }), v.shieldSelf(120)],
+    ult: { verbs: [{ op: 'magic', target: 'cluster', radius: 1, ap: 150 }, v.cleanse('self', 1.0)] } },
+  // Undead-PALADIN (death knight): an unholy smite that leeches — a fallen oath that will not die.
+  death_knight: { name: 'Unholy Smite', type: 'physical', target: 'current', adRatio: 2.7, ap: 240,
+    verbs: [v.phys({ adRatio: 2.7 }), v.magic({ ap: 240 }), v.lifesteal(0.22, 4, 'self')],
+    passive: { on: 'spawn', verbs: [v.thorns(0.10, 999, 'self')] },
+    ult: { verbs: [v.healCut(0.40, 3, 'current'), v.buffAS(0.3, 3, 'self')] } },
+  // Dragon-PALADIN (elite capstone): the Wyrmguard — wards the whole warband and smites a cluster.
+  wyrmguard: { name: 'Aegis of the Wyrm', type: 'shield', target: 'allies', ap: 160,
+    verbs: [{ op: 'shield', target: 'allies', ap: 160 }, v.cluster({ radius: 1 })],
+    ult: { verbs: [v.regen(12, 4, 'allies'), v.knockback(1, 'cluster')] } },
 };
 
 export const UNITS = [
@@ -324,6 +349,13 @@ export const UNITS = [
   mk('moonsinger',      'Moonsinger',      'elf',    'bard', 3, A.moonsinger),
   mk('discordant',      'Discordant',      'demon',  'bard', 4, A.discordant),
   mk('wyrmsong_herald', 'Wyrmsong Herald', 'dragon', 'bard', 5, A.wyrmsong_herald, { hpx: 1.28, adx: 1.20 }),
+
+  // ---- Paladin (NEW class — team damage-reduction aura + holy smite, across existing origins) ----
+  mk('squire',       'Squire',       'human',  'paladin', 1, A.squire),
+  mk('oathbreaker',  'Oathbreaker',  'demon',  'paladin', 2, A.oathbreaker),
+  mk('dawnblade',    'Dawnblade',    'elf',    'paladin', 3, A.dawnblade),
+  mk('death_knight', 'Death Knight', 'undead', 'paladin', 4, A.death_knight),
+  mk('wyrmguard',    'Wyrmguard',    'dragon', 'paladin', 5, A.wyrmguard, { hpx: 1.30, adx: 1.18 }),
 ];
 
 // Plain-language description of each champion's 3★ ULTIMATE upgrade — the qualitative
@@ -367,6 +399,11 @@ export const ULT3 = {
   moonsinger: 'Shields the 3 most-wounded allies instead of one.',
   discordant: 'Adds a 55/s burning DoT and cuts the cluster’s healing 35% for 3s.',
   wyrmsong_herald: 'The song also pours 14 HP/s regen for 4s and cleanses the warband.',
+  squire: 'The bash also shields adjacent allies for 110.',
+  oathbreaker: 'The smite cuts the target’s healing 35% and adds a 45/s burn for 3s.',
+  dawnblade: 'The smite splashes 120 holy damage to the cluster and cleanses the bearer.',
+  death_knight: 'The smite cuts healing 40% and grants the Death Knight +30% Attack Speed for 3s.',
+  wyrmguard: 'The aegis also pours 12 HP/s regen for 4s and the smite knocks the cluster back.',
 };
 
 import { CREATURES } from './creatures.js';
