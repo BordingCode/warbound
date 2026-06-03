@@ -48,8 +48,14 @@ const ART2 = {
   storm_shaman:    { accent: '#7fd8ff', cape: null,      weapon: 'staff',     build: 'normal', head: 'horns',  sig: ['felfire', 'antlers'] },
   plague_priest:   { accent: '#aef0b0', cape: '#1d3b2a', weapon: 'skullstaff', build: 'gaunt', head: 'hood',   sig: ['flask'] },
   banner_sergeant: { accent: '#ffd95c', cape: '#3a4d7a', weapon: 'sword',     build: 'broad', head: 'helm',    sig: ['banner'] },
+  // Bards — held lute + the music-note class badge (classMark) carry the identity; origin palette stays.
+  lutanist:        { accent: '#8fd0ff', cape: null,      weapon: 'lute',      build: 'slim',  head: 'cap',     sig: ['sash'] },
+  dirgesinger:     { accent: '#9effc0', cape: '#16261c', weapon: 'lute',      build: 'gaunt', head: 'hood',    sig: ['tatters'] },
+  moonsinger:      { accent: '#aef0ff', cape: '#2f7d6b', weapon: 'lute',      build: 'slim',  head: 'circlet', sig: ['moon'] },
+  discordant:      { accent: '#ff6a8a', cape: '#5a1414', weapon: 'lute',      build: 'normal', head: 'horns',  sig: ['tail'] },
+  wyrmsong_herald: { accent: '#ffd24a', cape: '#6a3fa0', weapon: 'lute',      build: 'normal', head: 'hood', wings: true, sig: ['scales'] },
 };
-const DEFAULT_HEAD = { knight: 'helm', mage: 'hat', ranger: 'hood', assassin: 'hood', healer: 'circlet', summoner: 'hood' };
+const DEFAULT_HEAD = { knight: 'helm', mage: 'hat', ranger: 'hood', assassin: 'hood', healer: 'circlet', summoner: 'hood', bard: 'cap' };
 
 // ---- gradients (namespaced per def so multiple heroes on screen don't collide) ----
 function grads(def, p) {
@@ -88,6 +94,7 @@ function weaponSVG(w, def, p, ac) {
     case 'orbstaff': return `<rect x="24.6" y="46" width="3" height="48" rx="1.5" fill="${shade(wood, 8)}"/><circle cx="26" cy="42" r="7" fill="${AC}"/><circle cx="26" cy="42" r="7" fill="none" stroke="#fff" stroke-width="1" opacity=".5"/>`;
     case 'skullstaff': return `<rect x="24.6" y="42" width="3" height="52" rx="1.5" fill="#3a2a1a"/><circle cx="26" cy="38" r="6.2" fill="${ac}"/><circle cx="24.2" cy="37.5" r="1.2" fill="#0b0f17"/><circle cx="27.8" cy="37.5" r="1.2" fill="#0b0f17"/>`;
     case 'wand': return `<rect x="25" y="64" width="2.6" height="28" rx="1.2" fill="#2c2018"/><circle cx="26.3" cy="61" r="4.2" fill="${AC}"/>`;
+    case 'lute': return `<path d="M22 94 q-4 -9 4 -11 q8 2 4 11 q-4 3 -8 0 Z" fill="${wood}"/><circle cx="26" cy="88" r="2" fill="${shade(wood, 30)}"/><rect x="25.1" y="66" width="2" height="20" rx="1" fill="${shade(wood, 10)}"/><path d="M23.6 84 v-16 M26 85 v-17 M28.4 84 v-16" stroke="${ac}" stroke-width=".7" opacity=".85"/><path d="M24 66 l4 -3" stroke="${shade(wood, 10)}" stroke-width="2" stroke-linecap="round"/>`;
     default: return '';
   }
 }
@@ -207,12 +214,16 @@ function classMark(def, p, a, layer) {
     const spark = `<g opacity=".9"><path d="M80 34 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="${ac}"/><circle cx="74" cy="46" r="1.3" fill="#fff" opacity=".7"/><circle cx="86" cy="28" r="1" fill="#fff" opacity=".6"/></g>`;
     return `<g class="v2-classmark">${collar}${spark}</g>`;
   }
+  if (def.klass === 'bard' && layer === 'front') {            // floating song — two music notes rising
+    const note = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><ellipse cx="0" cy="6" rx="2.4" ry="1.8" fill="${ac}" transform="rotate(-20 0 6)"/><rect x="1.7" y="-7" width="1.3" height="12" rx=".5" fill="${ac}"/><path d="M3 -7 q5 1 4 6 q-2 -3 -4 -2 z" fill="${ac}"/></g>`;
+    return `<g class="v2-classmark" opacity=".92">${note(72, 30, 1)}${note(84, 40, 0.78)}</g>`;
+  }
   return '';
 }
 
 export function championInnerV2(def) {
   const base = PALETTES[def.origin] || PALETTES.human;
-  const a = ART2[def.defId] || { accent: base.accent, weapon: ({ knight: 'sword', mage: 'orbstaff', ranger: 'bow', assassin: 'daggers', healer: 'staff', summoner: 'skullstaff' })[def.klass] || 'sword', build: (def.klass === 'assassin' || def.klass === 'ranger') ? 'slim' : 'normal', head: DEFAULT_HEAD[def.klass] };
+  const a = ART2[def.defId] || { accent: base.accent, weapon: ({ knight: 'sword', mage: 'orbstaff', ranger: 'bow', assassin: 'daggers', healer: 'staff', summoner: 'skullstaff', bard: 'lute' })[def.klass] || 'sword', build: (def.klass === 'assassin' || def.klass === 'ranger') ? 'slim' : 'normal', head: DEFAULT_HEAD[def.klass] };
   const p = Object.assign({}, base, { accent: a.accent || base.accent, cape: a.cape || base.primary });
   const build = a.build || 'normal';
   return [

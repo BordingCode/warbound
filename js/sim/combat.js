@@ -112,6 +112,9 @@ function applyTraits(units, board, traitBonus = {}) {
     if (has('undead')) { const ud = get('undead'); if (ud) { u.revivePct = Math.max(u.revivePct, ud.revivePct); if (ud.vamp) u.vamp += ud.vamp; } }   // undead leech: sustain kicker so the rainbow board has an offensive edge
     if (has('demon')) { const d = get('demon'); if (d) { u.burnOnHit = d.burn; u.manaBurnOnHit = d.manaBurn; } }
     if (has('summoner')) { const s = get('summoner'); if (s) u.summonPower = s.summonPower; }
+    // Bard: team OFFENCE aura — flat attack speed (via asStacks, folded through the single effAS
+    // cap) + ability power to EVERY ally. The offensive twin of the Healer's defensive aura.
+    if (has('bard')) { const bd = get('bard'); if (bd) { if (bd.as) u.asStacks += bd.as; if (bd.ap) u.apBonus += bd.ap; } }
   }
 }
 

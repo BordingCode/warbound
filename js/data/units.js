@@ -23,6 +23,7 @@ const ROLE = {
   assassin: { hpx: 0.90, adx: 1.08, range: 1, manaPer: 10, startMana: 0.20, dive: true },   // trimmed — c3 assassins got strong with the steeper curve
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
   summoner: { hpx: 1.12, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
+  bard:     { hpx: 0.95, adx: 0.66, range: 2, manaPer: 9, startMana: 0.40 },   // support: low damage, casts often to keep the team-buff songs up
 };
 
 // `tune` = optional per-unit balance overrides: { hpx, adx } multipliers.
@@ -242,6 +243,29 @@ const A = {
   banner_sergeant: { name: 'Muster the Ranks', type: 'summon', summonHp: 950, summonAd: 115,
     verbs: [v.summon({ kind: 'soldier', count: 2, hp: 1080, ad: 104, armor: 28, shieldStart: 240 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
     ult: { verbs: [v.summon({ kind: 'soldier', count: 1, hp: 1080, ad: 104, armor: 28, shieldStart: 240, statMult: 2 })] } },
+
+  // ── Bard (NEW class): the team-OFFENCE aura. Each bard's CAST layers a timed team buff on top of
+  // the always-on Bard trait aura — songs that haste, shield, slow foes, or disrupt casters. ──
+  // Human-BARD: cheap glue song — a marching cadence that hastes the whole warband.
+  lutanist: { name: 'Marching Tune', type: 'heal', target: 'allies', ap: 0,
+    verbs: [v.buffAS(0.16, 3, 'allies')],
+    ult: { verbs: [v.regen(9, 3, 'allies')] } },
+  // Undead-BARD: a dirge that drags the enemy line to a crawl while allies leech.
+  dirgesinger: { name: 'Hateful Dirge', type: 'magic', target: 'allEnemies', ap: 0,
+    verbs: [v.slow(0.20, 2.5, 'allEnemies'), v.lifesteal(0.16, 4, 'allies')],
+    ult: { verbs: [v.manaBurn(22, 'nearestN', 0)] } },
+  // Elf-BARD: a lunar hymn — hastes allies and shields the most wounded.
+  moonsinger: { name: 'Lunar Hymn', type: 'shield', target: 'allies', ap: 240,
+    verbs: [v.buffAS(0.18, 3, 'allies'), v.shield({ ap: 240 })],
+    ult: { verbs: [{ op: 'shield', target: 'lowestNAllies', n: 3, ap: 170 }] } },
+  // Demon-BARD: dissonance that shatters enemy spellcasting (mana burn + healcut) and sears the cluster.
+  discordant: { name: 'Dissonant Chord', type: 'magic', target: 'cluster', radius: 1, ap: 300,
+    verbs: [v.cluster({ radius: 1 }), v.manaBurn(26, 'cluster')],
+    ult: { verbs: [v.dot(55, 3, 'cluster'), v.healCut(0.35, 3, 'cluster')] } },
+  // Dragon-BARD (elite capstone): the Dragonsong — a roaring anthem that hastes AND heals the warband.
+  wyrmsong_herald: { name: 'Dragonsong', type: 'heal', target: 'allies', ap: 120,
+    verbs: [v.buffAS(0.24, 4, 'allies'), v.heal({ target: 'allies', ap: 120 })],
+    ult: { verbs: [v.regen(14, 4, 'allies'), v.cleanse('allies', 1.0)] } },
 };
 
 export const UNITS = [
@@ -293,6 +317,13 @@ export const UNITS = [
   mk('storm_shaman',   'Storm Shaman',   'beast',  'mage',     3, A.storm_shaman),
   mk('plague_priest',  'Plague Priest',  'undead', 'healer',   2, A.plague_priest),
   mk('banner_sergeant','Banner Sergeant','human',  'summoner', 3, A.banner_sergeant),
+
+  // ---- Bard (NEW class — team-offence aura, spread across existing origins) ----
+  mk('lutanist',        'Lutanist',        'human',  'bard', 1, A.lutanist),
+  mk('dirgesinger',     'Dirgesinger',     'undead', 'bard', 2, A.dirgesinger),
+  mk('moonsinger',      'Moonsinger',      'elf',    'bard', 3, A.moonsinger),
+  mk('discordant',      'Discordant',      'demon',  'bard', 4, A.discordant),
+  mk('wyrmsong_herald', 'Wyrmsong Herald', 'dragon', 'bard', 5, A.wyrmsong_herald, { hpx: 1.28, adx: 1.20 }),
 ];
 
 // Plain-language description of each champion's 3★ ULTIMATE upgrade — the qualitative
@@ -331,6 +362,11 @@ export const ULT3 = {
   storm_shaman: 'Leaves a 60/s burning field for 3s.',
   plague_priest: 'Sweeps a 16 HP/s regen over the whole warband for 3s.',
   banner_sergeant: 'Also conscripts a heavy footman with double stats.',
+  lutanist: 'The marching tune also regenerates 9 HP/s to the warband for 3s.',
+  dirgesinger: 'The dirge also burns 22 mana from the nearest foes.',
+  moonsinger: 'Shields the 3 most-wounded allies instead of one.',
+  discordant: 'Adds a 55/s burning DoT and cuts the cluster’s healing 35% for 3s.',
+  wyrmsong_herald: 'The song also pours 14 HP/s regen for 4s and cleanses the warband.',
 };
 
 import { CREATURES } from './creatures.js';

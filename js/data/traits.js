@@ -91,6 +91,13 @@ export const TRAITS = {
     bonuses: { 2: { summonPower: 0.13 }, 4: { summonPower: 0.33 } },
     bonusText: { 2: '+13% summon HP/dmg', 4: '+33% summon HP/dmg' },
   },
+  bard: {
+    name: 'Bard', axis: 'class', kind: 'glue', color: '#f48fd0',
+    desc: 'Battle-songs spur the whole warband to strike faster and cast stronger — the offensive twin of the Healer aura.',
+    breakpoints: [2, 4],
+    bonuses: { 2: { as: 0.14, ap: 32 }, 4: { as: 0.26, ap: 78 } },
+    bonusText: { 2: '+14% atk speed & +32 AP to all allies', 4: '+26% atk speed & +78 AP to all allies' },
+  },
 };
 
 // Given a list of unit defs on the board, compute active trait counts (distinct units per
