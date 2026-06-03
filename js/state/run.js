@@ -313,12 +313,18 @@ export function equipItem(run, iid, uid) {
   if (isEmblem(it.id) && run.mode === 'ladder') return false;   // emblems are Warpath-only (keep PvP pure)
   const u = run.board.find((b) => b.uid === uid) || run.bench.find((b) => b && b.uid === uid); if (!u) return false;
   u.items = u.items || [];
-  if (u.items.length >= 3) return false;
+  // A dropped component first tries to COMBINE with a component already on the unit — that just
+  // upgrades a slot in place (count unchanged), so it must stay allowed even on a FULL unit
+  // (3 items). Only block when there's nothing to combine with and no free slot.
+  let combineIdx = -1, combined = null;
   if (isComponent(it.id)) {
-    const ci = u.items.findIndex(isComponent);
-    if (ci !== -1) { const c = combine(u.items[ci], it.id); if (c) u.items[ci] = c; else u.items.push(it.id); }
-    else u.items.push(it.id);
-  } else u.items.push(it.id);
+    for (let i = 0; i < u.items.length; i++) {
+      if (isComponent(u.items[i])) { const c = combine(u.items[i], it.id); if (c) { combineIdx = i; combined = c; break; } }
+    }
+  }
+  if (combineIdx === -1 && u.items.length >= 3) return false;
+  if (combineIdx !== -1) u.items[combineIdx] = combined;
+  else u.items.push(it.id);
   run.items = run.items.filter((x) => x.iid !== iid);
   return true;
 }
