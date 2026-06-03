@@ -17,6 +17,9 @@ export const PALETTES = {
   // dwarf = earthy STONE + BRONZE armour (ruddy skin, amber accent) — reads "mountain-forged",
   // clear of beast's tan-brown via the bronze metal + amber trim.
   dwarf:  { skin: '#d59a6a', primary: '#5e5048', secondary: '#c8923f', accent: '#e0a35c' },
+  // giant = cold STONE-BLUE colossus (slate body, icy accent) — clear of human's bright blue
+  // (darker/greyer) and undead's neutral grey (bluer). Read mostly comes from the 'huge' scale.
+  giant:  { skin: '#a6b6c2', primary: '#3e4a59', secondary: '#8392a3', accent: '#bfe6f2' },
 };
 
 export const ORIGINS = Object.keys(PALETTES);

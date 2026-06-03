@@ -54,6 +54,13 @@ export const TRAITS = {
     bonuses: { 2: { armor: 12, mr: 12, ccResist: 0.35 }, 4: { armor: 24, mr: 24, ccResist: 0.65 } },
     bonusText: { 2: '+12 Armor/MR & −35% stun/slow duration (team)', 4: '+24 Armor/MR & −65% crowd-control duration (team)' },
   },
+  giant: {
+    name: 'Giant', axis: 'origin', kind: 'behaviour', color: '#9fb8c8',
+    desc: 'Towering giant-kin — colossal health that they SMASH into bonus damage, and every blow staggers. The bigger they are.',
+    breakpoints: [2, 4],
+    bonuses: { 2: { hpPct: 0.06, hpDmg: 0.005, staggerPct: 0.10, staggerDur: 0.6 }, 4: { hpPct: 0.11, hpDmg: 0.008, staggerPct: 0.12, staggerDur: 0.8 } },
+    bonusText: { 2: '+6% HP (team); each hit smashes for 0.5% of own HP & slows 10%', 4: '+11% HP (team); each hit smashes for 0.8% of own HP & slows 12% (0.8s)' },
+  },
 
   // ---------- CLASSES ----------
   knight: {

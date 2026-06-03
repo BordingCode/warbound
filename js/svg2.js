@@ -66,6 +66,12 @@ const ART2 = {
   runeseer:        { accent: '#ffcf7a', cape: null,      weapon: 'orbstaff',  build: 'broad', head: 'hood',   sig: ['beard'] },
   oathkeeper:      { accent: '#ffe7a0', cape: null,      weapon: 'mace',      build: 'broad', head: 'helm',  plume: '#ffe7a0', shield: true, sig: ['beard'] },
   mountain_king:   { accent: '#ffd24a', cape: '#5a3a1a', weapon: 'axe',       build: 'broad', head: 'helm',  plume: '#ffd24a', shield: true, sig: ['beard', 'crown'] },
+  // Giants — the 'huge' build scales the whole figure up; cold stone-blue palette (PALETTES.giant).
+  hill_brute:      { accent: '#bfe6f2', cape: null,      weapon: 'club',      build: 'huge',  head: 'helm',  shield: true },
+  boulderthrower:  { accent: '#bfe6f2', cape: null,      weapon: 'club',      build: 'huge',  head: 'bare' },
+  stormjarl:       { accent: '#cfeefb', cape: null,      weapon: 'staff',     build: 'huge',  head: 'hood' },
+  war_drummer:     { accent: '#bfe6f2', cape: null,      weapon: 'mace',      build: 'huge',  head: 'bare' },
+  earthshaker:     { accent: '#cfeefb', cape: '#2a3540', weapon: 'club',      build: 'huge',  head: 'helm',  plume: '#cfeefb', shield: true },
 };
 const DEFAULT_HEAD = { knight: 'helm', mage: 'hat', ranger: 'hood', assassin: 'hood', healer: 'circlet', summoner: 'hood', bard: 'cap', paladin: 'helm' };
 // Plate-armoured classes wear the metal torso/arms (vs the robe everyone else gets).
@@ -121,7 +127,7 @@ function wings(def, p) {
 }
 function cape(def) { return `<g class="v2-cape"><path d="M36 56 Q50 52 64 56 L74 116 Q50 108 26 116 Z" fill="url(#g2-${def.defId}-cape)" opacity=".96"/></g>`; }
 function legs(def, p, build) {
-  const w = build === 'broad' ? 7.5 : build === 'slim' || build === 'gaunt' ? 5 : 6.2;
+  const w = build === 'broad' || build === 'huge' ? 7.5 : build === 'slim' || build === 'gaunt' ? 5 : 6.2;
   const fill = `url(#g2-${def.defId}-metal)`;
   return `<g class="v2-leg-l"><path d="M${47 - w} 88 q-1.5 22 -2.5 40 l${w} 1 q1 -20 2 -41 Z" fill="${fill}"/></g>
           <g class="v2-leg-r"><path d="M53.5 88 q1 22 2 40 l${w} -1 q-1 -21 -2 -40 Z" fill="${fill}"/></g>`;
@@ -251,9 +257,7 @@ export function championInnerV2(def) {
   const a = ART2[def.defId] || { accent: base.accent, weapon: ({ knight: 'sword', mage: 'orbstaff', ranger: 'bow', assassin: 'daggers', healer: 'staff', summoner: 'skullstaff', bard: 'lute', paladin: 'sword' })[def.klass] || 'sword', build: (def.klass === 'assassin' || def.klass === 'ranger') ? 'slim' : 'normal', head: DEFAULT_HEAD[def.klass] };
   const p = Object.assign({}, base, { accent: a.accent || base.accent, cape: a.cape || base.primary });
   const build = a.build || 'normal';
-  return [
-    grads(def, p),
-    shadow(),
+  const body = [
     classMark(def, p, a, 'back'),
     a.wings ? wings(def, p) : '',
     a.cape ? cape(def) : '',
@@ -266,6 +270,9 @@ export function championInnerV2(def) {
     decor(def, p, a, 'front'),
     classMark(def, p, a, 'front'),
   ].join('');
+  // 'huge' (Giants): scale the whole figure up from the FEET so it towers but stays grounded.
+  const inner = build === 'huge' ? `<g transform="translate(50 132) scale(1.13) translate(-50 -132)">${body}</g>` : body;
+  return grads(def, p) + shadow() + inner;
 }
 
 export function championSVGV2(def, { size = 80, cls = '' } = {}) {

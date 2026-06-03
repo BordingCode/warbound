@@ -314,6 +314,29 @@ const A = {
   mountain_king: { name: 'Avalanche', type: 'physical', target: 'cluster', radius: 1, adRatio: 2.4,
     verbs: [v.cleave({ adRatio: 2.4 }), v.knockback(1, 'cluster'), v.stun(0.8, 'cluster')],
     ult: { verbs: [v.taunt(2, 2.5), v.shieldSelf(400)] } },
+
+  // ── Giant (NEW origin): towering giant-kin — colossal HP smashed into damage + a stagger on every
+  // blow (the CC SOURCE Dwarf's tenacity answers). Big bruisers across CLASSES. ──
+  // Giant-KNIGHT: a wallop that hurls a foe back.
+  hill_brute: { name: 'Wallop', type: 'physical', target: 'current', adRatio: 2.0,
+    verbs: [v.phys({ adRatio: 2.0 }), v.knockback(1)],
+    ult: { verbs: [v.stun(1.0)] } },
+  // Giant-RANGER: hurls a single huge boulder at one target (a smash, not a finesse AoE).
+  boulderthrower: { name: 'Boulder Toss', type: 'physical', target: 'current', adRatio: 2.6,
+    verbs: [v.phys({ adRatio: 2.6 })],
+    ult: { verbs: [v.knockback(1)] } },
+  // Giant-MAGE: a storm-jarl's thunderclap that slows the cluster.
+  stormjarl: { name: 'Thunderclap', type: 'magic', target: 'cluster', radius: 1, ap: 260,
+    verbs: [v.cluster({ radius: 1 }), v.slow(0.18, 1.5, 'cluster')],
+    ult: { verbs: [v.shred('mr', 25, 4, 'cluster')] } },
+  // Giant-BARD: booming war drums — hasten the warband (the offence-aura bard, giant-sized).
+  war_drummer: { name: 'War Drums', type: 'heal', target: 'allies', ap: 0,
+    verbs: [v.buffAS(0.16, 3, 'allies')],
+    ult: { verbs: [v.regen(10, 3, 'allies')] } },
+  // Giant-KNIGHT (elite capstone): the Earthshaker — a quake that buries the cluster (stun at 3★).
+  earthshaker: { name: 'Earthquake', type: 'physical', target: 'cluster', radius: 1, adRatio: 2.5,
+    verbs: [v.cleave({ adRatio: 2.5 }), v.knockback(1)],
+    ult: { verbs: [v.stun(0.9, 'cluster'), v.shieldSelf(380)] } },
 };
 
 export const UNITS = [
@@ -386,6 +409,13 @@ export const UNITS = [
   mk('runeseer',      'Runeseer',      'dwarf', 'mage',    3, A.runeseer),
   mk('oathkeeper',    'Oathkeeper',    'dwarf', 'paladin', 4, A.oathkeeper),
   mk('mountain_king', 'Mountain King', 'dwarf', 'knight',  5, A.mountain_king, { hpx: 1.34, adx: 1.22 }),
+
+  // ---- Giant (NEW origin — colossal HP-as-damage + stagger, across existing classes) ----
+  mk('hill_brute',     'Hill Brute',    'giant', 'knight', 1, A.hill_brute,     { hpx: 1.10 }),
+  mk('boulderthrower', 'Boulderthrower','giant', 'ranger', 2, A.boulderthrower, { hpx: 1.16 }),
+  mk('stormjarl',      'Storm Jarl',    'giant', 'mage',   3, A.stormjarl,      { hpx: 1.26 }),
+  mk('war_drummer',    'War Drummer',   'giant', 'bard',   4, A.war_drummer,    { hpx: 1.14 }),
+  mk('earthshaker',    'Earthshaker',   'giant', 'knight', 5, A.earthshaker,    { hpx: 1.18, adx: 1.12 }),
 ];
 
 // Plain-language description of each champion's 3★ ULTIMATE upgrade — the qualitative
@@ -439,6 +469,11 @@ export const ULT3 = {
   runeseer: 'The blast also stuns the whole cluster for 1s.',
   oathkeeper: 'Shields adjacent allies for 160 and cleanses itself (1.5s CC immunity).',
   mountain_king: 'Taunts all foes within 2 cells for 2.5s and gains a 400 shield.',
+  hill_brute: 'The wallop also stuns the target for 1s.',
+  boulderthrower: 'The boulder also stuns the whole cluster for 0.8s.',
+  stormjarl: 'The thunderclap also stuns the cluster for 1s.',
+  war_drummer: 'The drums also pour 10 HP/s regen to the warband for 3s.',
+  earthshaker: 'Taunts all foes within 2 cells for 2.5s and gains a 450 shield.',
 };
 
 import { CREATURES } from './creatures.js';

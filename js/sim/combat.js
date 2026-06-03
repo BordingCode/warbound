@@ -54,6 +54,7 @@ function makeUnit(entry, team, id, aug = null) {
     // trait-derived (filled by applyTraits) + item-derived
     block: 0, dmgRed: 0, ccResist: 0, critChance: im.critChance, critDmg: 0.4 + im.critDmg, dodge: 0, healAmp: 0, regen: im.regen,
     revivePct: im.revive, revived: false, burnOnHit: 0, manaBurnOnHit: 0,
+    hpDmg: 0, staggerPct: 0, staggerDur: 0,
     ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0,
     vamp: im.vamp, thorns: im.thorns,
     items: entry.items || [], isSummon: !!entry.isSummon,
@@ -121,6 +122,9 @@ function applyTraits(units, board, traitBonus = {}) {
     // Dwarf: stubborn mountain-folk — heavy armour/MR + TENACITY (ccResist shrinks incoming
     // stun/slow/taunt/mana-lock duration). The rock-paper-scissors answer to CC-heavy boards.
     const dwarf = get('dwarf'); if (dwarf) { u.armor += dwarf.armor || 0; u.mr += dwarf.mr || 0; if (dwarf.ccResist) u.ccResist = Math.max(u.ccResist, dwarf.ccResist); }
+    // Giant: huge HP (team) → which also fuels each unit's hpDmg smash; plus a stagger-slow on hit.
+    // The CC SOURCE that Dwarf's tenacity answers — completing the rock-paper-scissors.
+    const giant = get('giant'); if (giant) { if (giant.hpPct) { u.maxHp = Math.round(u.maxHp * (1 + giant.hpPct)); u.hp = u.maxHp; } if (giant.hpDmg) u.hpDmg = Math.max(u.hpDmg, giant.hpDmg); if (giant.staggerPct) { u.staggerPct = Math.max(u.staggerPct, giant.staggerPct); u.staggerDur = Math.max(u.staggerDur, giant.staggerDur); } }
   }
 }
 
@@ -513,7 +517,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
         ad: baseAd, as: sAs, armor: p.armor != null ? p.armor : 15, mr: 15, range: 1,
         mana: 0, maxMana: 9999, manaPer: 0, manaLockUntil: Infinity, attackCd: 1 / sAs, ability: null, apBonus: 0,
         alive: true, shield: Math.round((p.shieldStart || 0) * sm), stunUntil: -1, block: 0, dmgRed: 0, ccResist: 0, critChance: 0, critDmg: 0.4, dodge: p.dodge || 0, healAmp: 0, regen: 0,
-        revivePct: 0, revived: true, burnOnHit: 0, manaBurnOnHit: 0, ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0, isSummon: true,
+        revivePct: 0, revived: true, burnOnHit: 0, manaBurnOnHit: 0, hpDmg: 0, staggerPct: 0, staggerDur: 0, ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0, isSummon: true,
         vamp: 0, thorns: 0, items: [],
         slowPct: 0, slowUntil: -1, shredArmorAmt: 0, shredArmorUntil: -1, shredMrAmt: 0, shredMrUntil: -1,
         healCutPct: 0, healCutUntil: -1, dotDps: 0, dotUntil: -1, dotSrcId: -1, dotNextAt: -1,
@@ -545,6 +549,10 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     if (ls > 0 && u.alive) heal(u, dealt * ls, now);
     if (u.burnOnHit) applyDamage(target, u.burnOnHit, 'magic', u, now);
     if (u.manaBurnOnHit && target.alive) target.mana = Math.max(0, target.mana - u.manaBurnOnHit);
+    // Giant: each strike smashes for bonus magic = % of the GIANT's own max HP ("the bigger they
+    // are") AND staggers the target (a brief attack-speed slow — the CC SOURCE that Dwarf resists).
+    if (u.hpDmg && target.alive) applyDamage(target, u.maxHp * u.hpDmg, 'magic', u, now);
+    if (u.staggerPct && target.alive) { const d = ccDur(target, u.staggerDur); if (d > 0.05 && (target.slowPct <= u.staggerPct || now >= target.slowUntil)) { target.slowPct = Math.max(target.slowPct, u.staggerPct); target.slowUntil = now + d; } }
     gainMana(u, u.manaPer, now);
     if (u.ferocity) u.asStacks = Math.min(1.5, u.asStacks + u.ferocity);
     if (u.ragePerAuto) u.asStacks = Math.min(u.rageCap || 0.9, u.asStacks + u.ragePerAuto);   // bramble_brute / enraged pack
