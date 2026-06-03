@@ -189,6 +189,27 @@ function decor(def, p, a, layer) {
   return a.sig.filter((k) => (layer === 'back') === SIG_BACK.has(k)).map((k) => sigPiece(k, def, p, a)).join('');
 }
 
+// ---- class silhouette marks: an always-on, instantly-readable badge per CLASS so the three
+// robed caster classes (Mage / Healer / Summoner) don't all read as "a figure holding a stick".
+// Race palette + per-hero sig stay intact; each mark sits in a fixed region chosen not to collide
+// with sig pieces (healer halo behind the head, summoner rune-circle at the feet, mage collar +
+// floating spell sparkle). 'back' marks draw behind the body; 'front' marks over the torso.
+function classMark(def, p, a, layer) {
+  const ac = a.accent || p.accent;
+  if (def.klass === 'healer' && layer === 'back') {           // a saint's halo
+    return `<g class="v2-classmark" opacity=".82"><ellipse cx="50" cy="25" rx="15" ry="6" fill="none" stroke="#fdf3b0" stroke-width="2.4"/><ellipse cx="50" cy="25" rx="15" ry="6" fill="none" stroke="#7affc0" stroke-width="1" opacity=".6"/></g>`;
+  }
+  if (def.klass === 'summoner' && layer === 'back') {         // a glowing summoning circle underfoot
+    return `<g class="v2-classmark" opacity=".6"><ellipse cx="50" cy="126" rx="25" ry="7" fill="none" stroke="${ac}" stroke-width="1.8"/><ellipse cx="50" cy="126" rx="16" ry="4.4" fill="none" stroke="${ac}" stroke-width="1" opacity=".7"/><path d="M33 126 h34 M50 119 l-10 14 M50 119 l10 14" stroke="${ac}" stroke-width=".9" opacity=".55"/></g>`;
+  }
+  if (def.klass === 'mage' && layer === 'front') {            // arcane mantle collar + cast sparkle
+    const collar = `<path d="M37 59 Q50 49 63 59 L60 66 Q50 60 40 66 Z" fill="${tint(ac, 10)}" opacity=".92"/><path d="M40 63 Q50 59 60 63" stroke="#fff" stroke-width=".8" opacity=".4" fill="none"/>`;
+    const spark = `<g opacity=".9"><path d="M80 34 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="${ac}"/><circle cx="74" cy="46" r="1.3" fill="#fff" opacity=".7"/><circle cx="86" cy="28" r="1" fill="#fff" opacity=".6"/></g>`;
+    return `<g class="v2-classmark">${collar}${spark}</g>`;
+  }
+  return '';
+}
+
 export function championInnerV2(def) {
   const base = PALETTES[def.origin] || PALETTES.human;
   const a = ART2[def.defId] || { accent: base.accent, weapon: ({ knight: 'sword', mage: 'orbstaff', ranger: 'bow', assassin: 'daggers', healer: 'staff', summoner: 'skullstaff' })[def.klass] || 'sword', build: (def.klass === 'assassin' || def.klass === 'ranger') ? 'slim' : 'normal', head: DEFAULT_HEAD[def.klass] };
@@ -197,6 +218,7 @@ export function championInnerV2(def) {
   return [
     grads(def, p),
     shadow(),
+    classMark(def, p, a, 'back'),
     a.wings ? wings(def, p) : '',
     a.cape ? cape(def) : '',
     decor(def, p, a, 'back'),
@@ -206,6 +228,7 @@ export function championInnerV2(def) {
     frontArm(def, p, a),
     head(def, p, a),
     decor(def, p, a, 'front'),
+    classMark(def, p, a, 'front'),
   ].join('');
 }
 
