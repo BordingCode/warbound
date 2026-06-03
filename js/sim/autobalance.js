@@ -89,12 +89,15 @@ function ladderCurve() {
 // place a comp on its half: player on rows 5-7, enemy MIRRORED on rows 0-2 so the two teams
 // actually FACE each other across the board (frontline forward, carries back). The old version
 // put both teams on rows 5-7 (piled together) which made positioning/movement meaningless.
+// Net-worth-equalised stars: cheap units field at higher star, elites at 1★, so a comp's score
+// reflects its SYNERGY, not just how pricey its units are (flat 2★ favoured cost-5 comps).
+const STAR_BY_COST = { 1: 3, 2: 3, 3: 2, 4: 1, 5: 1 };
 function placeComp(defIds, enemy = false) {
   const front = ['knight', 'assassin'], out = []; let fc = 0, bc = 0;
   for (const id of defIds) {
-    const k = UNITS_BY_ID[id].klass;
-    if (front.includes(k)) { out.push({ defId: id, star: 2, col: 1 + (fc % 6), row: enemy ? (fc < 3 ? 1 : 2) : (fc < 3 ? 6 : 5) }); fc++; }
-    else { out.push({ defId: id, star: 2, col: 1 + (bc % 6), row: enemy ? (bc % 2 ? 0 : 1) : (bc % 2 ? 7 : 6) }); bc++; }
+    const u = UNITS_BY_ID[id]; const star = STAR_BY_COST[u.cost] || 1;
+    if (front.includes(u.klass)) { out.push({ defId: id, star, col: 1 + (fc % 6), row: enemy ? (fc < 3 ? 1 : 2) : (fc < 3 ? 6 : 5) }); fc++; }
+    else { out.push({ defId: id, star, col: 1 + (bc % 6), row: enemy ? (bc % 2 ? 0 : 1) : (bc % 2 ? 7 : 6) }); bc++; }
   }
   return out;
 }

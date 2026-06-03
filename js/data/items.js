@@ -15,8 +15,8 @@ export const COMPONENT_IDS = Object.keys(COMPONENTS);
 export const ITEMS = {
   // doubles
   infinity_edge: { name: 'Infinity Edge', icon: 'sword', mods: { ad: 0.10, critChance: 0.35, critDmg: 1.0 } },
-  rageblade:     { name: 'Rageblade', icon: 'flame', mods: { as: 0.45 } },
-  archmage:      { name: 'Archmage Crown', icon: 'crown', mods: { ap: 95 } },
+  rageblade:     { name: 'Rageblade', icon: 'flame', mods: { as: 0.38 } },
+  archmage:      { name: 'Archmage Crown', icon: 'crown', mods: { ap: 130 } },
   thornplate:    { name: 'Thornplate', icon: 'shield', mods: { armor: 50, mr: 50, thorns: 0.22 } },
   warmog:        { name: "Warmog's", icon: 'heart', mods: { hp: 0.50, regen: 14 } },
   // pairs
@@ -27,8 +27,8 @@ export const ITEMS = {
   static_shiv:   { name: 'Static Shiv', icon: 'burst', mods: { as: 0.20, ap: 30 } },
   bramble:       { name: 'Bramble Vest', icon: 'shield', mods: { armor: 25, as: 0.10, thorns: 0.18 } },
   titan:         { name: 'Titan Hydra', icon: 'heart', mods: { as: 0.20, hp: 0.20 } },
-  solari:        { name: 'Solari Locket', icon: 'star', mods: { ap: 20, mr: 20, shield: 260 } },
-  morello:       { name: 'Morellonomicon', icon: 'book', mods: { ap: 45, hp: 0.15 } },
+  solari:        { name: 'Solari Locket', icon: 'star', mods: { ap: 35, mr: 25, shield: 340 } },
+  morello:       { name: 'Morellonomicon', icon: 'book', mods: { ap: 65, hp: 0.18 } },
   redemption:    { name: 'Redemption', icon: 'potion', mods: { hp: 0.30, shield: 160, regen: 8 } },
 };
 

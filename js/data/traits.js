@@ -16,15 +16,15 @@ export const TRAITS = {
     name: 'Undead', axis: 'origin', kind: 'behaviour', color: '#8cff9e',
     desc: 'Slain Undead claw back from the grave, once.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { revivePct: 0.38 }, 4: { revivePct: 0.58, vamp: 0.30 }, 6: { revivePct: 0.78, vamp: 0.42 } },
-    bonusText: { 2: 'Revive once at 38% HP', 4: 'at 58% HP + 30% lifesteal', 6: 'at 78% HP + 42% lifesteal' },
+    bonuses: { 2: { revivePct: 0.37 }, 4: { revivePct: 0.56, vamp: 0.27 }, 6: { revivePct: 0.76, vamp: 0.38 } },
+    bonusText: { 2: 'Revive once at 37% HP', 4: 'at 56% HP + 27% lifesteal', 6: 'at 76% HP + 38% lifesteal' },
   },
   elf: {
     name: 'Elf', axis: 'origin', kind: 'behaviour', color: '#54e6c0',
     desc: 'Elves slip past blows and start shielded.',
     breakpoints: [2, 4],
-    bonuses: { 2: { dodge: 0.21, shield: 130 }, 4: { dodge: 0.37, shield: 250, as: 0.31 } },
-    bonusText: { 2: '21% dodge + 130 shield', 4: '37% dodge + 250 shield + 31% atk speed' },
+    bonuses: { 2: { dodge: 0.22, shield: 140 }, 4: { dodge: 0.38, shield: 270, as: 0.32 } },
+    bonusText: { 2: '22% dodge + 140 shield', 4: '38% dodge + 270 shield + 32% atk speed' },
   },
   demon: {
     name: 'Demon', axis: 'origin', kind: 'behaviour', color: '#ff5a3c',
@@ -37,15 +37,15 @@ export const TRAITS = {
     name: 'Beast', axis: 'origin', kind: 'behaviour', color: '#ffb15a',
     desc: 'Beasts grow more ferocious as the fight drags on.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { ferocity: 0.17, armor: 9 }, 4: { ferocity: 0.30, armor: 17 }, 6: { ferocity: 0.40, armor: 27 } },
-    bonusText: { 2: '+17% atk speed/strike & +9 armor', 4: '+30% & +17 armor', 6: '+40% & +27 armor (whole team)' },
+    bonuses: { 2: { ferocity: 0.15, armor: 8 }, 4: { ferocity: 0.26, armor: 15 }, 6: { ferocity: 0.34, armor: 22 } },
+    bonusText: { 2: '+15% atk speed/strike & +8 armor', 4: '+26% & +15 armor', 6: '+34% & +22 armor (whole team)' },
   },
   dragon: {
     name: 'Dragon', axis: 'origin', kind: 'behaviour', color: '#ffd24a',
     desc: 'Few but mighty — dragons shrug off magic.',
     breakpoints: [1, 2],
-    bonuses: { 1: { mr: 30, adPct: 0.19, ap: 60 }, 2: { mr: 54, adPct: 0.29, ap: 110 } },
-    bonusText: { 1: '+30 MR, +19% AD, +60 AP', 2: '+54 MR, +29% AD, +110 AP (near-immune to spells)' },
+    bonuses: { 1: { mr: 22, adPct: 0.12, ap: 38 }, 2: { mr: 40, adPct: 0.19, ap: 70 } },
+    bonusText: { 1: '+22 MR, +12% AD, +38 AP', 2: '+40 MR, +19% AD, +70 AP (resists spells)' },
   },
 
   // ---------- CLASSES ----------
@@ -53,8 +53,8 @@ export const TRAITS = {
     name: 'Knight', axis: 'class', kind: 'glue', color: '#b9c4d0',
     desc: 'A wall that ignores a flat chunk of every hit.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { block: 9 }, 4: { block: 15 }, 6: { block: 26 } },
-    bonusText: { 2: 'Ignore 9 dmg/hit', 4: 'ignore 15', 6: 'ignore 26' },
+    bonuses: { 2: { block: 12 }, 4: { block: 20 }, 6: { block: 33 } },
+    bonusText: { 2: 'Ignore 12 dmg/hit', 4: 'ignore 20', 6: 'ignore 33' },
   },
   mage: {
     name: 'Mage', axis: 'class', kind: 'glue', color: '#c79bff',
@@ -67,8 +67,8 @@ export const TRAITS = {
     name: 'Ranger', axis: 'class', kind: 'behaviour', color: '#9be86a',
     desc: 'Rangers loose bursts of rapid fire.',
     breakpoints: [2, 4],
-    bonuses: { 2: { rangerAS: 0.09 }, 4: { rangerAS: 0.22 } },
-    bonusText: { 2: '9% chance: +atk speed burst', 4: '22% chance' },
+    bonuses: { 2: { rangerAS: 0.13 }, 4: { rangerAS: 0.30 } },
+    bonusText: { 2: '13% chance: +atk speed burst', 4: '30% chance' },
   },
   assassin: {
     name: 'Assassin', axis: 'class', kind: 'behaviour', color: '#ff7eb6',
@@ -88,8 +88,8 @@ export const TRAITS = {
     name: 'Summoner', axis: 'class', kind: 'behaviour', color: '#ffcf5a',
     desc: 'Summoned creatures hit harder and last longer.',
     breakpoints: [2, 4],
-    bonuses: { 2: { summonPower: 0.14 }, 4: { summonPower: 0.36 } },
-    bonusText: { 2: '+14% summon HP/dmg', 4: '+36% summon HP/dmg' },
+    bonuses: { 2: { summonPower: 0.13 }, 4: { summonPower: 0.33 } },
+    bonusText: { 2: '+13% summon HP/dmg', 4: '+33% summon HP/dmg' },
   },
 };
 
