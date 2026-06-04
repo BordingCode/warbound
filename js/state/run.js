@@ -357,7 +357,8 @@ export function resolveRound(run, won) {
   if (run.round === 3 && run.lives < START_LIVES) run.lives++;
   run.round++;
   // beat all (winTarget) foes to win (Warpath=10 warbands, Trials=5 bosses), or run out of lives.
-  if (run.wins >= (run.winTarget || WIN_TARGET)) { run.over = true; run.won = true; }
+  // Endless never "wins" by count — it only ends when your lives run out (depth = how far you got).
+  if (run.mode !== 'endless' && run.wins >= (run.winTarget || WIN_TARGET)) { run.over = true; run.won = true; }
   if (run.lives <= 0) { run.over = true; run.won = false; }
   ensureRng(run);
   rollShop(run);                   // respects shopLocked (frozen shop persists)

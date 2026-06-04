@@ -23,6 +23,9 @@ import { launchConfetti } from './render/fx.js';
 
 let run = null;            // set by boot (solo resume) or a mode start
 let lobby = null;          // ladder-mode warlord lobby
+// Endless mode reinforcement pool — a rich cross-race mix so the infinite waves stay varied.
+const ENDLESS_POOL = ['warboss', 'berserker', 'axethrower', 'dragon_knight', 'warlock', 'lich', 'wraith',
+  'necromancer', 'pit_summoner', 'moon_priestess', 'bramble_brute', 'death_knight', 'beastmaster', 'hellguard'];
 const SPEEDS = [[0.5, '½×'], [1, '1×'], [2, '2×'], [4, '4×']];   // ½× is the new, calmer default
 const spdId = (s) => String(s).replace('.', '');
 let combatSpeed = (() => { try { const v = parseFloat(localStorage.getItem('warbound_speed')); return SPEEDS.some(([s]) => s === v) ? v : 0.5; } catch { return 0.5; } })();
@@ -51,6 +54,14 @@ function getOpponent() {
   // you beat the current one. A loss replays the SAME foe (while your round/economy keeps growing
   // so you can break the wall). The current REALM sets the difficulty + themes the reinforcements.
   if (run.mode === 'trials') return getTrialBoard(run.wins);   // boss-rush: next boss = bosses beaten
+  // Endless: difficulty climbs every win and never stops; every 10th wave is a BOSS for a spike.
+  // Depth (wins) is the only score — there is no win, only how far the Warhorde lets you march.
+  if (run.mode === 'endless') {
+    const wave = run.wins + 1;
+    if (wave % 10 === 0) return bossForRealm(Math.floor(run.wins / 10));   // bosses cycle then scale up
+    const b = getEnemyBoard(wave, null, { diff: run.wins, pool: ENDLESS_POOL });
+    return { ...b, name: 'Wave ' + wave, traitHint: 'the horde grows — survive' };
+  }
   const realm = realmAt(run.realm || 0);
   // the realm's 10th/final warband is a themed BOSS with a gimmick (telegraphed pre-fight).
   if (run.wins + 1 === Run.WIN_TARGET) return bossForRealm(realm.index);
@@ -370,7 +381,7 @@ function renderPlanning() {
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       run.mode === 'ladder'
         ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
-        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: run.mode === 'trials' ? `Slay all ${TRIAL_COUNT} bosses` : `${realmAt(run.realm || 0).name} · conquer all 10` }, `${run.wins}/${run.winTarget || Run.WIN_TARGET}`)]),
+        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: run.mode === 'trials' ? `Slay all ${TRIAL_COUNT} bosses` : run.mode === 'endless' ? 'Endless — survive as deep as you can' : `${realmAt(run.realm || 0).name} · conquer all 10` }, run.mode === 'endless' ? `Wave ${run.wins + 1}` : `${run.wins}/${run.winTarget || Run.WIN_TARGET}`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn#optionsBtn', { style: { padding: '5px 10px' }, title: 'Options & menu', onclick: showOptions, html: ic('bars') }),
     ]),
@@ -946,7 +957,9 @@ function showHelp() {
       ? ['trophy', '<b>Last warband standing wins.</b> You and 7 rival warlords share one champion pool. Lose a fight and your <b>HP</b> drops — when it hits 0 you\'re out. Outlast everyone to win.']
       : run.mode === 'trials'
         ? ['trophy', `Slay all <b>${TRIAL_COUNT} boss monsters</b> of the gauntlet (survive on <b>5 lives</b>). Each boss has its own deadly mechanic — learn it, then build to beat it.`]
-        : ['trophy', 'Beat all <b>10 warbands</b> to <b>conquer the realm</b> (survive on <b>5 lives</b>). Each realm conquered unlocks the next, harder one.'],
+        : run.mode === 'endless'
+          ? ['trophy', 'Hold against <b>endless escalating waves</b> on <b>5 lives</b> — every 10th wave is a boss. There is no winning: <b>bank Spoils for how deep you march.</b>']
+          : ['trophy', 'Beat all <b>10 warbands</b> to <b>conquer the realm</b> (survive on <b>5 lives</b>). Each realm conquered unlocks the next, harder one.'],
   ];
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'How to play'),
@@ -1151,8 +1164,12 @@ function endScreen(ladderSummary) {
     }
   } else {
     const isTrials = run.mode === 'trials';
+    const isEndless = run.mode === 'endless';
     const won = run.won;
-    if (isTrials) {
+    if (isEndless) {
+      head = 'OVERWHELMED';
+      sub = `The endless horde marched over you at Wave ${run.wins + 1}. You held ${run.wins} wave${run.wins === 1 ? '' : 's'} — and the deeper you march, the richer the Spoils.`;
+    } else if (isTrials) {
       if (won) { launchConfetti(5200); head = 'TRIALS CLEARED'; sub = `You slew every boss of the gauntlet — all ${TRIAL_COUNT}, from the Gloom Slime to the Void Maw itself. A true champion.`; }
       else { head = 'DEFEATED'; sub = `The bosses bested you — ${run.wins}/${TRIAL_COUNT} slain. Gear up in the Armory and face them again.`; }
     } else {
@@ -1164,17 +1181,21 @@ function endScreen(ladderSummary) {
         sub = newConquest ? `${realm.name} is yours for good — the next realm beckons.` : `${realm.name} cleared again. Spoils farmed; conquest already secured.`;
       } else { head = 'DEFEATED'; sub = `${realm.name} held your warband off (${run.wins}/10). Gear up in the Armory and march again.`; }
     }
-    // earn Spoils ONCE (even on a loss) — the meta-progression that eases the climb
-    if (!run.spoilsEarned) { run.spoilsEarned = Meta.spoilsForRun(run.wins, run.round - 1, won); Meta.addSpoils(run.spoilsEarned); Run.save(run); }
+    // earn Spoils ONCE — Endless pays for DEPTH (how far you came); other modes use the standard payout.
+    if (!run.spoilsEarned) {
+      run.spoilsEarned = isEndless ? Math.round(5 * run.wins + (run.round - 1)) : Meta.spoilsForRun(run.wins, run.round - 1, won);
+      Meta.addSpoils(run.spoilsEarned); Run.save(run);
+    }
     // War Honors: Trials progress, realm conquests (read AFTER conquerRealm above), and a flawless run
     if (isTrials) { if (run.wins >= 1) claimHonor('first_boss'); if (won) claimHonor('clear_trials'); }
-    else if (won) {
+    else if (!isEndless && won) {
       const c = Meta.realmsCleared();
       if (c >= 1) claimHonor('first_realm'); if (c >= 3) claimHonor('three_realms');
       if (c >= 7) claimHonor('all_realms'); if (c >= 8) claimHonor('astral');
       if (run.losses === 0) claimHonor('flawless');
     }
-    stats = isTrials ? [stat('Bosses slain', `${run.wins}/${TRIAL_COUNT}`), stat('Rounds', run.round - 1)]
+    stats = isEndless ? [stat('Depth reached', `Wave ${run.wins + 1}`), stat('Waves held', run.wins)]
+          : isTrials ? [stat('Bosses slain', `${run.wins}/${TRIAL_COUNT}`), stat('Rounds', run.round - 1)]
                      : [stat('Realm', realmAt(run.realm || 0).name), stat('Warbands', `${run.wins}/10`)];
     const spoilsTotal = Meta.load().spoils;
     const caches = Math.floor(spoilsTotal / Meta.CHEST_COST);
@@ -1182,7 +1203,9 @@ function endScreen(ladderSummary) {
       el('.er-line', {}, [iconEl('spoils', 'er-ico'), el('span.er-amt', {}, `+${run.spoilsEarned || 0} Spoils`)]),
       el('.er-sub', {}, `${spoilsTotal} total — enough for ${caches} War Cache${caches === 1 ? '' : 's'} in the Armory. Your Spoils & gear carry over; only the in-battle gold resets.`),
     ]);
-    extraBtn = isTrials
+    extraBtn = isEndless
+      ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startEndless(true) }, '↻ March again')
+      : isTrials
       ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startTrials(true) }, won ? '↻ Run the Trials again' : '↻ Retry the Trials')
       : won
         ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realmAt(run.realm || 0).index + 1) }, `Next Realm ▶`)
@@ -1331,6 +1354,18 @@ function startTrials(fresh) {
   run.mode = 'trials'; lobby = null;
   if (!resumed) applyGear(run);
   run.winTarget = TRIAL_COUNT;
+  Run.save(run); renderPlanning();
+  if (!seenIntro()) showHelp();
+}
+// Endless — infinite escalating waves on a life pool; bank Spoils scaled to the depth you reach.
+// Reuses the whole Warpath economy/planning; only the foe source (getOpponent) + end logic differ.
+function startEndless(fresh) {
+  if (fresh) Run.clearSave();
+  clearLobby();
+  const resumed = !fresh && Run.load();
+  run = resumed || Run.freshRun();
+  run.mode = 'endless'; lobby = null;
+  if (!resumed) applyGear(run);
   Run.save(run); renderPlanning();
   if (!seenIntro()) showHelp();
 }
@@ -1578,6 +1613,7 @@ function chooseMode() {
         ]),
       ]),
       card('#ff6a8a', 'burst', 'The Trials', `A boss rush: face a gauntlet of ${TRIAL_COUNT} unique monsters — from the Gloom Slime up to the Void Maw — each with its own deadly mechanic. Build a team, learn each fight, slay them all.`, () => startTrials(true)),
+      card('#8fd24a', 'skull', 'Endless', 'Hold against an endless tide of warbands that only grows fiercer — every 10th wave a boss. There is no winning, only how deep you march. Bank Spoils for the depth you reach.', () => startEndless(true)),
       ladderCard,
     ]),
     (() => { const got = HONORS.filter((h) => Meta.honorsEarned()[h.id]).length; return el('.honors-bar', { onclick: () => { Sfx.click(); showHonors('menu'); } }, [
