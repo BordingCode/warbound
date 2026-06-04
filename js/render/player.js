@@ -43,6 +43,7 @@ export class CombatPlayer {
     this.critPending = new Set();   // attacker ids whose next hit lands a crit
     this.pauseFor = 0;              // remaining hit-stop in *combat ms* (frozen clock)
     this.unitStats = new Map();   // combat id -> { defId, team, dealt, tanked } (per-unit live stats)
+    this.summonOwner = new Map();  // summon combat id -> owning summoner's combat id (credit its stats home)
     this.fightMs = 0; this.statsEl = null; this._statsDirty = false; this._statRows = null;
     this.stageEl = unitsLayer.closest('.stage') || unitsLayer.closest('.board-wrap') || unitsLayer;
     // shake the .stage (no overflow/clip/shadow of its own) so it moves as one cheap GPU layer
@@ -57,7 +58,7 @@ export class CombatPlayer {
     this.unitsLayer.replaceChildren();
     this.fxLayer.replaceChildren();
     this.nodes.clear();
-    this.unitStats.clear(); this.fightMs = 0; this._statRows = null;
+    this.unitStats.clear(); this.summonOwner.clear(); this.fightMs = 0; this._statRows = null;
     if (this.statsEl) { this.statsEl.remove(); this.statsEl = null; }
   }
 
@@ -111,6 +112,7 @@ export class CombatPlayer {
     this.unitsLayer.append(node);
     this.nodes.set(e.id, { el: node, maxHp: e.maxHp, hp: e.hp, team: e.team });
     if (e.defId !== 'summon') { this.unitStats.set(e.id, { defId: e.defId, team: e.team, dealt: 0, tanked: 0 }); if (e.team === 'player') this._statsDirty = true; }
+    else if (e.owner != null) this.summonOwner.set(e.id, e.owner);   // credit this summon's damage/tanked to its summoner
     // spawn pop-in (0 -> 1.15 -> 1, ease-out-back) on the body so the cell anchor never shifts
     const body = node.querySelector('.champ-body');
     if (body) body.animate(
@@ -472,9 +474,11 @@ export class CombatPlayer {
           this._spark(e.id, col, e.dmgType === 'magic' ? 5 : crit ? 5 : 3);
         }
         this._bumpMana(e.id, 0.05);
-        if (e.amount > 0) {   // per-unit: credit damage dealt to the source, tanked to the target
-          const src = this.unitStats.get(e.src); if (src) src.dealt += e.amount;
-          const tgt = this.unitStats.get(e.id); if (tgt) tgt.tanked += e.amount;
+        if (e.amount > 0) {   // per-unit: credit damage dealt to the source, tanked to the target.
+          // A summon's combat id isn't in unitStats — route its dealt/tanked to its OWNING summoner,
+          // so a summoner's stats include everything its minions did (per the design ask).
+          const src = this.unitStats.get(e.src) || this.unitStats.get(this.summonOwner.get(e.src)); if (src) src.dealt += e.amount;
+          const tgt = this.unitStats.get(e.id) || this.unitStats.get(this.summonOwner.get(e.id)); if (tgt) tgt.tanked += e.amount;
           this._statsDirty = true;
         }
         break;

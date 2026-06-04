@@ -32,6 +32,7 @@ let combatSpeed = (() => { try { const v = parseFloat(localStorage.getItem('warb
 let inCombat = false;
 let dragCtl = null;
 let lastBattleStats = null;   // per-unit stats from the last fight; shown in planning until the next battle
+let lastBattleUids = null;    // board uids in combat-spawn order, so per-unit stats map to the RIGHT instance
 let lastVerdict = null;       // P0.1: plain-language "why you won/lost" + breakdown from the last fight
 let player = null;
 let prevTraitTiers = {};   // for flashing synergy chips when they level up
@@ -84,7 +85,7 @@ function unitNode(u, team) {
   if (u.items && u.items.length) node.append(el('.item-dots', {}, u.items.map(() => el('i'))));
   // On-screen battle stats (opt-in): each of YOUR champions shows last fight's damage dealt & tanked.
   if (team === 'player' && !inCombat && battleStatsOn()) {
-    const bs = battleStatFor(u.defId);
+    const bs = battleStatForUnit(u);
     if (bs) node.append(el('.unit-bstat', { title: 'Last battle — damage dealt ⚔ / tanked 🛡' }, [
       el('span.ub-d', { html: ic('sword') }), el('span', {}, String(bs.dealt)),
       el('span.ub-t', { html: ic('shield') }), el('span', {}, String(bs.tanked)),
@@ -860,11 +861,14 @@ function toggleDragStats() { try { localStorage.setItem('warbound_dragstats', dr
 // damage dealt & tanked right on its tile, so you can read your carries/tanks at a glance.
 function battleStatsOn() { try { return localStorage.getItem('warbound_battlestats') === '1'; } catch { return false; } }
 // Sum the last battle's dealt/tanked for a defId (multiple same-id units aggregate). null if none.
-function battleStatFor(defId) {
-  if (!lastBattleStats) return null;
-  let dealt = 0, tanked = 0, found = false;
-  for (const s of lastBattleStats) if (s.defId === defId) { dealt += s.dealt; tanked += s.tanked; found = true; }
-  return found ? { dealt, tanked } : null;
+// PER-INSTANCE: this board unit's OWN last-fight stats (matched by uid through the captured
+// spawn-order), never summed with other units that share its name. A summoner's number already
+// includes its minions' damage (credited home in the combat renderer).
+function battleStatForUnit(u) {
+  if (!lastBattleStats || !lastBattleUids || !u) return null;
+  const i = lastBattleUids.indexOf(u.uid);
+  const s = i >= 0 ? lastBattleStats[i] : null;
+  return s ? { dealt: s.dealt, tanked: s.tanked } : null;
 }
 
 // Consolidated Options & menu — ONE HUD button opens this (replaces the old row of top-bar
@@ -1051,6 +1055,7 @@ async function startCombat() {
   lastVerdict = null;       // and the previous after-action verdict
   const enemy = getOpponent();
   const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
+  lastBattleUids = run.board.map((b) => b.uid);   // same order the sim spawns + reports stats in
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const seed = hashSeed(run.seed, run.round);
   // build the combat aug: player augments, plus (in ladder) warlord powers + the lobby modifier

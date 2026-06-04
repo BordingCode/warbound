@@ -532,7 +532,7 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
       };
       if (s.lifestealAura) s.vamp = s.lifestealAura;   // enraged pack drains on its own autos
       units.push(s); occupied.add(idx(s.col, s.row));
-      ev(now, 'spawn', { id: s.id, team: s.team, defId: 'summon', summonKind: kind, name: sName, star: 1, col: s.col, row: s.row, hp: s.hp, maxHp: s.maxHp, summon: true });
+      ev(now, 'spawn', { id: s.id, team: s.team, defId: 'summon', summonKind: kind, name: sName, star: 1, col: s.col, row: s.row, hp: s.hp, maxHp: s.maxHp, summon: true, owner: u.id });
     }
   }
 
