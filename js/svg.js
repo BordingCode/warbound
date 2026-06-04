@@ -9,8 +9,9 @@ export const PALETTES = {
   // undead = ASHEN bone-grey (no green body) so it never reads like an elf; the spectral
   // green survives only as the eye/trim accent — the iconic "undead glow".
   undead: { skin: '#b4b7ab', primary: '#4f5a68', secondary: '#d9dace', accent: '#8cff9e' },
-  // elf = living LEAF-green (pulled off teal/blue) so it stays clear of human's blue casters.
-  elf:    { skin: '#d8c39c', primary: '#2f8a52', secondary: '#d6f2dc', accent: '#5fe39a' },
+  // elf = TEAL/cyan — shifted off leaf-green now that Orc owns green; matches the elf trait colour
+  // (#54e6c0) and stays clear of human's blue AND orc's green (the old elf/orc green clash).
+  elf:    { skin: '#d8c39c', primary: '#1f8f86', secondary: '#cdeee6', accent: '#54e6c0' },
   demon:  { skin: '#8c3b3b', primary: '#5a1414', secondary: '#2a1414', accent: '#ff5a3c' },
   beast:  { skin: '#caa06a', primary: '#7a4a2a', secondary: '#caa06a', accent: '#ffb15a' },
   dragon: { skin: '#d9c27a', primary: '#6a3fa0', secondary: '#e6c04a', accent: '#ffd24a' },
