@@ -455,6 +455,44 @@ function renderPlanning() {
     const iid = c.dataset.iid; const it = run.items.find((x) => x.iid === iid);
     if (it) dragCtl.makeDraggable(c, iid, 'item', `<div class="item-ghost">${ic(itemDef(it.id).icon)}</div>`);
   });
+  maybeCoach();
+}
+
+// P1.4 — progressive first-run onboarding: fire ONE plain-language tip the moment it's relevant
+// (a pair on the bench → "buy a third"), each once ever (saved flag), so veterans never see them.
+const COACH_TIPS = [
+  { id: 'fuse', icon: 'star', text: 'You have two of the same champion — buy a third to fuse them into a stronger ★★!',
+    when: () => { const c = {}; for (const u of [...run.board, ...run.bench.filter(Boolean)]) { c[u.defId] = (c[u.defId] || 0) + 1; if (c[u.defId] === 2) return true; } return false; } },
+  { id: 'synergy', icon: 'gem', text: 'Synergy active! Matching Origins & Classes unlock team bonuses — see the bar near the top.',
+    when: () => $$('.trait-chip.active').length > 0 },
+  { id: 'position', icon: 'shield', text: 'Positioning wins fights: put tanky Knights in the FRONT row to shield your ranged units behind them.',
+    when: () => run.round >= 2 },
+  { id: 'item', icon: 'sword', text: 'Drag two item components onto one champion to forge a powerful item.',
+    when: () => (run.items && run.items.length >= 2) },
+  { id: 'reroll', icon: 'coffer', text: 'Out of options? Reroll the shop (⟳) for a fresh set of champions.',
+    when: () => run.round >= 3 },
+];
+function coachSeen(id) { try { return (localStorage.getItem('warbound_coach') || '').includes('|' + id + '|'); } catch { return true; } }
+function markCoach(id) { try { localStorage.setItem('warbound_coach', (localStorage.getItem('warbound_coach') || '|') + id + '|'); } catch {} }
+function maybeCoach() {
+  if (run.mode === 'ladder') return;            // onboarding tips fire in the solo/Trials/Endless flow
+  for (const t of COACH_TIPS) {
+    if (coachSeen(t.id)) continue;
+    let ok = false; try { ok = t.when(); } catch { ok = false; }
+    if (!ok) continue;
+    markCoach(t.id);
+    coachToast(t.icon, t.text);
+    return;   // one tip at a time
+  }
+}
+function coachToast(icon, text) {
+  const t = el('.honor-toast.coach', { style: { background: 'rgba(20,28,40,0.97)', borderColor: 'var(--gold)' } }, [
+    el('.ht-medal', { style: { color: 'var(--gold)' }, html: ic(icon) }),
+    el('.ht-body', {}, [el('.ht-label', {}, 'Tip'), el('.ht-name', { style: { fontWeight: '600', fontSize: '13px', whiteSpace: 'normal' } }, text)]),
+  ]);
+  document.body.append(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 5200);
 }
 
 // post-round item draft (Underlords-style pick 1 of 3 components)
