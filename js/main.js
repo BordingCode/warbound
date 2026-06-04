@@ -336,6 +336,12 @@ function buildEnemyScout(enemy) {
       el('span.dot', { style: { background: def.color } }), el('span', {}, def.name), el('span.cnt', {}, info.count),
     ]));
   }
+  // P0.3b — telegraph the positioning THREATS so the player can counter-place (the genre's core skill).
+  const threat = (txt) => el('.scout-threat', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', fontWeight: '700', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '999px', padding: '2px 8px', marginLeft: '4px' } }, txt);
+  const divers = enemy.units.filter((u) => (UNITS_BY_ID[u.defId] || {}).dive).length;
+  if (divers) row.append(threat(`⚔ ${divers} assassin${divers > 1 ? 's' : ''} — dives your back line; tuck carries in a corner`));
+  const bigAoe = enemy.units.some((u) => { const a = (UNITS_BY_ID[u.defId] || {}).ability; return a && a.type === 'magic' && (a.radius || 0) >= 2; });
+  if (bigAoe) row.append(threat('✦ heavy AoE — don\'t clump your units'));
   return row;
 }
 
