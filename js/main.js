@@ -32,6 +32,7 @@ let combatSpeed = (() => { try { const v = parseFloat(localStorage.getItem('warb
 let inCombat = false;
 let dragCtl = null;
 let lastBattleStats = null;   // per-unit stats from the last fight; shown in planning until the next battle
+let lastVerdict = null;       // P0.1: plain-language "why you won/lost" + breakdown from the last fight
 let player = null;
 let prevTraitTiers = {};   // for flashing synergy chips when they level up
 
@@ -394,6 +395,7 @@ function renderPlanning() {
     buildTraitsEl(),
     run.mode === 'ladder' ? buildLobbyBar() : null,
     run.mode === 'ladder' ? buildStandings() : null,
+    lastVerdict ? verdictCard(lastVerdict) : null,
     enemy.boss
       ? el('.phase-banner.boss-banner', {}, [
           el('div', { style: { fontWeight: '800', letterSpacing: '.04em' } }, `☠ BOSS — ${enemy.name}`),
@@ -971,12 +973,69 @@ function showHelp() {
 }
 function seenIntro() { try { return localStorage.getItem('warbound_intro') === '1'; } catch { return false; } }
 
+// P0.1 — "every loss has a clear reason" (DESIGN pillar #2). Read the just-finished fight's event
+// timeline into a plain-language verdict + a small damage/tank breakdown. Pure: events in, summary
+// out, using only data the sim already emits (spawn/damage/cast/faint).
+function fightVerdict(events, won) {
+  const u = {};
+  for (const e of events) if (e.type === 'spawn' && e.defId && e.defId !== 'summon' && u[e.id] === undefined)
+    u[e.id] = { team: e.team, defId: e.defId, star: e.star || 1, dealt: 0, tanked: 0, casts: 0, died: false };
+  for (const e of events) {
+    if (e.type === 'damage') { if (u[e.src]) u[e.src].dealt += e.amount || 0; if (u[e.id]) u[e.id].tanked += e.amount || 0; }
+    else if (e.type === 'cast' && u[e.id]) u[e.id].casts++;
+    else if (e.type === 'faint' && u[e.id]) u[e.id].died = true;
+  }
+  const all = Object.values(u);
+  const P = all.filter((x) => x.team === 'player'), E = all.filter((x) => x.team === 'enemy');
+  const nm = (x) => (x && UNITS_BY_ID[x.defId] && UNITS_BY_ID[x.defId].name) || 'your unit';
+  const sum = (a, k) => a.reduce((s, x) => s + x[k], 0);
+  const val = (x) => (UNITS_BY_ID[x.defId] ? UNITS_BY_ID[x.defId].cost : 1) * (x.star || 1);
+  const byDealt = P.slice().sort((a, b) => b.dealt - a.dealt);
+  const byTank = P.slice().sort((a, b) => b.tanked - a.tanked);
+  const carry = P.slice().sort((a, b) => val(b) - val(a))[0];
+  const pDealt = sum(P, 'dealt'), eDealt = sum(E, 'dealt'), pTank = sum(P, 'tanked'), eTank = sum(E, 'tanked');
+  let text;
+  if (won) text = byDealt[0] && byDealt[0].dealt > 0 ? `Clean win — ${nm(byDealt[0])} carried with ${Math.round(byDealt[0].dealt)} damage.` : 'Victory — well fought.';
+  else if (carry && carry.died && carry.casts === 0) text = `Your carry ${nm(carry)} died before it could cast — tuck it in a back corner behind your frontline.`;
+  else if (pDealt > eDealt * 1.08 && pTank < eTank) text = `You out-damaged them but folded fast — add a tankier frontline (Knight/Paladin) to buy your carries time.`;
+  else if (eTank > pTank * 1.25) text = `Their frontline out-tanked yours — bring armor/MR shred, or upgrade a damage carry.`;
+  else if (byDealt[0] && byDealt[0].dealt < eDealt * 0.4) text = `Your damage came up short — three-star a carry or deepen a damage synergy.`;
+  else text = `Their board was simply stronger — upgrade a unit to 3★ or push a synergy to its next tier.`;
+  return {
+    text, won,
+    top: byDealt.filter((x) => x.dealt > 0).slice(0, 2).map((x) => ({ defId: x.defId, dealt: Math.round(x.dealt) })),
+    tank: byTank[0] && byTank[0].tanked > 0 ? { defId: byTank[0].defId, tanked: Math.round(byTank[0].tanked) } : null,
+  };
+}
+// The after-action card shown on the next planning screen — the verdict + a compact dmg/tank read.
+function verdictCard(v) {
+  if (!v) return null;
+  const accent = v.won ? 'var(--hp)' : 'var(--danger)';
+  const chip = (s, label) => el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+    el('div', { style: { width: '30px', height: '34px', flex: '0 0 auto' }, html: UNITS_BY_ID[s.defId] ? championSVG(UNITS_BY_ID[s.defId], { size: 30 }) : '' }),
+    el('div', { style: { display: 'flex', flexDirection: 'column', lineHeight: '1.15' } }, [
+      el('span', { style: { fontSize: '10px', color: 'var(--ink-dim)' } }, (UNITS_BY_ID[s.defId] || {}).name || ''),
+      el('span', { style: { fontSize: '11px', fontWeight: '700' } }, label),
+    ]),
+  ]);
+  const chips = (v.top || []).map((t) => chip(t, `⚔ ${t.dealt}`));
+  if (v.tank) chips.push(chip(v.tank, `🛡 ${v.tank.tanked}`));
+  return el('div', { style: { background: 'rgba(20,24,34,0.7)', border: `1px solid ${accent}`, borderLeft: `4px solid ${accent}`, borderRadius: '10px', padding: '8px 12px', margin: '4px 0', display: 'flex', flexDirection: 'column', gap: '6px' } }, [
+    el('div', {}, [
+      el('span', { style: { fontSize: '10px', fontWeight: '800', letterSpacing: '.06em', color: accent, marginRight: '8px' } }, v.won ? 'WHY YOU WON' : 'WHY YOU LOST'),
+      el('span', { style: { fontSize: '13px' } }, v.text),
+    ]),
+    chips.length ? el('div', { style: { display: 'flex', gap: '18px', flexWrap: 'wrap' } }, chips) : null,
+  ]);
+}
+
 // ---------- combat ----------
 async function startCombat() {
   if (inCombat) return;
   audioResume();
   inCombat = true;
   lastBattleStats = null;   // a new battle clears the previous battle's per-unit stats
+  lastVerdict = null;       // and the previous after-action verdict
   const enemy = getOpponent();
   const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
@@ -1005,6 +1064,7 @@ async function startCombat() {
   const winner = await player.play(events, { speed: combatSpeed });
   lastBattleStats = player.playerStats();   // keep per-unit stats visible through planning until next fight
   const won = winner === 'player';
+  lastVerdict = fightVerdict(events, won);   // P0.1: the plain-language "why" for the next planning screen
   won ? Sfx.victory() : Sfx.defeat();
   if (won) launchConfetti(2000);
   const sv = result.survivors;
