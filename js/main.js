@@ -1206,6 +1206,9 @@ function offerUnderdogDraft(after) {
 function endScreen(ladderSummary) {
   const stat = (label, val) => el('.istat', { style: { minWidth: '120px' } }, [el('span', { style: { color: 'var(--ink-dim)' } }, label), el('span', {}, val)]);
   let head, sub, stats, rankBlock = null, rewardBlock = null, extraBtn = null;
+  // P1.2 — collect honours newly earned THIS run so the closure card can celebrate them.
+  const earnedThisRun = [];
+  const claim = (id) => { const r = claimHonor(id); if (r) earnedThisRun.push(r.honor); };
   if (run.mode === 'ladder') {
     const place = (ladderSummary && ladderSummary.humanPlace) || (lobby && lobby.human.place) || Bots.aliveCount(lobby);
     const first = place === 1;
@@ -1216,8 +1219,8 @@ function endScreen(ladderSummary) {
     // apply the placement to your rank ONCE, and show the result
     if (!run.rankApplied) { run.rankApplied = true; run._rankResult = Rank.applyPlacement(place); Run.save(run); }
     // War Honors: a 1st place, and reaching each rank tier (idempotent — fires once ever)
-    if (first) claimHonor('ladder_win');
-    { const t = Rank.currentRank().tier; if (t >= 2) claimHonor('reach_gold'); if (t >= 4) claimHonor('reach_diamond'); if (t >= 5) claimHonor('reach_master'); }
+    if (first) claim('ladder_win');
+    { const t = Rank.currentRank().tier; if (t >= 2) claim('reach_gold'); if (t >= 4) claim('reach_diamond'); if (t >= 5) claim('reach_master'); }
     const rr = run._rankResult;
     if (rr) {
       if (rr.promoted) launchConfetti(4000);
@@ -1256,12 +1259,12 @@ function endScreen(ladderSummary) {
       Meta.addSpoils(run.spoilsEarned); Run.save(run);
     }
     // War Honors: Trials progress, realm conquests (read AFTER conquerRealm above), and a flawless run
-    if (isTrials) { if (run.wins >= 1) claimHonor('first_boss'); if (won) claimHonor('clear_trials'); }
+    if (isTrials) { if (run.wins >= 1) claim('first_boss'); if (won) claim('clear_trials'); }
     else if (!isEndless && won) {
       const c = Meta.realmsCleared();
-      if (c >= 1) claimHonor('first_realm'); if (c >= 3) claimHonor('three_realms');
-      if (c >= 7) claimHonor('all_realms'); if (c >= 8) claimHonor('astral');
-      if (run.losses === 0) claimHonor('flawless');
+      if (c >= 1) claim('first_realm'); if (c >= 3) claim('three_realms');
+      if (c >= 7) claim('all_realms'); if (c >= 8) claim('astral');
+      if (run.losses === 0) claim('flawless');
     }
     stats = isEndless ? [stat('Depth reached', `Wave ${run.wins + 1}`), stat('Waves held', run.wins)]
           : isTrials ? [stat('Bosses slain', `${run.wins}/${TRIAL_COUNT}`), stat('Rounds', run.round - 1)]
@@ -1285,6 +1288,13 @@ function endScreen(ladderSummary) {
     el('p', { style: { color: 'var(--ink-dim)', margin: '0' } }, sub),
     el('.istats', { style: { maxWidth: '280px' } }, stats),
     rewardBlock,
+    // P1.2 — celebrate honours earned this run (a satisfying "you achieved something" beat).
+    earnedThisRun.length ? el('.end-honors', { style: { display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' } }, [
+      el('span', { style: { fontSize: '11px', fontWeight: '800', letterSpacing: '.06em', color: 'var(--gold)' } }, 'WAR HONORS EARNED'),
+      el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' } }, earnedThisRun.map((h) =>
+        el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', background: 'rgba(255,224,138,0.12)', border: '1px solid var(--gold)', borderRadius: '999px', padding: '3px 10px' } },
+          [el('span', { html: ic(h.icon || 'trophy') }), el('span', {}, h.name)]))),
+    ]) : null,
     rankBlock,
     run.mode !== 'ladder' && run.augments.length ? el('div', {}, [el('div', { style: { color: 'var(--ink-dim)', fontSize: '12px', marginBottom: '4px' } }, 'Augments gathered'), el('.relic-bar', { style: { justifyContent: 'center' } }, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: AUGMENTS[id].name, html: augIcon(AUGMENTS[id]) })))]) : null,
     run.mode !== 'ladder' ? el('.seed-share', { style: { fontSize: '12px', color: 'var(--ink-dim)' } }, [
@@ -1300,8 +1310,11 @@ function endScreen(ladderSummary) {
       extraBtn,
       run.mode === 'solo' ? el('button.btn', { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => showRealms() }, 'Realms') : null,
       el('button.btn', { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => showArmory() }, [iconEl('coffer'), el('span', { style: { marginLeft: '6px' } }, 'Armory')]),
-      el('button.btn', { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => chooseMode() }, 'Menu'),
+      el('button.btn', { style: { fontSize: '15px', padding: '12px 22px' }, onclick: () => chooseMode() }, '✓ Stop here'),
     ]),
+    // P1.2 — healthy closure: an explicit, guilt-free "you can stop now" beat (the ethical inverse
+    // of an open compulsion loop). Progress is already saved; leaving is framed as a clean win.
+    run.mode !== 'ladder' ? el('p', { style: { fontSize: '11px', color: 'var(--ink-faint)', margin: '2px 0 0' } }, 'Well fought. Your Spoils, gear and conquered realms are saved — stop here any time.') : null,
   ]);
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', textAlign: 'center', gap: '14px' } }, [card]));
 }
