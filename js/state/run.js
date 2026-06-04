@@ -77,17 +77,35 @@ function pickCostTier(level) {
   for (let c = 1; c <= 5; c++) { acc += odds[c - 1]; if (roll < acc) return c; }
   return 1;
 }
+// P1.1 — "behind" check for the underdog supply. Solo/Trials/Endless run on lives; ≤2 = danger.
+export function isUnderdog(run) { return run.mode !== 'ladder' && (run.lives || 0) <= 2; }
+// origins+classes currently on your board — what the underdog supply favours (helps you complete
+// the synergies you're already building, rather than handing you a random pivot).
+function boardTraitSet(run) {
+  const s = new Set();
+  for (const u of run.board) { const d = UNITS_BY_ID[u.defId]; if (d) { s.add(d.origin); s.add(d.klass); } }
+  return s;
+}
 function pickUnitOfCost(cost, run) {
   // weight by remaining pool copies so depleted units appear less.
   const ids = unitsByCost[cost].filter((id) => (run.pool[id] || 0) > 0);
   if (!ids.length) return null;
-  let total = 0; for (const id of ids) total += run.pool[id];
+  // Underdog supply (transparent rubber-band): when you're behind, favour units that match a
+  // trait already on your board — DESIGN §7.3 "rubber-band the rewards, not the combat".
+  const fav = isUnderdog(run) ? boardTraitSet(run) : null;
+  const w = {}; let total = 0;
+  for (const id of ids) {
+    let weight = run.pool[id];
+    if (fav) { const d = UNITS_BY_ID[id]; if (d && (fav.has(d.origin) || fav.has(d.klass))) weight *= 2.2; }
+    w[id] = weight; total += weight;
+  }
   let roll = _rng.next() * total;
-  for (const id of ids) { roll -= run.pool[id]; if (roll < 0) return id; }
+  for (const id of ids) { roll -= w[id]; if (roll < 0) return id; }
   return ids[ids.length - 1];
 }
 export function rollShop(run) {
   if (run.shopLocked) return;
+  run.underdogSupply = isUnderdog(run);   // surfaced in the shop UI (transparent, never hidden)
   for (let i = 0; i < SHOP_SIZE; i++) {
     const cost = pickCostTier(run.level);
     run.shop[i] = pickUnitOfCost(cost, run);

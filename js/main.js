@@ -181,7 +181,11 @@ function buildShopEl() {
     el(`button.btn${run.shopLocked ? ' primary' : ''}`, { title: 'Freeze the shop so it keeps these champions next round', onclick: doLock, html: ic(run.shopLocked ? 'lock' : 'unlock') }),
     el('button.econ-info', { style: { marginLeft: 'auto' }, onclick: showEconomyInfo }, [el('span', {}, `+${inc.total}⛁/turn`), el('span', { style: { opacity: .7 } }, 'ⓘ')]),
   ]);
-  return el(`.shop${run.shopLocked ? ' locked' : ''}`, {}, [controls, row]);
+  // P1.1 — transparent underdog supply: when behind, the shop is biased toward your synergies.
+  // Always SHOWN, never hidden (the honest White-Hat form of rubber-banding — help, don't deceive).
+  const underdog = run.underdogSupply ? el('.underdog-note', { style: { fontSize: '11px', color: 'var(--hp)', textAlign: 'center', margin: '0 0 4px', fontWeight: '700' } },
+    '⚑ Underdog supply — while you\'re behind, the shop favours the synergies you\'re building') : null;
+  return el(`.shop${run.shopLocked ? ' locked' : ''}`, {}, [controls, underdog, row]);
 }
 
 // ladder info bar: this match's lobby-wide modifier + your chosen warlord power (tappable)
