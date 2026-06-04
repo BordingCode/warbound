@@ -120,19 +120,19 @@ const A = {
   knight_captain: { name: 'Rallying Bash', type: 'physical', target: 'current', adRatio: 2.0, stun: 1.0,
     verbs: [v.phys({ adRatio: 2.0 }), v.stun(1.0), v.shieldSelf(30)],
     passive: { on: 'cast', verbs: [v.buffAS(0.09, 2, 'adjacentAllies')] },
-    ult: { verbs: [v.buffAS(0.25, 3, 'adjacentAllies')] } },
+    ult: { verbs: [v.buffAS(0.30, 4, 'allies')] } },
   // PASSIVE — Conduit: gains AP for each allied caster (mage/healer/summoner) on the board.
   court_mage: { name: 'Arcane Nuke', type: 'magic', target: 'cluster', radius: 1, ap: 220,
     verbs: [v.cluster({ radius: 1 })], passive: { on: 'spawn', verbs: [v.casterScale(16)] },
-    ult: { verbs: [v.manaBurn(30)] } },
+    ult: { verbs: [v.manaBurn(30), { op: 'magic', target: 'cluster', radius: 2, ap: 160 }] } },
   // Suppressing Volley: fires at the FRONT cluster (nearest 4) and softens it with a slow.
   crossbowman: { name: 'Suppressing Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.2,
     verbs: [{ op: 'phys', target: 'nearestN', count: 4, mult: 0.7, adRatio: 2.2 }, { op: 'slow', pct: 0.15, dur: 1.5, target: 'nearestN', count: 4 }],
-    ult: { verbs: [v.slow(0.25, 2, 'mostEnemies')] } },
+    ult: { verbs: [v.slow(0.25, 2, 'mostEnemies'), v.volley({ adRatio: 2.2, offset: 4 })] } },
   // PASSIVE — Triage: when an ally falls, instantly burst-heals the two most wounded allies.
   field_medic: { name: 'Mend', type: 'heal', target: 'lowestAllyHP', ap: 200,
     verbs: [v.heal({ ap: 200 })], passive: { on: 'allyDeath', verbs: [{ op: 'heal', target: 'lowestNAllies', n: 2, ap: 160 }] },
-    ult: { verbs: [v.cleanse('lowestAllyHP', 1.5)] } },
+    ult: { verbs: [v.cleanse('lowestAllyHP', 1.5), { op: 'heal', target: 'lowestNAllies', n: 3, ap: 200 }] } },
 
   // Undead
   // PURE PASSIVE — Bonewall: no cast; hardens every 3rd hit taken (shield) + reflects (thorns);
@@ -147,7 +147,7 @@ const A = {
   skeleton_archer: { name: 'Bone Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.0,
     verbs: [v.volley({ adRatio: 2.0, onKill: [{ op: 'raise', max: 2 }] })],
     passive: { on: 'hit', every: 4, verbs: [v.magic({ ap: 140 })] },
-    ult: { verbs: [{ op: 'enableOnKill' }] } },
+    ult: { verbs: [{ op: 'enableOnKill' }, v.volley({ adRatio: 2.0, offset: 4 })] } },
   // PASSIVE — Spectral Drain: always leeches on autos; phases out (shield) once when low.
   wraith: { name: 'Soul Reap', type: 'physical', target: 'lowestEnemyHP', adRatio: 3.6,
     verbs: [v.exec({ adRatio: 3.6, drain: 0.40 })],
@@ -163,7 +163,7 @@ const A = {
   death_knight: { name: 'Unholy Smite', type: 'physical', target: 'current', adRatio: 2.7, ap: 240,
     verbs: [v.phys({ adRatio: 2.7 }), v.magic({ ap: 240 }), v.lifesteal(0.22, 4, 'self')],
     passive: { on: 'spawn', verbs: [v.thorns(0.10, 999, 'self')] },
-    ult: { verbs: [v.healCut(0.40, 3, 'current'), v.buffAS(0.3, 3, 'self')] } },
+    ult: { verbs: [v.healCut(0.40, 3, 'current'), v.buffAS(0.3, 4, 'self'), v.lifesteal(0.30, 4, 'self')] } },
 
   // Elf
   moon_priestess: { name: 'Lunar Bolt', type: 'magic', target: 'current', ap: 560,
@@ -190,7 +190,7 @@ const A = {
   // Caster-hunter: its volley targets the enemy's highest-mana units to deny their spells.
   fel_archer: { name: 'Searing Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.3,
     verbs: [{ op: 'phys', target: 'mostMana', count: 4, mult: 0.7, adRatio: 2.3 }],
-    ult: { verbs: [v.manaBurn(12, 'mostMana')] } },
+    ult: { verbs: [v.manaBurn(30, 'mostMana'), v.slow(0.25, 2, 'mostMana')] } },
   // PASSIVE — Cinder Chain: refunds mana on a kill to chain into the next victim.
   imp_assassin: { name: 'Backstab', type: 'physical', target: 'lowestEnemyHP', adRatio: 2.6,
     verbs: [v.exec({ adRatio: 2.6 })], passive: { on: 'kill', verbs: [v.gainManaSelf(40)] },
@@ -256,7 +256,7 @@ const A = {
   // Orc-KNIGHT: a brutish grunt — a bashing wall that shrugs blows back.
   orc_grunt: { name: 'Brutal Bash', type: 'physical', target: 'current', adRatio: 2.0, stun: 0.9,
     verbs: [v.phys({ adRatio: 2.0 }), v.stun(0.9), v.shieldSelf(60)],
-    ult: { verbs: [v.knockback(1), v.thorns(0.15, 4, 'self')] } },
+    ult: { verbs: [v.knockback(1), v.thorns(0.30, 6, 'self'), v.taunt(1, 1.5)] } },
   // Orc-MAGE: a spirit-shaman that calls forked lightning down on the cluster.
   orc_shaman: { name: 'Spirit Lightning', type: 'magic', target: 'cluster', radius: 1, ap: 300,
     verbs: [v.cluster({ radius: 1 }), v.slow(0.18, 1.5, 'cluster')],
@@ -329,23 +329,23 @@ export const UNITS = [
 // force-multiplier the engine adds when star===3 (verbs.concat(ult.verbs); 3★-gated passives;
 // wood_ranger's focus shred). Kept in sync with the `ult` data above and ABILITIES_SPEC.md.
 export const ULT3 = {
-  knight_captain: 'Adjacent allies gain +25% Attack Speed for 3s.',
-  court_mage: 'The nuke also burns 30 mana from the target.',
-  crossbowman: 'All targets hit are slowed 25% for 2s.',
-  field_medic: 'Also cleanses the ally and grants 1.5s crowd-control immunity.',
+  knight_captain: 'Rallies the WHOLE warband — +30% Attack Speed for 4s.',
+  court_mage: 'Burns 30 mana AND detonates a second, wider arcane blast (160).',
+  crossbowman: 'All targets hit are slowed 25%, and it looses a second volley into the back line.',
+  field_medic: 'Cleanses + 1.5s CC immunity, and surges a 200 heal across the 3 most-wounded allies.',
   bone_guard: 'Also leeches 18% of its attack damage as health.',
   lich: 'Also shreds 30 Magic Resist from everything hit for 4s.',
-  skeleton_archer: 'Kills raise a Risen skeleton (up to 2 per fight).',
+  skeleton_archer: 'Kills raise a Risen, and it looses a SECOND volley at the back line.',
   wraith: 'On a kill, resets its attack and gains +40% Attack Speed for 3s.',
   necromancer: 'Also raises a greater wight with double stats.',
-  death_knight: 'The smite cuts healing 40% and grants the Death Knight +30% Attack Speed for 3s.',
+  death_knight: 'Cuts healing 40%, and the Death Knight gains +30% Attack Speed AND 30% lifesteal for 4s — nearly unkillable.',
   moon_priestess: 'The bolt chains to 2 more foes (×0.6 each).',
   wood_ranger: 'Its locked-on focus also shreds the target’s Armor by 25.',
   shadow_dancer: 'After striking, gains +40% dodge and +40% Attack Speed for 3s.',
   grove_healer: 'Heal splashes 50% to adjacent allies and adds 12 HP/s regen for 3s.',
   hellguard: 'Also burns 25 mana and cuts healing 40% on all hit for 3s.',
   warlock: 'Adds a 60/s burning DoT for 3s and burns 30 mana.',
-  fel_archer: 'Each hit also burns 12 mana (team-wide cast denial).',
+  fel_archer: 'Each volley burns 30 mana and slows the enemy casters 25% — total cast lockdown.',
   imp_assassin: 'On a kill, burns 40 mana and slows the 2 nearest foes 30%.',
   pit_summoner: 'Also calls 3 meteors (120 magic each) on random foes.',
   oathbreaker: 'The smite cuts the target’s healing 35% and adds a 45/s burn for 3s.',
@@ -360,7 +360,7 @@ export const ULT3 = {
   wyrmguard: 'The aegis also pours 12 HP/s regen for 4s and the smite knocks the cluster back.',
   banner_sergeant: 'Also conscripts a heavy footman with double stats.',
   berserker: 'On a kill, gains +35% Attack Speed and 25% lifesteal for 3s.',
-  orc_grunt: 'The bash also knocks the foe back and wreathes the grunt in thorns.',
+  orc_grunt: 'Knocks the foe back, wreathes itself in heavy thorns, and taunts adjacent foes.',
   orc_shaman: 'The lightning forks to 2 more foes (×0.6 each).',
   axethrower: 'Looses a second axe-spread and slows all targets hit 20%.',
   warboss: 'Taunts all foes within 2 cells for 2.5s and gains a 420 shield.',
