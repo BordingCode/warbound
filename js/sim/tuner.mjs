@@ -28,7 +28,6 @@ const COMPS = {
   Ranger:   ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'axethrower', 'field_medic'],
   Summoner: ['necromancer', 'pit_summoner', 'beastmaster', 'banner_sergeant', 'bone_guard', 'field_medic'],
   Dragon:   ['dragon_knight', 'dragon_sage', 'knight_captain', 'bone_guard', 'moon_priestess', 'grove_healer'],
-  Paladin:  ['oathbreaker', 'death_knight', 'wyrmguard', 'bone_guard', 'court_mage', 'field_medic'],
   Orc:      ['warboss', 'orc_grunt', 'berserker', 'axethrower', 'orc_shaman', 'field_medic'],
 };
 // Realistic stars: cheap units reach 3★, elites stay 1★ — how real boards actually look. Tuning
@@ -86,7 +85,7 @@ const knobs = [];
 const K = (name, min, max, apply) => knobs.push({ name, value: 1, min, max, step: 0.06, apply });
 
 // class power (hp+ad) — dragons excluded (their own knob)
-for (const klass of ['knight', 'mage', 'ranger', 'assassin', 'healer', 'summoner', 'paladin'])
+for (const klass of ['knight', 'mage', 'ranger', 'assassin', 'healer', 'summoner'])
   K('cls:' + klass, 0.78, 1.3, (v) => { for (const u of UNITS) if (u.klass === klass && !isDragon(u.defId)) { u.hp = Math.round(baseU[u.defId].hp * v); u.ad = Math.round(baseU[u.defId].ad * v); } });
 // dragon power (hp+ad+ability) — the elite outlier, its own lever
 K('dragon', 0.6, 1.1, (v) => { for (const u of UNITS) if (isDragon(u.defId)) { u.hp = Math.round(baseU[u.defId].hp * v); u.ad = Math.round(baseU[u.defId].ad * v); if (u.ability.ap != null) u.ability.ap = Math.round(baseU[u.defId].ability.ap * v); if (u.ability.adRatio != null) u.ability.adRatio = r3(baseU[u.defId].ability.adRatio * v); } });
@@ -100,7 +99,7 @@ abilityKnob('summon', (a) => a.type === 'summon', ['summonHp', 'summonAd']);
 abilityKnob('heal', (a) => a.type === 'heal' || a.type === 'shield', ['ap']);
 // trait power
 const traitKnob = (t, keys) => K('tr:' + t, 0.6, 1.5, (v) => { for (const bp in TRAITS[t].bonuses) for (const key of keys) if (baseT[t][bp][key] != null) TRAITS[t].bonuses[bp][key] = scaleVal(baseT[t][bp][key], v); });
-traitKnob('knight', ['block']);
+traitKnob('knight', ['block', 'dmgRed']);
 traitKnob('undead', ['revivePct']);
 traitKnob('elf', ['dodge', 'shield']);
 traitKnob('demon', ['burn', 'manaBurn']);
@@ -112,7 +111,6 @@ traitKnob('assassin', ['critChance', 'critDmg']);
 traitKnob('ranger', ['rangerAS']);
 traitKnob('summoner', ['summonPower']);
 traitKnob('healer', ['healAmp', 'regen']);
-traitKnob('paladin', ['dmgRed']);
 
 function applyAll() { resetBase(); for (const k of knobs) k.apply(k.value); }
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
