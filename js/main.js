@@ -616,6 +616,15 @@ function showUnitInfo(def, star = 1, items = [], opts = {}) {
         return [...natural.map((t) => chip(t, false)), ...granted.map((t) => chip(t, true))].filter(Boolean);
       })()),
       el('.sub', {}, `Cost ${def.cost}⛁ · ${def.range === 1 ? 'melee' : 'ranged ' + def.range}`),
+      // P0.3 — teach POSITIONING (the genre's core skill): how this unit fights, so you know where
+      // to place it. Dive units want safety, ranged want screening, melee want the front.
+      (() => {
+        const t = def.dive ? 'Dives to the enemy back line — it kills their carries but folds if focused. Keep it survivable.'
+          : def.range >= 2 ? 'Fights from the back — screen it behind a front line so it can fire safely.'
+          : 'Holds the front — engages the nearest foe. Put it up front to shield your ranged units.';
+        return el('.iposition', { style: { fontSize: '12px', color: 'var(--ink-dim)', margin: '2px 0 6px', display: 'flex', gap: '6px', alignItems: 'baseline' } },
+          [el('span', { style: { color: 'var(--gold)', fontWeight: '700', whiteSpace: 'nowrap' } }, '⌖ Position'), el('span', {}, t)]);
+      })(),
       // per-star scaling — the upgrade benefit, with the current star highlighted
       el('.star-scaling', {}, [
         el('.ss-row.ss-head', {}, [el('span.ss-l', {}, 'Upgrade'), ...STARS.map((st) => el(`span.ss-v${st === star ? ' cur' : ''}`, {}, '★'.repeat(st)))]),
