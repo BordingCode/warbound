@@ -207,6 +207,27 @@ function modal2(title, body) {
   document.body.append(ov);
 }
 
+// P2.2 — "beat my run": paste a seed a friend shared to march the SAME boards/shop and compare
+// depth. Asynchronous, opt-in, no accounts or pressure — the friendly (naches) social lever.
+function showSeedPrompt() {
+  Sfx.click();
+  const input = el('input.seed-input', { type: 'text', placeholder: 'paste a seed…', style: { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--ink-faint)', background: 'rgba(0,0,0,.3)', color: 'var(--ink)', fontSize: '14px', boxSizing: 'border-box' } });
+  const play = () => { const s = input.value.trim(); if (s) { ov.remove(); startSolo(true, 0, s); } };
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } },
+    el('.help-card', { style: { maxWidth: '320px' } }, [
+      el('h2', { style: { fontSize: '19px' } }, 'Play a shared seed'),
+      el('p', { style: { fontSize: '13px', color: 'var(--ink-dim)', lineHeight: '1.4' } }, 'Paste a seed a friend shared to march the SAME run and see how far you each get — a friendly challenge, no accounts, no pressure.'),
+      input,
+      el('.end-btns', { style: { display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '10px' } }, [
+        el('button.btn.primary', { onclick: play }, 'Play this seed ▶'),
+        el('button.btn', { onclick: () => ov.remove() }, 'Cancel'),
+      ]),
+    ]));
+  document.body.append(ov);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') play(); });
+  setTimeout(() => input.focus(), 50);
+}
+
 // a warlord's heraldic crest (works for the human proxy or a bot)
 function crestOf(p, size = 20) { return crest(p.color || (p.style && p.style.color) || '#888', p.sigil || (p.style && p.style.sigil) || '?', size); }
 // an augment's icon by category (no emoji): combat=sword, econ=coffer, synergy=gem, build=star.
@@ -1811,6 +1832,10 @@ function chooseMode() {
       el('span', { style: { color: 'var(--ink-dim)' } }, 'Character art:'),
       el('span', { style: { fontWeight: 800, color: 'var(--gold)' } }, getArtSet() === 'detailed' ? 'Detailed' : 'Classic'),
       el('span', { style: { color: 'var(--ink-faint)' } }, '· tap to switch'),
+    ]),
+    el('.art-toggle', { onclick: () => showSeedPrompt(), style: { cursor: 'pointer' } }, [
+      el('span', { style: { color: 'var(--ink-dim)' } }, '⚑ Play a shared seed'),
+      el('span', { style: { color: 'var(--ink-faint)' } }, '· beat a friend\'s run'),
     ]),
     // Install-as-app: hidden once the game is already running as an installed app.
     isStandalone() ? null : el('.install-pill', { onclick: () => { Sfx.click(); promptInstall(); } }, [el('span', { html: ic('spoils') }), el('span', {}, 'Install app on this device')]),
