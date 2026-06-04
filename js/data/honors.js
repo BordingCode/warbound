@@ -22,7 +22,7 @@ export const HONORS = [
   // — Conquest (Warpath) —
   { id: 'first_realm',     cat: 'conquest', icon: 'banner', bounty: 15, name: 'First Conquest',       desc: 'Conquer your first realm.' },
   { id: 'three_realms',    cat: 'conquest', icon: 'sword',  bounty: 25, name: 'Warlord',              desc: 'Conquer three realms.' },
-  { id: 'all_realms',      cat: 'conquest', icon: 'crown',  bounty: 50, name: 'Conqueror of the Six', desc: 'Conquer all six realms.' },
+  { id: 'all_realms',      cat: 'conquest', icon: 'crown',  bounty: 50, name: 'Conqueror of the Realms', desc: 'Conquer all seven realms.' },
   { id: 'astral',          cat: 'conquest', icon: 'gem',    bounty: 75, name: 'Ascendant',            desc: 'Conquer the hidden Astral Throne.', secret: true },
   { id: 'flawless',        cat: 'conquest', icon: 'shield', bounty: 30, name: 'Untouched',            desc: 'Conquer a realm without losing a single life.' },
   // — The Trials —

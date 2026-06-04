@@ -1044,11 +1044,13 @@ const REALM_EMBLEMS = [
   '<path d="M12 2C7.6 2 4 5.4 4 9.6c0 2.5 1.2 4.2 3 5.4V19h2.2v-2.2h1.6V19h2.4v-2.2h1.6V19H18v-4c1.8-1.2 3-2.9 3-5.4C21 5.4 17.4 2 12 2z"/><circle cx="8.8" cy="10.4" r="1.9" fill="#0c0f17"/><circle cx="15.2" cy="10.4" r="1.9" fill="#0c0f17"/>',
   // 3 The Inferno — flame (demon legions)
   '<path d="M13 2c.6 3-2 4.6-2 7 0 1.3 1 2 2 1.2 1-.8 1.1-2.2 1.3-3.4C16.2 9 17.5 11 17.5 14a5.5 5.5 0 11-11 0c0-2.7 1.6-4.7 3-6.6C10.8 9 12 10.2 12.5 11.4 13.4 9 12 5 13 2z"/>',
-  // 4 The Dragonspire — dragon head profile (dragonsworn)
+  // 4 The Warhorde — crossed orc axes (the bloodlust horde)
+  '<path d="M3.5 4.2l3.7 1.1 9.3 12.8-2.9 2.1-9.3-12.8zM20.5 4.2l-3.7 1.1-4 5.5 2.9 2.1 4-5.5zM10.3 14.2l-3.6 5-2.9-2.1 3.6-5z"/><circle cx="12" cy="20.4" r="1.9"/>',
+  // 5 The Dragonspire — dragon head profile (dragonsworn)
   '<path d="M2 11l3-1 1-2c1-1 3-1.5 5-1.3-.6.5-1 1.1-1.1 1.8 1.6-.3 3.2.2 4.6 1.3 1.4 1.1 2.3 2.7 2.5 4.6-1.2-1.3-2.5-2-3.9-2.1l1.3 3.4-3.2-2.6c-1.9.6-3.8.2-5.7-1.2.9 0 1.6-.3 2.1-.9-1.3.1-2.4-.3-3.5-1.3z"/><circle cx="9.4" cy="9.8" r=".9" fill="#0c0f17"/>',
-  // 5 The Voidreach — void swirl / portal (every horror)
+  // 6 The Voidreach — void swirl / portal (every horror)
   '<path d="M12 3a9 9 0 109 9 5.5 5.5 0 11-5.5-5.5A9 9 0 0012 3zm0 4.5A4.5 4.5 0 117.5 12 2.7 2.7 0 1012 9.3 4.4 4.4 0 0012 7.5z"/>',
-  // 6 The Astral Throne — radiant crown + sunburst (the secret apotheosis)
+  // 7 The Astral Throne — radiant crown + sunburst (the secret apotheosis)
   '<path d="M12 1.5l1.6 3.2 3.2-1-1 3.2 3.2 1.6-3.2 1.6 1 3.2-3.2-1L12 18.5l-1.6-3.2-3.2 1 1-3.2L5 11.5l3.2-1.6-1-3.2 3.2 1z" opacity=".6"/><path d="M5 14l1.8-5 3 3 2.2-4 2.2 4 3-3 1.8 5z"/><rect x="5" y="14" width="14" height="2.6" rx="1"/>',
 ];
 function realmEmblemSVG(i, size = 30) {
@@ -1169,7 +1171,7 @@ function endScreen(ladderSummary) {
     else if (won) {
       const c = Meta.realmsCleared();
       if (c >= 1) claimHonor('first_realm'); if (c >= 3) claimHonor('three_realms');
-      if (c >= 6) claimHonor('all_realms'); if (c >= 7) claimHonor('astral');
+      if (c >= 7) claimHonor('all_realms'); if (c >= 8) claimHonor('astral');
       if (run.losses === 0) claimHonor('flawless');
     }
     stats = isTrials ? [stat('Bosses slain', `${run.wins}/${TRIAL_COUNT}`), stat('Rounds', run.round - 1)]
@@ -1264,8 +1266,8 @@ function syncRetroHonors() {
   const cleared = Meta.realmsCleared();
   if (cleared >= 1) Meta.markHonor('first_realm');
   if (cleared >= 3) Meta.markHonor('three_realms');
-  if (cleared >= 6) Meta.markHonor('all_realms');
-  if (cleared >= 7) Meta.markHonor('astral');     // the hidden 7th realm (Astral Throne)
+  if (cleared >= 7) Meta.markHonor('all_realms');
+  if (cleared >= 8) Meta.markHonor('astral');     // the hidden final realm (Astral Throne)
   const tier = Rank.currentRank().tier;            // 0 Bronze … 2 Gold … 4 Diamond … 5 Master
   if (tier >= 2) Meta.markHonor('reach_gold');
   if (tier >= 4) Meta.markHonor('reach_diamond');

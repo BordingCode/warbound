@@ -60,18 +60,12 @@ const ART2 = {
   dawnblade:       { accent: '#fff0c0', cape: '#2f7d6b', weapon: 'sword',     build: 'normal', head: 'helm',  plume: '#fff0c0', shield: true, sig: ['sash'] },
   death_knight:    { accent: '#9effc0', cape: '#16261c', weapon: 'greatsword', build: 'broad', head: 'helm',  sig: ['ribcage'] },
   wyrmguard:       { accent: '#ffd24a', cape: null,      weapon: 'greatsword', build: 'broad', head: 'helm', wings: true, plume: '#ffd24a', shield: true, sig: ['scales'] },
-  // Dwarves — stocky 'broad' build + a braided beard; bronze/stone palette (PALETTES.dwarf).
-  ironbeard:       { accent: '#e0a35c', cape: null,      weapon: 'mace',      build: 'broad', head: 'helm',  shield: true, sig: ['beard'] },
-  sharpshooter:    { accent: '#e0a35c', cape: null,      weapon: 'crossbow',  build: 'broad', head: 'cap',    sig: ['beard', 'quiver'] },
-  runeseer:        { accent: '#ffcf7a', cape: null,      weapon: 'orbstaff',  build: 'broad', head: 'hood',   sig: ['beard'] },
-  oathkeeper:      { accent: '#ffe7a0', cape: null,      weapon: 'mace',      build: 'broad', head: 'helm',  plume: '#ffe7a0', shield: true, sig: ['beard'] },
-  mountain_king:   { accent: '#ffd24a', cape: '#5a3a1a', weapon: 'axe',       build: 'broad', head: 'helm',  plume: '#ffd24a', shield: true, sig: ['beard', 'crown'] },
-  // Giants — the 'huge' build scales the whole figure up; cold stone-blue palette (PALETTES.giant).
-  hill_brute:      { accent: '#bfe6f2', cape: null,      weapon: 'club',      build: 'huge',  head: 'helm',  shield: true },
-  boulderthrower:  { accent: '#bfe6f2', cape: null,      weapon: 'club',      build: 'huge',  head: 'bare' },
-  stormjarl:       { accent: '#cfeefb', cape: null,      weapon: 'staff',     build: 'huge',  head: 'hood' },
-  war_drummer:     { accent: '#bfe6f2', cape: null,      weapon: 'mace',      build: 'huge',  head: 'bare' },
-  earthshaker:     { accent: '#cfeefb', cape: '#2a3540', weapon: 'club',      build: 'huge',  head: 'helm',  plume: '#cfeefb', shield: true },
+  // Orc / the Warhorde — green-skinned brutes (PALETTES.orc); jutting fangs + heavy iron read "orc".
+  berserker:       { accent: '#8fd24a', cape: null,      weapon: 'daggers',   build: 'broad', head: 'bare',  sig: ['fangs'] },
+  orc_grunt:       { accent: '#7fc24a', cape: null,      weapon: 'club',      build: 'broad', head: 'helm',  shield: true, sig: ['fangs'] },
+  orc_shaman:      { accent: '#aef06a', cape: '#2a3a1a', weapon: 'skullstaff', build: 'broad', head: 'hood',  sig: ['fangs'] },
+  axethrower:      { accent: '#9bd05a', cape: null,      weapon: 'axe',       build: 'broad', head: 'bare',  sig: ['fangs', 'quiver'] },
+  warboss:         { accent: '#6fae3a', cape: '#3a4a1a', weapon: 'axe',       build: 'huge',  head: 'helm',  plume: '#7fc24a', shield: true, sig: ['fangs'] },
 };
 const DEFAULT_HEAD = { knight: 'helm', mage: 'hat', ranger: 'hood', assassin: 'hood', healer: 'circlet', summoner: 'hood', bard: 'cap', paladin: 'helm' };
 // Plate-armoured classes wear the metal torso/arms (vs the robe everyone else gets).

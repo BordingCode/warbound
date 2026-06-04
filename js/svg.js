@@ -14,12 +14,9 @@ export const PALETTES = {
   demon:  { skin: '#8c3b3b', primary: '#5a1414', secondary: '#2a1414', accent: '#ff5a3c' },
   beast:  { skin: '#caa06a', primary: '#7a4a2a', secondary: '#caa06a', accent: '#ffb15a' },
   dragon: { skin: '#d9c27a', primary: '#6a3fa0', secondary: '#e6c04a', accent: '#ffd24a' },
-  // dwarf = earthy STONE + BRONZE armour (ruddy skin, amber accent) — reads "mountain-forged",
-  // clear of beast's tan-brown via the bronze metal + amber trim.
-  dwarf:  { skin: '#d59a6a', primary: '#5e5048', secondary: '#c8923f', accent: '#e0a35c' },
-  // giant = cold STONE-BLUE colossus (slate body, icy accent) — clear of human's bright blue
-  // (darker/greyer) and undead's neutral grey (bluer). Read mostly comes from the 'huge' scale.
-  giant:  { skin: '#a6b6c2', primary: '#3e4a59', secondary: '#8392a3', accent: '#bfe6f2' },
+  // orc = GREEN-SKINNED warhorde — the green is on the SKIN (vs elf's tan skin + green cloth),
+  // with dark war-hide and iron. Tusks (originAccent) seal the silhouette read.
+  orc:    { skin: '#74a23f', primary: '#3c4a2e', secondary: '#7d7361', accent: '#7fc24a' },
 };
 
 export const ORIGINS = Object.keys(PALETTES);
@@ -66,6 +63,7 @@ function originAccent(p, origin) {
     case 'demon':  return `<path d="M41 31 q-6 -8 -2 -13 q5 5 7 10 Z" fill="#241010"/><path d="M59 31 q6 -8 2 -13 q-5 5 -7 10 Z" fill="#241010"/>`;
     case 'undead': return `<circle cx="45" cy="43" r="3.2" fill="#070707"/><circle cx="55" cy="43" r="3.2" fill="#070707"/><circle cx="45" cy="43" r="1.5" fill="${p.accent}"/><circle cx="55" cy="43" r="1.5" fill="${p.accent}"/>`;
     case 'dragon': return `<path d="M50 49 q-8 3 0 9 q8 -6 0 -9 Z" fill="${p.skin}"/><circle cx="46" cy="51" r="1" fill="#000"/>`;
+    case 'orc':    return `<path d="M45 50 l-1.6 -8 l3.2 0 z" fill="#f2efe0"/><path d="M55 50 l1.6 -8 l-3.2 0 z" fill="#f2efe0"/><path d="M40 36 q5 -3 9 -1 M60 36 q-5 -3 -9 -1" stroke="#0d1320" stroke-width="1.6" fill="none" opacity="0.6"/>`;
     default:       return '';
   }
 }

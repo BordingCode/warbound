@@ -110,6 +110,9 @@ function applyTraits(units, board, traitBonus = {}) {
     if (has('assassin')) { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; } }
     if (has('ranger')) { const r = get('ranger'); if (r) u.rangerAS = r.rangerAS; }
     if (has('beast')) { const b = get('beast'); if (b) { u.ferocity = Math.max(u.ferocity, b.ferocity); if (b.armor) u.armor += b.armor; } }   // beasts ramp AS AND wear thicker hide (survive to ramp)
+    // Orc Bloodlust: ramping attack speed (ferocity) AND lifesteal (vamp) for the whole warband —
+    // reuses the same engine hooks as Beast ferocity + Undead vamp, so it composes cleanly.
+    if (has('orc')) { const o = get('orc'); if (o) { if (o.ferocity) u.ferocity = Math.max(u.ferocity, o.ferocity); if (o.vamp) u.vamp += o.vamp; } }
     if (has('undead')) { const ud = get('undead'); if (ud) { u.revivePct = Math.max(u.revivePct, ud.revivePct); if (ud.vamp) u.vamp += ud.vamp; } }   // undead leech: sustain kicker so the rainbow board has an offensive edge
     if (has('demon')) { const d = get('demon'); if (d) { u.burnOnHit = d.burn; u.manaBurnOnHit = d.manaBurn; } }
     if (has('summoner')) { const s = get('summoner'); if (s) u.summonPower = s.summonPower; }

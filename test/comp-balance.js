@@ -12,13 +12,13 @@ const FRONT = new Set(['knight', 'assassin']);
 
 const COMPS = {
   Knight:   ['knight_captain', 'bone_guard', 'hellguard', 'crossbowman', 'court_mage', 'field_medic'],
-  Mage:     ['court_mage', 'lich', 'warlock', 'runeseer', 'bone_guard', 'field_medic'],
+  Mage:     ['court_mage', 'lich', 'warlock', 'orc_shaman', 'bone_guard', 'field_medic'],
   Assassin: ['wraith', 'shadow_dancer', 'pack_stalker', 'imp_assassin', 'bone_guard', 'field_medic'],
   Undead:   ['bone_guard', 'lich', 'skeleton_archer', 'wraith', 'necromancer', 'death_knight'],
   Demon:    ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'oathbreaker', 'pit_summoner'],
   Beast:    ['bramble_brute', 'beast_hunter', 'pack_stalker', 'druid_healer', 'beastmaster', 'knight_captain'],
-  Elf:      ['moonsinger', 'moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'bone_guard'],
-  Ranger:   ['crossbowman', 'wood_ranger', 'fel_archer', 'sharpshooter', 'knight_captain', 'field_medic'],
+  Elf:      ['knight_captain', 'moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'bone_guard'],
+  Ranger:   ['crossbowman', 'wood_ranger', 'fel_archer', 'axethrower', 'knight_captain', 'field_medic'],
   Summoner: ['necromancer', 'pit_summoner', 'beastmaster', 'banner_sergeant', 'bone_guard', 'field_medic'],
   Dragon:   ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'wyrmguard', 'bone_guard', 'grove_healer'],
 };

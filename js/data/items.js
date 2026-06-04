@@ -45,6 +45,7 @@ export const EMBLEMS = {
   emblem_demon:   { name: 'Demon Emblem',   icon: 'crown', emblem: true, mods: { ap: 18 },           traitGrant: { demon: 1 } },
   emblem_beast:   { name: 'Beast Emblem',   icon: 'crown', emblem: true, mods: { ad: 0.10 },         traitGrant: { beast: 1 } },
   emblem_dragon:  { name: 'Dragon Emblem',  icon: 'crown', emblem: true, mods: { mr: 18, ad: 0.06 }, traitGrant: { dragon: 1 } },
+  emblem_orc:     { name: 'Orc Emblem',     icon: 'crown', emblem: true, mods: { as: 0.08, vamp: 0.06 }, traitGrant: { orc: 1 } },
   // classes
   emblem_knight:  { name: 'Knight Emblem',  icon: 'crown', emblem: true, mods: { armor: 18 },        traitGrant: { knight: 1 } },
   emblem_mage:    { name: 'Mage Emblem',    icon: 'crown', emblem: true, mods: { ap: 22 },           traitGrant: { mage: 1 } },
@@ -52,6 +53,7 @@ export const EMBLEMS = {
   emblem_assassin:{ name: 'Assassin Emblem',icon: 'crown', emblem: true, mods: { critChance: 0.12 }, traitGrant: { assassin: 1 } },
   emblem_healer:  { name: 'Healer Emblem',  icon: 'crown', emblem: true, mods: { regen: 7 },         traitGrant: { healer: 1 } },
   emblem_summoner:{ name: 'Summoner Emblem',icon: 'crown', emblem: true, mods: { hp: 0.10 },         traitGrant: { summoner: 1 } },
+  emblem_paladin: { name: 'Paladin Emblem', icon: 'crown', emblem: true, mods: { armor: 16 },        traitGrant: { paladin: 1 } },
 };
 export const EMBLEM_IDS = Object.keys(EMBLEMS);
 export function isEmblem(id) { return !!EMBLEMS[id]; }

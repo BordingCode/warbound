@@ -1,18 +1,17 @@
-// Champion roster (42 units) across an 8 Origins × 8 Classes matrix that is DELIBERATELY PARTIAL:
+// Champion roster (35 units) across a 7 Origins × 7 Classes matrix that is DELIBERATELY PARTIAL:
 // each origin fields only a thematic subset of classes (no origin has them all), so the race you
 // commit to defines how your board plays. Stats are 1-star base values, cost-scaled, then
 // role-adjusted. Ability is data the combat sim's ability handlers read (sim/rules.js). These are
 // STARTING numbers — the headless autobalancer (sim/autobalance.js) will tune the outliers.
 //
 // ORIGIN → CLASS palette (— = deliberately empty, off-theme for that race):
-//   Human   knight mage ranger  --     healer summoner bard    --        (disciplined, supportive)
-//   Undead  knight mage ranger  assassin --   summoner --      paladin   (the grave: skeletons→death knight)
-//   Elf     --     mage ranger  assassin healer --      bard    --        (fey grace — no armour, no brutes)
-//   Demon   knight mage ranger  assassin --   summoner --      paladin   (relentless aggression + oathbreaker)
-//   Beast   knight --   ranger  assassin healer summoner --    --        (the Wilds — no casters, no holy)
-//   Dragon  knight mage ranger  --     --     --       --      paladin   (elite 5-cost capstones)
-//   Dwarf   knight mage ranger  --     --     --       --      paladin   (sturdy runesmiths + holy)
-//   Giant   knight mage ranger  --     --     --       bard    --        (colossal bruisers + war drums)
+//   Human   knight mage ranger  --     healer summoner --        (disciplined, supportive)
+//   Undead  knight mage ranger  assassin --   summoner paladin   (the grave: skeletons→death knight)
+//   Elf     --     mage ranger  assassin healer --      --        (fey grace — no armour, no brutes)
+//   Demon   knight mage ranger  assassin --   summoner paladin   (relentless aggression + oathbreaker)
+//   Beast   knight --   ranger  assassin healer summoner --       (the Wilds — no casters, no holy)
+//   Dragon  knight mage ranger  --     --     --       paladin   (elite 5-cost capstones)
+//   Orc     knight mage ranger  assassin --   --       --        (the Warhorde — savage Bloodlust)
 
 // Base 1-star stats per cost tier.
 const COST_BASE = {
@@ -34,7 +33,6 @@ const ROLE = {
   assassin: { hpx: 0.90, adx: 1.08, range: 1, manaPer: 10, startMana: 0.20, dive: true },   // trimmed — c3 assassins got strong with the steeper curve
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
   summoner: { hpx: 1.12, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
-  bard:     { hpx: 0.95, adx: 0.66, range: 2, manaPer: 9, startMana: 0.40 },   // support: low damage, casts often to keep the team-buff songs up
   paladin:  { hpx: 1.30, adx: 1.16, range: 1, manaPer: 8, startMana: 0.30 },   // holy frontline: sturdy BRUISER that smites (real damage + bonus magic), not a pure wall
 };
 
@@ -178,10 +176,6 @@ const A = {
   grove_healer: { name: 'Verdant Mend', type: 'heal', target: 'lowestAllyHP', ap: 260,
     verbs: [v.heal({ ap: 260 })],
     ult: { verbs: [v.heal({ ap: 130, target: 'adjacentAllies' }), v.regen(12, 3, 'lowestAllyHP')] } },
-  // Elf-BARD: a lunar hymn — hastes allies and shields the most wounded.
-  moonsinger: { name: 'Lunar Hymn', type: 'shield', target: 'allies', ap: 240,
-    verbs: [v.buffAS(0.18, 3, 'allies'), v.shield({ ap: 240 })],
-    ult: { verbs: [{ op: 'shield', target: 'lowestNAllies', n: 3, ap: 170 }] } },
 
   // Demon
   // PASSIVE — Soul Tithe: each auto pays 2% own max HP to sear the target (can never self-kill).
@@ -228,8 +222,6 @@ const A = {
     ult: { verbs: [v.summon({ kind: 'wolf', count: 2, hp: 770, ad: 122, as: 0.92, armor: 10, rage: 0.05, lifestealAura: 0.15 })] } },
 
   // Dragon (elite, expensive)
-  // 3★ was a duplicate of Lich's Frost Nova (cluster magic + slow + MR-shred). Re-flavoured to a
-  // frontline-dragon identity: the roar SHOVES the enemy line back and sears wounds shut (healCut).
   // PASSIVE — Dragonscale: soaks 15% of adjacent allies' incoming damage (the elite protector).
   dragon_knight: { name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap: 250,
     verbs: [v.cluster({ radius: 2 })], passive: { on: 'spawn', verbs: [v.guard(0.15)] },
@@ -252,66 +244,37 @@ const A = {
     verbs: [v.summon({ kind: 'soldier', count: 2, hp: 1080, ad: 104, armor: 28, shieldStart: 240 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
     ult: { verbs: [v.summon({ kind: 'soldier', count: 1, hp: 1080, ad: 104, armor: 28, shieldStart: 240, statMult: 2 })] } },
 
-  // ── Bard (team-OFFENCE aura). Each bard's CAST layers a timed team buff on top of the always-on
-  // Bard trait aura. Lives on Human (lutes), Elf (hymns — see moonsinger above) and Giant (drums). ──
-  // Human-BARD: cheap glue song — a marching cadence that hastes the whole warband.
-  lutanist: { name: 'Marching Tune', type: 'heal', target: 'allies', ap: 0,
-    verbs: [v.buffAS(0.16, 3, 'allies')],
-    ult: { verbs: [v.regen(9, 3, 'allies')] } },
-
-  // ── Dwarf (origin — heavy armour + crowd-control resistance) ──
-  // Dwarf-KNIGHT: an immovable shield wall that locks down a foe.
-  ironbeard: { name: 'Shield Wall', type: 'physical', target: 'current', adRatio: 1.9, stun: 0.7,
-    verbs: [v.phys({ adRatio: 1.9 }), v.shieldSelf(70), v.stun(0.7)],
-    ult: { verbs: [v.taunt(1, 2)] } },
-  // Dwarf-RANGER: a blunderbuss that scatters the front line back.
-  sharpshooter: { name: 'Blunderbuss', type: 'physical', target: 'mostEnemies', adRatio: 2.2,
-    verbs: [v.volley({ adRatio: 2.2 }), v.knockback(1, 'cluster')],
-    ult: { verbs: [v.slow(0.25, 2, 'mostEnemies')] } },
-  // Dwarf-MAGE: rune-blast that cracks magic resist.
-  runeseer: { name: 'Rune Blast', type: 'magic', target: 'cluster', radius: 1, ap: 300,
-    verbs: [v.cluster({ radius: 1 }), v.shred('mr', 25, 3, 'cluster')],
-    ult: { verbs: [v.stun(1.0, 'cluster')] } },
-  // Dwarf-PALADIN: the Unbreakable — a holy bruiser that will not be moved or felled.
-  oathkeeper: { name: 'Unbreakable', type: 'physical', target: 'current', adRatio: 2.2, ap: 200,
-    verbs: [v.phys({ adRatio: 2.2 }), v.magic({ ap: 200 }), v.shieldSelf(220)],
-    ult: { verbs: [{ op: 'shield', target: 'adjacentAllies', ap: 160 }, v.cleanse('self', 1.5)] } },
-  // Dwarf-KNIGHT (elite capstone): the Mountain King — an avalanche that buries the enemy cluster.
-  mountain_king: { name: 'Avalanche', type: 'physical', target: 'cluster', radius: 1, adRatio: 2.4,
-    verbs: [v.cleave({ adRatio: 2.4 }), v.knockback(1, 'cluster'), v.stun(0.8, 'cluster')],
-    ult: { verbs: [v.taunt(2, 2.5), v.shieldSelf(400)] } },
-
-  // ── Giant (origin — colossal HP smashed into damage + a stagger on every blow) ──
-  // Giant-KNIGHT: a wallop that hurls a foe back.
-  hill_brute: { name: 'Wallop', type: 'physical', target: 'current', adRatio: 2.0,
-    verbs: [v.phys({ adRatio: 2.0 }), v.knockback(1)],
-    ult: { verbs: [v.stun(1.0)] } },
-  // Giant-RANGER: hurls a single huge boulder at one target (a smash, not a finesse AoE).
-  boulderthrower: { name: 'Boulder Toss', type: 'physical', target: 'current', adRatio: 2.6,
-    verbs: [v.phys({ adRatio: 2.6 })],
-    ult: { verbs: [v.knockback(1)] } },
-  // Giant-MAGE: a storm-jarl's thunderclap that slows the cluster.
-  stormjarl: { name: 'Thunderclap', type: 'magic', target: 'cluster', radius: 1, ap: 260,
+  // ── Orc (NEW origin — the Warhorde: savage warriors who feed on slaughter (Bloodlust trait =
+  // ramping attack speed + lifesteal for the whole warband). No healers, no holy, no summons. ──
+  // Orc-ASSASSIN: a frenzied berserker that snowballs its OWN attack speed the longer it fights.
+  berserker: { name: 'Headsplitter', type: 'physical', target: 'lowestEnemyHP', adRatio: 3.2,
+    verbs: [v.exec({ adRatio: 3.2 })], passive: { on: 'spawn', verbs: [v.rageSelf(0.05, 0.7)] },
+    ult: { verbs: [{ op: 'enableOnKill' }], onKill: [v.buffAS(0.35, 3, 'self'), v.lifesteal(0.25, 3, 'self')] } },
+  // Orc-KNIGHT: a brutish grunt — a bashing wall that shrugs blows back.
+  orc_grunt: { name: 'Brutal Bash', type: 'physical', target: 'current', adRatio: 2.0, stun: 0.9,
+    verbs: [v.phys({ adRatio: 2.0 }), v.stun(0.9), v.shieldSelf(60)],
+    ult: { verbs: [v.knockback(1), v.thorns(0.15, 4, 'self')] } },
+  // Orc-MAGE: a spirit-shaman that calls forked lightning down on the cluster.
+  orc_shaman: { name: 'Spirit Lightning', type: 'magic', target: 'cluster', radius: 1, ap: 300,
     verbs: [v.cluster({ radius: 1 }), v.slow(0.18, 1.5, 'cluster')],
-    ult: { verbs: [v.shred('mr', 25, 4, 'cluster')] } },
-  // Giant-BARD: booming war drums — hasten the warband (the offence-aura bard, giant-sized).
-  war_drummer: { name: 'War Drums', type: 'heal', target: 'allies', ap: 0,
-    verbs: [v.buffAS(0.16, 3, 'allies')],
-    ult: { verbs: [v.regen(10, 3, 'allies')] } },
-  // Giant-KNIGHT (elite capstone): the Earthshaker — a quake that buries the cluster (stun at 3★).
-  earthshaker: { name: 'Earthquake', type: 'physical', target: 'cluster', radius: 1, adRatio: 2.5,
-    verbs: [v.cleave({ adRatio: 2.5 }), v.knockback(1)],
-    ult: { verbs: [v.stun(0.9, 'cluster'), v.shieldSelf(380)] } },
+    ult: { verbs: [v.chain({ count: 2, falloff: 0.6 })] } },
+  // Orc-RANGER: hurls a spread of cleaving axes across the front line.
+  axethrower: { name: 'Cleaving Axes', type: 'physical', target: 'mostEnemies', adRatio: 2.6,
+    verbs: [v.volley({ adRatio: 2.6 })],
+    ult: { verbs: [v.volley({ adRatio: 2.6, offset: 4 }), v.slow(0.20, 2, 'mostEnemies')] } },
+  // Orc-KNIGHT (capstone): the Warboss — a brutal cleave that buries and roots the enemy cluster.
+  warboss: { name: "Warlord's Cleave", type: 'physical', target: 'cluster', radius: 1, adRatio: 2.5,
+    verbs: [v.cleave({ adRatio: 2.5 }), v.knockback(1, 'cluster'), v.stun(0.8, 'cluster')],
+    ult: { verbs: [v.taunt(2, 2.5), v.shieldSelf(420)] } },
 };
 
 export const UNITS = [
-  // ---- Human (knight · mage · ranger · healer · summoner · bard) ----
+  // ---- Human (knight · mage · ranger · healer · summoner) ----
   mk('knight_captain', 'Knight-Captain', 'human', 'knight', 1, A.knight_captain),
   mk('court_mage',     'Court Mage',     'human', 'mage',   2, A.court_mage),
   mk('crossbowman',    'Crossbowman',    'human', 'ranger', 1, A.crossbowman),
   mk('field_medic',    'Field Medic',    'human', 'healer', 1, A.field_medic),
   mk('banner_sergeant','Banner Sergeant','human', 'summoner', 3, A.banner_sergeant),
-  mk('lutanist',       'Lutanist',       'human', 'bard',   1, A.lutanist),
 
   // ---- Undead (knight · mage · ranger · assassin · summoner · paladin) ----
   mk('bone_guard',     'Bone Guard',     'undead', 'knight', 1, A.bone_guard),
@@ -321,12 +284,11 @@ export const UNITS = [
   mk('necromancer',    'Necromancer',    'undead', 'summoner', 5, A.necromancer),
   mk('death_knight',   'Death Knight',   'undead', 'paladin', 4, A.death_knight),
 
-  // ---- Elf (mage · ranger · assassin · healer · bard) ----
+  // ---- Elf (mage · ranger · assassin · healer) ----
   mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.moon_priestess),
   mk('wood_ranger',    'Wood Ranger',    'elf', 'ranger', 1, A.wood_ranger),
   mk('shadow_dancer',  'Shadow Dancer',  'elf', 'assassin', 3, A.shadow_dancer),
   mk('grove_healer',   'Grove Healer',   'elf', 'healer', 2, A.grove_healer),
-  mk('moonsinger',     'Moonsinger',     'elf', 'bard',   3, A.moonsinger),
 
   // ---- Demon (knight · mage · ranger · assassin · summoner · paladin) ----
   mk('hellguard',      'Hellguard',      'demon', 'knight', 2, A.hellguard),
@@ -352,19 +314,12 @@ export const UNITS = [
   mk('wyrm_archer',    'Stormwyrm',      'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.30, adx: 1.24 }),
   mk('wyrmguard',      'Wyrmguard',      'dragon', 'paladin', 5, A.wyrmguard, { hpx: 1.30, adx: 1.18 }),
 
-  // ---- Dwarf (knight · mage · ranger · paladin) ----
-  mk('ironbeard',     'Ironbeard',     'dwarf', 'knight',  1, A.ironbeard),
-  mk('sharpshooter',  'Sharpshooter',  'dwarf', 'ranger',  2, A.sharpshooter),
-  mk('runeseer',      'Runeseer',      'dwarf', 'mage',    3, A.runeseer),
-  mk('oathkeeper',    'Oathkeeper',    'dwarf', 'paladin', 4, A.oathkeeper),
-  mk('mountain_king', 'Mountain King', 'dwarf', 'knight',  5, A.mountain_king, { hpx: 1.34, adx: 1.22 }),
-
-  // ---- Giant (knight · mage · ranger · bard) ----
-  mk('hill_brute',     'Hill Brute',    'giant', 'knight', 1, A.hill_brute,     { hpx: 1.10 }),
-  mk('boulderthrower', 'Boulderthrower','giant', 'ranger', 2, A.boulderthrower, { hpx: 1.16 }),
-  mk('stormjarl',      'Storm Jarl',    'giant', 'mage',   3, A.stormjarl,      { hpx: 1.26 }),
-  mk('war_drummer',    'War Drummer',   'giant', 'bard',   4, A.war_drummer,    { hpx: 1.14 }),
-  mk('earthshaker',    'Earthshaker',   'giant', 'knight', 5, A.earthshaker,    { hpx: 1.18, adx: 1.12 }),
+  // ---- Orc / the Warhorde (knight · mage · ranger · assassin) ----
+  mk('berserker',   'Blood Berserker', 'orc', 'assassin', 1, A.berserker),
+  mk('orc_grunt',   'Orc Grunt',       'orc', 'knight',   2, A.orc_grunt),
+  mk('orc_shaman',  'Orc Shaman',      'orc', 'mage',     3, A.orc_shaman),
+  mk('axethrower',  'Axethrower',      'orc', 'ranger',   4, A.axethrower),
+  mk('warboss',     'Warboss',         'orc', 'knight',   5, A.warboss, { hpx: 1.30, adx: 1.20 }),
 ];
 
 // Plain-language description of each champion's 3★ ULTIMATE upgrade — the qualitative
@@ -385,7 +340,6 @@ export const ULT3 = {
   wood_ranger: 'Its locked-on focus also shreds the target’s Armor by 25.',
   shadow_dancer: 'After striking, gains +40% dodge and +40% Attack Speed for 3s.',
   grove_healer: 'Heal splashes 50% to adjacent allies and adds 12 HP/s regen for 3s.',
-  moonsinger: 'Shields the 3 most-wounded allies instead of one.',
   hellguard: 'Also burns 25 mana and cuts healing 40% on all hit for 3s.',
   warlock: 'Adds a 60/s burning DoT for 3s and burns 30 mana.',
   fel_archer: 'Each hit also burns 12 mana (team-wide cast denial).',
@@ -402,17 +356,11 @@ export const ULT3 = {
   wyrm_archer: 'Looses a second cinder-storm and slows the entire enemy team 20%.',
   wyrmguard: 'The aegis also pours 12 HP/s regen for 4s and the smite knocks the cluster back.',
   banner_sergeant: 'Also conscripts a heavy footman with double stats.',
-  lutanist: 'The marching tune also regenerates 9 HP/s to the warband for 3s.',
-  ironbeard: 'Also taunts adjacent foes for 2s.',
-  sharpshooter: 'All targets hit are also slowed 25% for 2s.',
-  runeseer: 'The blast also stuns the whole cluster for 1s.',
-  oathkeeper: 'Shields adjacent allies for 160 and cleanses itself (1.5s CC immunity).',
-  mountain_king: 'Taunts all foes within 2 cells for 2.5s and gains a 400 shield.',
-  hill_brute: 'The wallop also stuns the target for 1s.',
-  boulderthrower: 'The boulder also stuns the whole cluster for 0.8s.',
-  stormjarl: 'The thunderclap also stuns the cluster for 1s.',
-  war_drummer: 'The drums also pour 10 HP/s regen to the warband for 3s.',
-  earthshaker: 'Taunts all foes within 2 cells for 2.5s and gains a 450 shield.',
+  berserker: 'On a kill, gains +35% Attack Speed and 25% lifesteal for 3s.',
+  orc_grunt: 'The bash also knocks the foe back and wreathes the grunt in thorns.',
+  orc_shaman: 'The lightning forks to 2 more foes (×0.6 each).',
+  axethrower: 'Looses a second axe-spread and slows all targets hit 20%.',
+  warboss: 'Taunts all foes within 2 cells for 2.5s and gains a 420 shield.',
 };
 
 import { CREATURES } from './creatures.js';

@@ -47,19 +47,12 @@ export const TRAITS = {
     bonuses: { 1: { mr: 22, adPct: 0.12, ap: 38 }, 2: { mr: 40, adPct: 0.19, ap: 70 } },
     bonusText: { 1: '+22 MR, +12% AD, +38 AP', 2: '+40 MR, +19% AD, +70 AP (resists spells)' },
   },
-  dwarf: {
-    name: 'Dwarf', axis: 'origin', kind: 'glue', color: '#e0a35c',
-    desc: 'Stubborn mountain-folk — armoured to the teeth and almost impossible to stagger. The hard counter to crowd-control.',
+  orc: {
+    name: 'Orc', axis: 'origin', kind: 'behaviour', color: '#7fc24a',
+    desc: 'The Warhorde feeds on slaughter — every strike whips the whole warband into a deeper Bloodlust: ramping attack speed AND lifesteal.',
     breakpoints: [2, 4],
-    bonuses: { 2: { armor: 12, mr: 12, ccResist: 0.35 }, 4: { armor: 24, mr: 24, ccResist: 0.65 } },
-    bonusText: { 2: '+12 Armor/MR & −35% stun/slow duration (team)', 4: '+24 Armor/MR & −65% crowd-control duration (team)' },
-  },
-  giant: {
-    name: 'Giant', axis: 'origin', kind: 'behaviour', color: '#9fb8c8',
-    desc: 'Towering giant-kin — colossal health that they SMASH into bonus damage, and every blow staggers. The bigger they are.',
-    breakpoints: [2, 4],
-    bonuses: { 2: { hpPct: 0.06, hpDmg: 0.005, staggerPct: 0.10, staggerDur: 0.6 }, 4: { hpPct: 0.11, hpDmg: 0.008, staggerPct: 0.12, staggerDur: 0.8 } },
-    bonusText: { 2: '+6% HP (team); each hit smashes for 0.5% of own HP & slows 10%', 4: '+11% HP (team); each hit smashes for 0.8% of own HP & slows 12% (0.8s)' },
+    bonuses: { 2: { ferocity: 0.12, vamp: 0.10 }, 4: { ferocity: 0.22, vamp: 0.18 } },
+    bonusText: { 2: '+12% atk speed/strike & 10% lifesteal (team)', 4: '+22% atk speed/strike & 18% lifesteal (team)' },
   },
 
   // ---------- CLASSES ----------
@@ -105,19 +98,12 @@ export const TRAITS = {
     bonuses: { 2: { summonPower: 0.13 }, 4: { summonPower: 0.33 } },
     bonusText: { 2: '+13% summon HP/dmg', 4: '+33% summon HP/dmg' },
   },
-  bard: {
-    name: 'Bard', axis: 'class', kind: 'glue', color: '#f48fd0',
-    desc: 'Battle-songs spur the whole warband to strike faster and cast stronger — the offensive twin of the Healer aura.',
-    breakpoints: [2, 3],
-    bonuses: { 2: { as: 0.14, ap: 32 }, 3: { as: 0.26, ap: 78 } },
-    bonusText: { 2: '+14% atk speed & +32 AP to all allies', 3: '+26% atk speed & +78 AP to all allies' },
-  },
   paladin: {
     name: 'Paladin', axis: 'class', kind: 'glue', color: '#ffe7a0',
-    desc: 'Oathbound protectors raise a holy ward — the whole warband takes reduced damage. The defensive twin of the Bard aura.',
-    breakpoints: [2, 4],
-    bonuses: { 2: { dmgRed: 0.10 }, 4: { dmgRed: 0.18 } },
-    bonusText: { 2: 'All allies take 10% less damage', 4: 'All allies take 18% less damage' },
+    desc: 'Oathbound protectors raise a holy ward — the whole warband takes reduced damage.',
+    breakpoints: [2, 3],
+    bonuses: { 2: { dmgRed: 0.10 }, 3: { dmgRed: 0.18 } },
+    bonusText: { 2: 'All allies take 10% less damage', 3: 'All allies take 18% less damage' },
   },
 };
 
