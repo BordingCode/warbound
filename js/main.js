@@ -11,7 +11,8 @@ import { hashSeed } from './rng.js';
 import { CombatPlayer, unitStatsPanel } from './render/player.js';
 import { createDragController } from './input/drag.js';
 import { getEnemyBoard, REALMS, realmAt, bossForRealm, getTrialBoard, TRIAL_COUNT } from './data/enemies.js';
-import { COMPONENTS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS, combine as combineItems } from './data/items.js';
+import { COMPONENTS, ITEMS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS, combine as combineItems } from './data/items.js';
+import { CREATURES_LIST } from './data/creatures.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
 import { HONORS, HONOR_CATS, HONOR_BY_ID, TOTAL_BOUNTY } from './data/honors.js';
 import * as Run from './state/run.js';
@@ -802,7 +803,7 @@ function showCodex(tab = 'units') {
           el('span', { style: { color: 'var(--ink-faint)', fontSize: '10px', marginLeft: 'auto' } }, t.axis),
         ]));
       body.append(list);
-    } else {
+    } else if (which === 'augments') {
       const list = el('.codex-list');
       const order = { common: 0, rare: 1, prismatic: 2 };
       for (const [id, a] of Object.entries(AUGMENTS).sort((x, y) => order[x[1].tier] - order[y[1].tier])) list.append(
@@ -811,10 +812,36 @@ function showCodex(tab = 'units') {
           el('span', { style: { color: 'var(--ink-faint)', fontSize: '10px', marginLeft: 'auto' } }, TIER_LABEL[a.tier]),
         ]));
       body.append(list);
+    } else if (which === 'items') {
+      const list = el('.codex-list');
+      const modTxt = (mods) => Object.entries(mods || {}).map(([k, v]) => `+${(v < 1 && v > -1) ? Math.round(v * 100) + '%' : v} ${DMOD_LABEL[k] || k}`).join(', ');
+      const section = (title, obj, sub) => {
+        list.append(el('.codex-sec', { style: { fontSize: '11px', fontWeight: '800', letterSpacing: '.05em', color: 'var(--ink-dim)', margin: '8px 2px 2px' } }, title));
+        for (const [, it] of Object.entries(obj)) list.append(el('.item-row', { style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 2px' } }, [
+          el('span', { style: { color: 'var(--gold)' }, html: ic(it.icon || 'sword') }),
+          el('span', { style: { fontWeight: '700', minWidth: '116px' } }, it.name),
+          el('span', { style: { fontSize: '11px', color: 'var(--ink-dim)' } }, sub ? sub(it) : modTxt(it.mods)),
+        ]));
+      };
+      section('Components (combine two)', COMPONENTS);
+      section('Forged items', ITEMS);
+      section('Emblems (grant a synergy)', EMBLEMS, (it) => `Grants ${TRAITS[Object.keys(it.traitGrant)[0]] ? TRAITS[Object.keys(it.traitGrant)[0]].name : ''}` + (Object.keys(it.mods || {}).length ? ' · ' + modTxt(it.mods) : ''));
+      body.append(list);
+    } else {
+      // Bestiary — the unique boss CREATURES of the Trials, each with its signature mechanic.
+      const list = el('.codex-list');
+      for (const c of CREATURES_LIST) list.append(el('.beast-row', { style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 2px' } }, [
+        el('span', { style: { width: '34px', height: '38px', flex: '0 0 auto' }, html: championSVG(c, { size: 34 }) }),
+        el('div', { style: { display: 'flex', flexDirection: 'column', lineHeight: '1.2' } }, [
+          el('span', { style: { fontWeight: '700' } }, c.name),
+          el('span', { style: { fontSize: '11px', color: 'var(--ink-dim)' } }, c.ability ? `${c.ability.name} — ${abilityText(c.ability)}` : 'A fearsome boss.'),
+        ]),
+      ]));
+      body.append(list);
     }
   };
-  const tabs = el('.codex-tabs');
-  const tabDefs = [['units', `Champions (${UNITS.length})`], ['traits', `Synergies (${Object.keys(TRAITS).length})`], ['augments', `Augments (${Object.keys(AUGMENTS).length})`]];
+  const tabs = el('.codex-tabs', { style: { flexWrap: 'wrap' } });
+  const tabDefs = [['units', `Champions (${UNITS.length})`], ['traits', `Synergies (${Object.keys(TRAITS).length})`], ['augments', `Augments (${Object.keys(AUGMENTS).length})`], ['items', 'Items'], ['bestiary', `Bestiary (${CREATURES_LIST.length})`]];
   const tabBtns = tabDefs.map(([key, label]) => el(`button.btn${tab === key ? ' primary' : ''}`, { onclick: () => { tab = key; tabBtns.forEach((b, i) => b.classList.toggle('primary', tabDefs[i][0] === key)); render(key); } }, label));
   tabs.append(...tabBtns);
   render(tab);
@@ -1736,6 +1763,12 @@ function chooseMode() {
       el('.hb-text', {}, [el('span.hb-label', {}, 'War Honors'), el('span.hb-sub', {}, 'feats & Spoils bounties across every mode')]),
       el('span.hb-count', {}, `${got}/${HONORS.length}`),
     ]); })(),
+    // P1.3 — Codex reachable from home (browse champions, synergies, augments, items, bestiary anytime)
+    el('.honors-bar', { onclick: () => { Sfx.click(); showCodex('units'); }, style: { cursor: 'pointer' } }, [
+      el('span.hb-ico', { html: ic('codex') }),
+      el('.hb-text', {}, [el('span.hb-label', {}, 'Codex'), el('span.hb-sub', {}, 'browse every champion, synergy, augment, item & boss')]),
+      el('span.hb-count', {}, '›'),
+    ]),
     el('.art-toggle', { onclick: () => { setArtSet(getArtSet() === 'detailed' ? 'classic' : 'detailed'); Sfx.click(); chooseMode(); } }, [
       el('span', { style: { color: 'var(--ink-dim)' } }, 'Character art:'),
       el('span', { style: { fontWeight: 800, color: 'var(--gold)' } }, getArtSet() === 'detailed' ? 'Detailed' : 'Classic'),
