@@ -1549,6 +1549,18 @@ function showArmory() {
         el('.cc-text', {}, [el('.cc-title', {}, 'Open War Cache'), el('.cc-sub', {}, 'a random piece of gear')]),
         el('.cc-cost', {}, [String(Meta.CHEST_COST) + ' ', iconEl('spoils')]),
       ]),
+      // Healthy/transparent: the cache is the one randomised surface, so we publish the real odds
+      // (the genre-ethics rule "show odds if anything is randomised") and remind that the better
+      // rarities are FORGE-earned, never gated behind RNG — you're never purely at luck's mercy.
+      (() => {
+        const tot = Meta.RARITIES.reduce((a, r) => a + r.weight, 0) || 1;
+        return el('.cache-odds', { style: { fontSize: '11px', color: 'var(--ink-dim)', margin: '5px 2px 0', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' } }, [
+          el('span', { style: { fontWeight: '700' } }, 'Cache odds:'),
+          ...Meta.RARITIES.filter((r) => r.weight > 0).map((r) => el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } },
+            [el('span', { style: { width: '8px', height: '8px', borderRadius: '50%', background: r.color, display: 'inline-block' } }), `${Math.round((r.weight / tot) * 100)}% ${r.name}`])),
+          el('span', { style: { opacity: '.85' } }, '· higher rarities are forge-earned, never random'),
+        ]);
+      })(),
       // FAST PATH: open every cache you can afford at once, auto-equip upgrades, one quick summary.
       Meta.affordableChests(m) >= 2
         ? el('.cache-all', { onclick: () => { const n = Meta.affordableChests(m); const r = Meta.openChests(n); if (r.ok) revealBulk(r.items, render); } },
