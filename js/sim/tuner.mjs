@@ -28,13 +28,18 @@ const COMPS = {
   Ranger:   ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'axethrower', 'field_medic'],
   Summoner: ['necromancer', 'pit_summoner', 'beastmaster', 'banner_sergeant', 'bone_guard', 'field_medic'],
   Dragon:   ['dragon_knight', 'dragon_sage', 'knight_captain', 'bone_guard', 'moon_priestess', 'grove_healer'],
+  Paladin:  ['oathbreaker', 'death_knight', 'wyrmguard', 'bone_guard', 'court_mage', 'field_medic'],
+  Orc:      ['warboss', 'orc_grunt', 'berserker', 'axethrower', 'orc_shaman', 'field_medic'],
 };
+// Realistic stars: cheap units reach 3★, elites stay 1★ — how real boards actually look. Tuning
+// against flat 2★ (the old default) ignored that cheap Demon/Summoner units hit 3★ and dominate.
+const STAR_BY_COST = { 1: 3, 2: 3, 3: 2, 4: 1, 5: 1 };
 function place(ids, enemy) {
   const front = ['knight', 'assassin'], out = []; let fc = 0, bc = 0;
   for (const id of ids) {
-    const k = UNITS_BY_ID[id].klass;
-    if (front.includes(k)) { out.push({ defId: id, star: 2, col: 1 + (fc % 6), row: enemy ? (fc < 3 ? 1 : 2) : (fc < 3 ? 6 : 5) }); fc++; }
-    else { out.push({ defId: id, star: 2, col: 1 + (bc % 6), row: enemy ? (bc % 2 ? 0 : 1) : (bc % 2 ? 7 : 6) }); bc++; }
+    const u = UNITS_BY_ID[id]; const k = u.klass; const star = STAR_BY_COST[u.cost] || 1;
+    if (front.includes(k)) { out.push({ defId: id, star, col: 1 + (fc % 6), row: enemy ? (fc < 3 ? 1 : 2) : (fc < 3 ? 6 : 5) }); fc++; }
+    else { out.push({ defId: id, star, col: 1 + (bc % 6), row: enemy ? (bc % 2 ? 0 : 1) : (bc % 2 ? 7 : 6) }); bc++; }
   }
   return out;
 }
@@ -43,7 +48,7 @@ const NAMES = Object.keys(COMPS);
 // matchup resolves ~0%/~100% and per-matchup win-rates are COARSE. With too few seeds the climber
 // overfits the seed sample (verified: a 9-seed optimum did NOT generalise to 15 seeds). Use a high
 // seed count for a trustworthy signal; this is an OFFLINE tool, so prefer slow-but-correct.
-const SEEDS = 25;                                  // fights per matchup (more = smoother + less overfit, slower)
+const SEEDS = 15;                                  // fights per matchup (more = smoother + less overfit, slower)
 function winRates() {
   const wins = NAMES.map(() => 0), games = NAMES.map(() => 0);
   for (let i = 0; i < NAMES.length; i++) for (let j = 0; j < NAMES.length; j++) {
@@ -69,7 +74,7 @@ const isDragon = (id) => UNITS_BY_ID[id].origin === 'dragon';
 const baseU = {}; for (const u of UNITS) baseU[u.defId] = { hp: u.hp, ad: u.ad, ability: JSON.parse(JSON.stringify(u.ability)) };
 const baseT = {}; for (const t in TRAITS) baseT[t] = JSON.parse(JSON.stringify(TRAITS[t].bonuses));
 const r3 = (x) => Math.round(x * 1000) / 1000;
-const scaleVal = (b, v) => (Math.abs(b) < 1 ? r3(b * v) : Math.round(b * v));   // keep fractions vs ints
+const scaleVal = (b, v) => (Number.isInteger(b) ? Math.round(b * v) : r3(b * v));   // keep fractions (e.g. critDmg 1.5) precise; only true ints round
 
 function resetBase() {
   for (const u of UNITS) { const b = baseU[u.defId]; u.hp = b.hp; u.ad = b.ad; u.ability = JSON.parse(JSON.stringify(b.ability)); }
@@ -81,7 +86,7 @@ const knobs = [];
 const K = (name, min, max, apply) => knobs.push({ name, value: 1, min, max, step: 0.06, apply });
 
 // class power (hp+ad) — dragons excluded (their own knob)
-for (const klass of ['knight', 'mage', 'ranger', 'assassin', 'healer', 'summoner'])
+for (const klass of ['knight', 'mage', 'ranger', 'assassin', 'healer', 'summoner', 'paladin'])
   K('cls:' + klass, 0.78, 1.3, (v) => { for (const u of UNITS) if (u.klass === klass && !isDragon(u.defId)) { u.hp = Math.round(baseU[u.defId].hp * v); u.ad = Math.round(baseU[u.defId].ad * v); } });
 // dragon power (hp+ad+ability) — the elite outlier, its own lever
 K('dragon', 0.6, 1.1, (v) => { for (const u of UNITS) if (isDragon(u.defId)) { u.hp = Math.round(baseU[u.defId].hp * v); u.ad = Math.round(baseU[u.defId].ad * v); if (u.ability.ap != null) u.ability.ap = Math.round(baseU[u.defId].ability.ap * v); if (u.ability.adRatio != null) u.ability.adRatio = r3(baseU[u.defId].ability.adRatio * v); } });
@@ -100,12 +105,14 @@ traitKnob('undead', ['revivePct']);
 traitKnob('elf', ['dodge', 'shield']);
 traitKnob('demon', ['burn', 'manaBurn']);
 traitKnob('beast', ['ferocity']);
+traitKnob('orc', ['ferocity', 'vamp']);
 traitKnob('dragon', ['mr']);
 traitKnob('mage', ['ap']);
 traitKnob('assassin', ['critChance', 'critDmg']);
 traitKnob('ranger', ['rangerAS']);
 traitKnob('summoner', ['summonPower']);
 traitKnob('healer', ['healAmp', 'regen']);
+traitKnob('paladin', ['dmgRed']);
 
 function applyAll() { resetBase(); for (const k of knobs) k.apply(k.value); }
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
