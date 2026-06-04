@@ -1253,6 +1253,9 @@ function endScreen(ladderSummary) {
         sub = newConquest ? `${realm.name} is yours for good — the next realm beckons.` : `${realm.name} cleared again. Spoils farmed; conquest already secured.`;
       } else { head = 'DEFEATED'; sub = `${realm.name} held your warband off (${run.wins}/10). Gear up in the Armory and march again.`; }
     }
+    // record personal bests for the menu's at-a-glance progress (Endless depth, Trials bosses)
+    if (isEndless) Meta.recordBest('endless', run.wins);
+    else if (isTrials) Meta.recordBest('trials', run.wins);
     // earn Spoils ONCE — Endless pays for DEPTH (how far you came); other modes use the standard payout.
     if (!run.spoilsEarned) {
       run.spoilsEarned = isEndless ? Math.round(5 * run.wins + (run.round - 1)) : Meta.spoilsForRun(run.wins, run.round - 1, won);
@@ -1693,21 +1696,30 @@ function chooseMode() {
   const rk = Rank.currentRank();
   const ladderCard = card('#6fb1ff', 'crown', 'Warlord Ladder', 'Auto-Chess: 8 warlords, ONE shared champion pool, last warband standing wins. Climb the ranks — higher rank = smarter rivals.', () => startLadder());
   ladderCard.querySelector('.mc-body').append(el('.mc-rank', { style: { color: rk.color } }, [el('span', { html: rankMedal(rk.color, 16) }), el('span', {}, ` ${rk.name}${rk.nextAt ? ` · ${rk.inTier}/${rk.nextAt} RP` : ` · ${rk.rp} RP`}`)]));
+  // P0.2 — at-a-glance progress per mode (orientation, not a hook): realms conquered + personal bests.
+  const totalRealms = REALMS.filter((r) => !r.secret).length;
+  const prog = (c, txt, color) => { c.querySelector('.mc-body').append(el('.mc-prog', { style: { fontSize: '11px', color: color || 'var(--ink-dim)', marginTop: '5px', fontWeight: '700' } }, txt)); return c; };
+  const warpathCard = prog(card('var(--gold)', 'sword', 'Warpath', 'Conquer the realms: beat all 10 warbands of a realm to claim it for good, then march on the next, harder one. Earn Spoils to gear your Champion.', () => showRealms()),
+    `${Math.min(Meta.realmsCleared(), totalRealms)} / ${totalRealms} realms conquered`, 'var(--gold)');
+  const trialsCard = card('#ff6a8a', 'burst', 'The Trials', `A boss rush: face a gauntlet of ${TRIAL_COUNT} unique monsters — from the Gloom Slime up to the Void Maw — each with its own deadly mechanic. Build a team, learn each fight, slay them all.`, () => startTrials(true));
+  { const b = Meta.best('trials'); if (b > 0) prog(trialsCard, `Best: ${b} / ${TRIAL_COUNT} bosses slain`, '#ff9ab0'); }
+  const endlessCard = card('#8fd24a', 'skull', 'Endless', 'Hold against an endless tide of warbands that only grows fiercer — every 10th wave a boss. There is no winning, only how deep you march. Bank Spoils for the depth you reach.', () => startEndless(true));
+  { const b = Meta.best('endless'); if (b > 0) prog(endlessCard, `Best: reached Wave ${b + 1}`, '#aef06a'); }
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '14px' } }, [
     el('h1.title-main', {}, 'Warbound'),
     el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-10px' } }, 'Choose your battle'),
     el('.mode-menu', {}, [
       // Warpath + its Armory are one visual GROUP — gear belongs to Warpath, not the ladder.
       el('.warpath-group', {}, [
-        card('var(--gold)', 'sword', 'Warpath', 'Conquer the realms: beat all 10 warbands of a realm to claim it for good, then march on the next, harder one. Earn Spoils to gear your Champion.', () => showRealms()),
+        warpathCard,
         el('.armory-bar', { onclick: () => showArmory() }, [
           el('span.ab-ico', { html: ic('coffer') }),
           el('.ab-text', {}, [el('span.ab-label', {}, 'Armory'), el('span.ab-sub', {}, 'gear your Champion — for Warpath & Trials')]),
           el('span.ab-spoils', {}, `${Meta.load().spoils} Spoils`),
         ]),
       ]),
-      card('#ff6a8a', 'burst', 'The Trials', `A boss rush: face a gauntlet of ${TRIAL_COUNT} unique monsters — from the Gloom Slime up to the Void Maw — each with its own deadly mechanic. Build a team, learn each fight, slay them all.`, () => startTrials(true)),
-      card('#8fd24a', 'skull', 'Endless', 'Hold against an endless tide of warbands that only grows fiercer — every 10th wave a boss. There is no winning, only how deep you march. Bank Spoils for the depth you reach.', () => startEndless(true)),
+      trialsCard,
+      endlessCard,
       ladderCard,
     ]),
     (() => { const got = HONORS.filter((h) => Meta.honorsEarned()[h.id]).length; return el('.honors-bar', { onclick: () => { Sfx.click(); showHonors('menu'); } }, [

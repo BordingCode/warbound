@@ -73,6 +73,10 @@ export function realmsCleared() { return load().realmsCleared || 0; }
 export function conquerRealm(idx) { const m = load(); if (idx + 1 > (m.realmsCleared || 0)) { m.realmsCleared = idx + 1; save(m); return true; } return false; }
 export function addSpoils(n) { const m = load(); m.spoils = Math.max(0, m.spoils + Math.round(n)); save(m); return m.spoils; }
 
+// ---- personal bests (Endless depth, Trials bosses) — at-a-glance progress on the mode menu. ----
+export function recordBest(key, value) { const m = load(); const k = 'best_' + key; if (value > (m[k] || 0)) { m[k] = value; save(m); return true; } return false; }
+export function best(key) { return load()['best_' + key] || 0; }
+
 // ---- War Honors (one-time achievements; see js/data/honors.js) ----
 export function honorsEarned() { return load().honors || {}; }
 export function hasHonor(id) { return !!(load().honors || {})[id]; }
