@@ -11,7 +11,7 @@ import { AUGMENTS, AUGMENT_IDS, augmentBundle } from '../js/data/augments.js';
 const FRONT = new Set(['knight', 'assassin']);
 function placeComp(defIds) {
   const out = []; let fc = 0, bc = 0;
-  const klassOf = { knight_captain: 'knight', bone_guard: 'knight', thornguard: 'knight', hellguard: 'knight', bramble_brute: 'knight', dragon_knight: 'knight', imp_assassin: 'assassin', royal_blade: 'assassin', shadow_dancer: 'assassin', wraith: 'assassin', pack_stalker: 'assassin' };
+  const klassOf = { knight_captain: 'knight', bone_guard: 'knight', hellguard: 'knight', bramble_brute: 'knight', dragon_knight: 'knight', mountain_king: 'knight', ironbeard: 'knight', imp_assassin: 'assassin', shadow_dancer: 'assassin', wraith: 'assassin', pack_stalker: 'assassin' };
   for (const id of defIds) {
     if (FRONT.has(klassOf[id])) { out.push({ defId: id, star: 2, col: 1 + (fc % 6), row: fc < 3 ? 6 : 5 }); fc++; }
     else { out.push({ defId: id, star: 2, col: 1 + (bc % 6), row: bc % 2 ? 7 : 6 }); bc++; }
@@ -20,16 +20,16 @@ function placeComp(defIds) {
 }
 const COMPS = {
   Mage: ['court_mage', 'lich', 'moon_priestess', 'warlock', 'knight_captain', 'field_medic'],
-  Knight: ['knight_captain', 'bone_guard', 'thornguard', 'hellguard', 'court_mage', 'field_medic'],
-  Assassin: ['imp_assassin', 'royal_blade', 'shadow_dancer', 'pack_stalker', 'bone_guard', 'druid_healer'],
-  Undead: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer', 'thornguard'],
+  Knight: ['knight_captain', 'bone_guard', 'hellguard', 'bramble_brute', 'court_mage', 'field_medic'],
+  Assassin: ['imp_assassin', 'wraith', 'shadow_dancer', 'pack_stalker', 'bone_guard', 'druid_healer'],
+  Undead: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer', 'death_knight'],
   Ranger: ['skeleton_archer', 'crossbowman', 'wood_ranger', 'fel_archer', 'beast_hunter', 'knight_captain'],
   Mixed: ['knight_captain', 'court_mage', 'skeleton_archer', 'imp_assassin', 'field_medic', 'bone_guard'],
 };
 
 // Fixed mixed enemy board (rows 0-3); a per-comp handicap f scales enemy HP+AD ~50%.
 const ENEMY = [
-  { defId: 'thornguard', star: 2, col: 2, row: 3 }, { defId: 'hellguard', star: 2, col: 4, row: 3 },
+  { defId: 'bramble_brute', star: 2, col: 2, row: 3 }, { defId: 'hellguard', star: 2, col: 4, row: 3 },
   { defId: 'bone_guard', star: 2, col: 6, row: 3 }, { defId: 'shadow_dancer', star: 2, col: 5, row: 2 },
   { defId: 'warlock', star: 2, col: 3, row: 0 }, { defId: 'moon_priestess', star: 2, col: 4, row: 0 },
   { defId: 'fel_archer', star: 2, col: 1, row: 1 },

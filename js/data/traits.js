@@ -35,10 +35,10 @@ export const TRAITS = {
   },
   beast: {
     name: 'Beast', axis: 'origin', kind: 'behaviour', color: '#ffb15a',
-    desc: 'Beasts grow more ferocious as the fight drags on.',
-    breakpoints: [2, 4, 6],
-    bonuses: { 2: { ferocity: 0.15, armor: 8 }, 4: { ferocity: 0.26, armor: 15 }, 6: { ferocity: 0.34, armor: 22 } },
-    bonusText: { 2: '+15% atk speed/strike & +8 armor', 4: '+26% & +15 armor', 6: '+34% & +22 armor (whole team)' },
+    desc: 'The Wilds grow more ferocious as the fight drags on.',
+    breakpoints: [2, 4],
+    bonuses: { 2: { ferocity: 0.15, armor: 8 }, 4: { ferocity: 0.30, armor: 18 } },
+    bonusText: { 2: '+15% atk speed/strike & +8 armor', 4: '+30% atk speed/strike & +18 armor (whole team)' },
   },
   dragon: {
     name: 'Dragon', axis: 'origin', kind: 'behaviour', color: '#ffd24a',
@@ -94,9 +94,9 @@ export const TRAITS = {
   healer: {
     name: 'Healer', axis: 'class', kind: 'glue', color: '#7affd6',
     desc: 'Amplifies all healing and mends the wounded.',
-    breakpoints: [2, 4],
-    bonuses: { 2: { healAmp: 0.20, regen: 8 }, 4: { healAmp: 0.40, regen: 16 } },
-    bonusText: { 2: '+20% healing + regen', 4: '+40% healing + regen' },
+    breakpoints: [2, 3],
+    bonuses: { 2: { healAmp: 0.20, regen: 8 }, 3: { healAmp: 0.40, regen: 16 } },
+    bonusText: { 2: '+20% healing + regen', 3: '+40% healing + regen' },
   },
   summoner: {
     name: 'Summoner', axis: 'class', kind: 'behaviour', color: '#ffcf5a',
@@ -108,9 +108,9 @@ export const TRAITS = {
   bard: {
     name: 'Bard', axis: 'class', kind: 'glue', color: '#f48fd0',
     desc: 'Battle-songs spur the whole warband to strike faster and cast stronger — the offensive twin of the Healer aura.',
-    breakpoints: [2, 4],
-    bonuses: { 2: { as: 0.14, ap: 32 }, 4: { as: 0.26, ap: 78 } },
-    bonusText: { 2: '+14% atk speed & +32 AP to all allies', 4: '+26% atk speed & +78 AP to all allies' },
+    breakpoints: [2, 3],
+    bonuses: { 2: { as: 0.14, ap: 32 }, 3: { as: 0.26, ap: 78 } },
+    bonusText: { 2: '+14% atk speed & +32 AP to all allies', 3: '+26% atk speed & +78 AP to all allies' },
   },
   paladin: {
     name: 'Paladin', axis: 'class', kind: 'glue', color: '#ffe7a0',

@@ -12,15 +12,15 @@ import { ITEMS } from '../data/items.js';
 const STAR_BY_COST = { 1: 3, 2: 3, 3: 2, 4: 1, 5: 1 };
 const FRONT = new Set(['knight', 'assassin']);
 const COMPS = {
-  Knight:   ['knight_captain', 'bone_guard', 'thornguard', 'crossbowman', 'court_mage', 'field_medic'],
-  Mage:     ['court_mage', 'lich', 'warlock', 'bone_guard', 'thornguard', 'field_medic'],
-  Assassin: ['royal_blade', 'shadow_dancer', 'pack_stalker', 'bone_guard', 'thornguard', 'field_medic'],
-  Undead:   ['bone_guard', 'lich', 'skeleton_archer', 'wraith', 'necromancer', 'thornguard'],
+  Knight:   ['knight_captain', 'bone_guard', 'hellguard', 'crossbowman', 'court_mage', 'field_medic'],
+  Mage:     ['court_mage', 'lich', 'warlock', 'runeseer', 'bone_guard', 'field_medic'],
+  Assassin: ['wraith', 'shadow_dancer', 'pack_stalker', 'imp_assassin', 'bone_guard', 'field_medic'],
+  Undead:   ['bone_guard', 'lich', 'skeleton_archer', 'wraith', 'necromancer', 'death_knight'],
   Demon:    ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'bone_guard', 'field_medic'],
   Beast:    ['bramble_brute', 'beast_hunter', 'pack_stalker', 'knight_captain', 'druid_healer', 'beastmaster'],
-  Elf:      ['thornguard', 'moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'bone_guard'],
-  Ranger:   ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'thornguard', 'field_medic'],
-  Summoner: ['necromancer', 'pit_summoner', 'beastmaster', 'bone_guard', 'thornguard', 'field_medic'],
+  Elf:      ['moonsinger', 'moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'bone_guard'],
+  Ranger:   ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'sharpshooter', 'field_medic'],
+  Summoner: ['necromancer', 'pit_summoner', 'beastmaster', 'banner_sergeant', 'bone_guard', 'field_medic'],
   Dragon:   ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'knight_captain', 'bone_guard', 'grove_healer'],
 };
 const names = Object.keys(COMPS);

@@ -21,7 +21,7 @@ const eUnit = (defId, star, col, row) => ({ defId, star, col, row });
 // ---- 1. Determinism: same boards + seed => byte-identical events ----
 {
   // Two assassins -> Assassin trait active -> crit rolls consume RNG, so seed matters.
-  const A = [pUnit('imp_assassin', 2, 2, 6), pUnit('royal_blade', 2, 4, 6), pUnit('court_mage', 1, 3, 7)];
+  const A = [pUnit('imp_assassin', 2, 2, 6), pUnit('shadow_dancer', 2, 4, 6), pUnit('court_mage', 1, 3, 7)];
   const B = [eUnit('hellguard', 2, 3, 1), eUnit('skeleton_archer', 1, 3, 0), eUnit('bone_guard', 1, 5, 1)];
   const r1 = simulate(A, B, 12345);
   const r2 = simulate(A, B, 12345);

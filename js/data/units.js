@@ -1,7 +1,18 @@
-// Champion roster (~29 units) across the 6 Origins x 6 Classes matrix.
-// Stats are 1-star base values, cost-scaled, then role-adjusted. Ability is data the
-// combat sim's ability handlers read (sim/rules.js). These are STARTING numbers — the
-// headless autobalancer (sim/autobalance.js) will tune the outliers.
+// Champion roster (42 units) across an 8 Origins × 8 Classes matrix that is DELIBERATELY PARTIAL:
+// each origin fields only a thematic subset of classes (no origin has them all), so the race you
+// commit to defines how your board plays. Stats are 1-star base values, cost-scaled, then
+// role-adjusted. Ability is data the combat sim's ability handlers read (sim/rules.js). These are
+// STARTING numbers — the headless autobalancer (sim/autobalance.js) will tune the outliers.
+//
+// ORIGIN → CLASS palette (— = deliberately empty, off-theme for that race):
+//   Human   knight mage ranger  --     healer summoner bard    --        (disciplined, supportive)
+//   Undead  knight mage ranger  assassin --   summoner --      paladin   (the grave: skeletons→death knight)
+//   Elf     --     mage ranger  assassin healer --      bard    --        (fey grace — no armour, no brutes)
+//   Demon   knight mage ranger  assassin --   summoner --      paladin   (relentless aggression + oathbreaker)
+//   Beast   knight --   ranger  assassin healer summoner --    --        (the Wilds — no casters, no holy)
+//   Dragon  knight mage ranger  --     --     --       --      paladin   (elite 5-cost capstones)
+//   Dwarf   knight mage ranger  --     --     --       --      paladin   (sturdy runesmiths + holy)
+//   Giant   knight mage ranger  --     --     --       bard    --        (colossal bruisers + war drums)
 
 // Base 1-star stats per cost tier.
 const COST_BASE = {
@@ -117,10 +128,6 @@ const A = {
   crossbowman: { name: 'Suppressing Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.2,
     verbs: [{ op: 'phys', target: 'nearestN', count: 4, mult: 0.7, adRatio: 2.2 }, { op: 'slow', pct: 0.15, dur: 1.5, target: 'nearestN', count: 4 }],
     ult: { verbs: [v.slow(0.25, 2, 'mostEnemies')] } },
-  // PASSIVE — Opening Strike: bonus damage on a strike into a still-healthy target (assassinate).
-  royal_blade: { name: 'Regicide', type: 'physical', target: 'lowestEnemyHP', adRatio: 3.0,
-    verbs: [v.exec({ adRatio: 3.0 })], passive: { on: 'hit', verbs: [v.bonusVs(0.8, 0.8)] },
-    ult: { verbs: [{ op: 'recastOnKill', max: 1 }] } },
   // PASSIVE — Triage: when an ally falls, instantly burst-heals the two most wounded allies.
   field_medic: { name: 'Mend', type: 'heal', target: 'lowestAllyHP', ap: 200,
     verbs: [v.heal({ ap: 200 })], passive: { on: 'allyDeath', verbs: [{ op: 'heal', target: 'lowestNAllies', n: 2, ap: 160 }] },
@@ -151,11 +158,13 @@ const A = {
     verbs: [v.summon({ kind: 'risen', count: 2, hp: 1040, ad: 108, armor: 22 })],
     passive: { on: 'allyDeath', verbs: [v.raiseCorpse(700, 95)] },
     ult: { verbs: [v.summon({ kind: 'risen', count: 1, hp: 1040, ad: 108, armor: 22, statMult: 2 }), v.summon({ kind: 'risen', count: 1, hp: 1040, ad: 108, armor: 22 })] } },
+  // Undead-PALADIN (death knight): an unholy smite that leeches — a fallen oath that will not die.
+  death_knight: { name: 'Unholy Smite', type: 'physical', target: 'current', adRatio: 2.7, ap: 240,
+    verbs: [v.phys({ adRatio: 2.7 }), v.magic({ ap: 240 }), v.lifesteal(0.22, 4, 'self')],
+    passive: { on: 'spawn', verbs: [v.thorns(0.10, 999, 'self')] },
+    ult: { verbs: [v.healCut(0.40, 3, 'current'), v.buffAS(0.3, 3, 'self')] } },
 
   // Elf
-  thornguard: { name: 'Bramble Bash', type: 'physical', target: 'current', adRatio: 2.1, stun: 1.0,
-    verbs: [v.phys({ adRatio: 2.1 }), v.stun(1.0), v.thorns(0.15, 3, 'self')],
-    ult: { verbs: [v.knockup(1.25), v.taunt(1, 2)] } },
   moon_priestess: { name: 'Lunar Bolt', type: 'magic', target: 'current', ap: 560,
     verbs: [v.magic({ ap: 560 })], ult: { verbs: [v.chain({ count: 2, falloff: 0.6 })] } },
   // PURE PASSIVE — Marksman's Focus: no cast; locks one target and ramps escalating bonus damage
@@ -169,10 +178,10 @@ const A = {
   grove_healer: { name: 'Verdant Mend', type: 'heal', target: 'lowestAllyHP', ap: 260,
     verbs: [v.heal({ ap: 260 })],
     ult: { verbs: [v.heal({ ap: 130, target: 'adjacentAllies' }), v.regen(12, 3, 'lowestAllyHP')] } },
-  // Spirit: ethereal wisp — phases through blows (dodge), average damage, no body to armour.
-  spirit_caller: { name: 'Call Spirits', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ kind: 'spirit', count: 2, hp: 820, ad: 110, armor: 0, dodge: 0.20 })],
-    ult: { verbs: [v.summon({ kind: 'spirit', count: 2, hp: 820, ad: 110, armor: 0, dodge: 0.30, slowAura: 0.15 })] } },
+  // Elf-BARD: a lunar hymn — hastes allies and shields the most wounded.
+  moonsinger: { name: 'Lunar Hymn', type: 'shield', target: 'allies', ap: 240,
+    verbs: [v.buffAS(0.18, 3, 'allies'), v.shield({ ap: 240 })],
+    ult: { verbs: [{ op: 'shield', target: 'lowestNAllies', n: 3, ap: 170 }] } },
 
   // Demon
   // PASSIVE — Soul Tithe: each auto pays 2% own max HP to sear the target (can never self-kill).
@@ -192,11 +201,15 @@ const A = {
   // Imp: volatile glass-cannon — frail, but DETONATES for AoE magic on death.
   pit_summoner: { name: 'Open the Pit', type: 'summon', summonHp: 950, summonAd: 115,
     verbs: [v.summon({ kind: 'imp', count: 2, hp: 720, ad: 96, armor: 8, explode: 160 })], ult: { verbs: [v.meteors({ n: 3, ap: 120, radius: 1 })] } },
+  // Demon-PALADIN (oathbreaker): a corrupted smite that burns the target's mana as it sears.
+  oathbreaker: { name: 'Fel Smite', type: 'physical', target: 'current', adRatio: 2.3,
+    verbs: [v.phys({ adRatio: 2.3 }), v.magic({ ap: 190 }), v.manaBurn(18)],
+    ult: { verbs: [v.healCut(0.35, 3, 'current'), v.dot(45, 3, 'current')] } },
 
-  // Beast
+  // Beast (the Wilds)
   // PASSIVE — Hunter's Mark: marks the enemy CARRY (highest cost×star); the WHOLE team's autos
-  // hit the mark harder. The only ranger that buffs allies.
-  beast_hunter: { name: "Hunter's Volley", type: 'physical', target: 'mostEnemies', adRatio: 2.4,
+  // hit the mark harder. The only beast ranger that buffs allies.
+  beast_hunter: { name: 'Quill Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.4,
     verbs: [v.volley({ adRatio: 2.4 })], passive: { on: 'spawn', verbs: [{ op: 'mark', mult: 1.15, dur: 999, target: 'highestValueEnemy' }] },
     ult: { verbs: [v.mark(1.4, 5, 'lowestEnemyHP')] } },
   bramble_brute: { name: 'Thorn Cleave', type: 'physical', target: 'cluster', radius: 1, adRatio: 2.4,
@@ -223,77 +236,30 @@ const A = {
     ult: { verbs: [v.knockback(1, 'cluster'), v.healCut(0.40, 3, 'cluster')] } },
   dragon_sage: { name: 'Cataclysm', type: 'magic', target: 'cluster', radius: 2, ap: 340,
     verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.meteors({ n: 4, ap: 100, radius: 1 }), v.manaBurn(25)] } },
-  wyrm_archer: { name: 'Storm of Arrows', type: 'physical', target: 'mostEnemies', adRatio: 2.8,
+  // Dragon-RANGER: a fire-breathing skywyrm — its "volley" is a storm of cinders, not arrows.
+  wyrm_archer: { name: 'Storm of Cinders', type: 'physical', target: 'mostEnemies', adRatio: 2.8,
     verbs: [v.volley({ adRatio: 2.8 })],
     ult: { verbs: [v.volley({ adRatio: 2.8, offset: 4 }), v.slow(0.20, 2, 'allEnemies')] } },
-
-  // ── Bridge champions (fill empty Origin×Class cells → new pivots) ──
-  // Beast-MAGE: the only beast caster. PASSIVE — Frenzy: ramps its OWN attack/cast speed the
-  // longer it fights (a beast that snowballs spell cadence). 3★ leaves a burning field.
-  storm_shaman: { name: 'Primal Surge', type: 'magic', target: 'cluster', radius: 1, ap: 300,
-    verbs: [v.cluster({ radius: 1 })], passive: { on: 'spawn', verbs: [v.rageSelf(0.04, 0.6)] },
-    ult: { verbs: [v.dot(60, 3, 'cluster')] } },
-  // Undead-HEALER: enables undead attrition comps. PASSIVE — Plague Touch: its autos infect the
-  // target so they heal for less (anti-sustain). 3★ ult: a sweeping regen over the whole warband.
-  plague_priest: { name: 'Withering Mend', type: 'heal', target: 'lowestAllyHP', ap: 240,
-    verbs: [v.heal({ ap: 240 })], passive: { on: 'hit', verbs: [v.healCut(0.30, 4, 'current')] },
-    ult: { verbs: [v.regen(16, 3, 'allies')] } },
-  // Human-SUMMONER: disciplined ranks + a mana engine. PASSIVE — Rally: every muster also shields
-  // the soldiers beside the banner. 3★ ult: conscripts a heavy (double-stat) footman.
-  // Soldier: armoured line-holder — sturdy, well-armoured, marches in with a shield up; low damage.
-  banner_sergeant: { name: 'Muster the Ranks', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ kind: 'soldier', count: 2, hp: 1080, ad: 104, armor: 28, shieldStart: 240 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
-    ult: { verbs: [v.summon({ kind: 'soldier', count: 1, hp: 1080, ad: 104, armor: 28, shieldStart: 240, statMult: 2 })] } },
-
-  // ── Bard (NEW class): the team-OFFENCE aura. Each bard's CAST layers a timed team buff on top of
-  // the always-on Bard trait aura — songs that haste, shield, slow foes, or disrupt casters. ──
-  // Human-BARD: cheap glue song — a marching cadence that hastes the whole warband.
-  lutanist: { name: 'Marching Tune', type: 'heal', target: 'allies', ap: 0,
-    verbs: [v.buffAS(0.16, 3, 'allies')],
-    ult: { verbs: [v.regen(9, 3, 'allies')] } },
-  // Undead-BARD: a dirge that drags the enemy line to a crawl while allies leech.
-  dirgesinger: { name: 'Hateful Dirge', type: 'magic', target: 'allEnemies', ap: 0,
-    verbs: [v.slow(0.20, 2.5, 'allEnemies'), v.lifesteal(0.16, 4, 'allies')],
-    ult: { verbs: [v.manaBurn(22, 'nearestN', 0)] } },
-  // Elf-BARD: a lunar hymn — hastes allies and shields the most wounded.
-  moonsinger: { name: 'Lunar Hymn', type: 'shield', target: 'allies', ap: 240,
-    verbs: [v.buffAS(0.18, 3, 'allies'), v.shield({ ap: 240 })],
-    ult: { verbs: [{ op: 'shield', target: 'lowestNAllies', n: 3, ap: 170 }] } },
-  // Demon-BARD: dissonance that shatters enemy spellcasting (mana burn + healcut) and sears the cluster.
-  discordant: { name: 'Dissonant Chord', type: 'magic', target: 'cluster', radius: 1, ap: 300,
-    verbs: [v.cluster({ radius: 1 }), v.manaBurn(26, 'cluster')],
-    ult: { verbs: [v.dot(55, 3, 'cluster'), v.healCut(0.35, 3, 'cluster')] } },
-  // Dragon-BARD (elite capstone): the Dragonsong — a roaring anthem that hastes AND heals the warband.
-  wyrmsong_herald: { name: 'Dragonsong', type: 'heal', target: 'allies', ap: 120,
-    verbs: [v.buffAS(0.24, 4, 'allies'), v.heal({ target: 'allies', ap: 120 })],
-    ult: { verbs: [v.regen(14, 4, 'allies'), v.cleanse('allies', 1.0)] } },
-
-  // ── Paladin (NEW class): the team DAMAGE-REDUCTION aura. Holy melee frontline whose CASTS SMITE
-  // (physical strike + bonus holy magic on the same target) and shield/protect allies. ──
-  // Human-PALADIN: cheap oathsworn line-holder — shield bash that wards itself.
-  squire: { name: 'Shield Bash', type: 'physical', target: 'current', adRatio: 2.1, stun: 0.8,
-    verbs: [v.phys({ adRatio: 2.1 }), v.magic({ ap: 120 }), v.stun(0.8), v.shieldSelf(60)],
-    ult: { verbs: [{ op: 'shield', target: 'adjacentAllies', ap: 110 }] } },
-  // Demon-PALADIN (oathbreaker): a corrupted smite that burns the target's mana as it sears.
-  oathbreaker: { name: 'Fel Smite', type: 'physical', target: 'current', adRatio: 2.3,
-    verbs: [v.phys({ adRatio: 2.3 }), v.magic({ ap: 190 }), v.manaBurn(18)],
-    ult: { verbs: [v.healCut(0.35, 3, 'current'), v.dot(45, 3, 'current')] } },
-  // Elf-PALADIN: radiant dawn-smite — holy burst that also cleanses and shields the bearer.
-  dawnblade: { name: 'Radiant Smite', type: 'magic', target: 'current', adRatio: 2.3, ap: 240,
-    verbs: [v.phys({ adRatio: 2.3 }), v.magic({ ap: 240 }), v.shieldSelf(120)],
-    ult: { verbs: [{ op: 'magic', target: 'cluster', radius: 1, ap: 150 }, v.cleanse('self', 1.0)] } },
-  // Undead-PALADIN (death knight): an unholy smite that leeches — a fallen oath that will not die.
-  death_knight: { name: 'Unholy Smite', type: 'physical', target: 'current', adRatio: 2.7, ap: 240,
-    verbs: [v.phys({ adRatio: 2.7 }), v.magic({ ap: 240 }), v.lifesteal(0.22, 4, 'self')],
-    passive: { on: 'spawn', verbs: [v.thorns(0.10, 999, 'self')] },
-    ult: { verbs: [v.healCut(0.40, 3, 'current'), v.buffAS(0.3, 3, 'self')] } },
   // Dragon-PALADIN (elite capstone): the Wyrmguard — wards the whole warband and smites a cluster.
   wyrmguard: { name: 'Aegis of the Wyrm', type: 'shield', target: 'allies', ap: 160,
     verbs: [{ op: 'shield', target: 'allies', ap: 160 }, v.cluster({ radius: 1 })],
     ult: { verbs: [v.regen(12, 4, 'allies'), v.knockback(1, 'cluster')] } },
 
-  // ── Dwarf (NEW origin): stubborn mountain-folk — heavy armour + tenacity (CC resist). Units span
-  // CLASSES (an origin, not a class) so they compose with class badges/roles in the art rig. ──
+  // ── Bridge champion: Human-SUMMONER — disciplined ranks + a mana engine. PASSIVE — Rally: every
+  // muster also shields the soldiers beside the banner. 3★ ult: conscripts a heavy footman.
+  // Soldier: armoured line-holder — sturdy, well-armoured, marches in with a shield up; low damage.
+  banner_sergeant: { name: 'Muster the Ranks', type: 'summon', summonHp: 950, summonAd: 115,
+    verbs: [v.summon({ kind: 'soldier', count: 2, hp: 1080, ad: 104, armor: 28, shieldStart: 240 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
+    ult: { verbs: [v.summon({ kind: 'soldier', count: 1, hp: 1080, ad: 104, armor: 28, shieldStart: 240, statMult: 2 })] } },
+
+  // ── Bard (team-OFFENCE aura). Each bard's CAST layers a timed team buff on top of the always-on
+  // Bard trait aura. Lives on Human (lutes), Elf (hymns — see moonsinger above) and Giant (drums). ──
+  // Human-BARD: cheap glue song — a marching cadence that hastes the whole warband.
+  lutanist: { name: 'Marching Tune', type: 'heal', target: 'allies', ap: 0,
+    verbs: [v.buffAS(0.16, 3, 'allies')],
+    ult: { verbs: [v.regen(9, 3, 'allies')] } },
+
+  // ── Dwarf (origin — heavy armour + crowd-control resistance) ──
   // Dwarf-KNIGHT: an immovable shield wall that locks down a foe.
   ironbeard: { name: 'Shield Wall', type: 'physical', target: 'current', adRatio: 1.9, stun: 0.7,
     verbs: [v.phys({ adRatio: 1.9 }), v.shieldSelf(70), v.stun(0.7)],
@@ -315,8 +281,7 @@ const A = {
     verbs: [v.cleave({ adRatio: 2.4 }), v.knockback(1, 'cluster'), v.stun(0.8, 'cluster')],
     ult: { verbs: [v.taunt(2, 2.5), v.shieldSelf(400)] } },
 
-  // ── Giant (NEW origin): towering giant-kin — colossal HP smashed into damage + a stagger on every
-  // blow (the CC SOURCE Dwarf's tenacity answers). Big bruisers across CLASSES. ──
+  // ── Giant (origin — colossal HP smashed into damage + a stagger on every blow) ──
   // Giant-KNIGHT: a wallop that hurls a foe back.
   hill_brute: { name: 'Wallop', type: 'physical', target: 'current', adRatio: 2.0,
     verbs: [v.phys({ adRatio: 2.0 }), v.knockback(1)],
@@ -340,77 +305,61 @@ const A = {
 };
 
 export const UNITS = [
-  // ---- Human ----
+  // ---- Human (knight · mage · ranger · healer · summoner · bard) ----
   mk('knight_captain', 'Knight-Captain', 'human', 'knight', 1, A.knight_captain),
   mk('court_mage',     'Court Mage',     'human', 'mage',   2, A.court_mage),
   mk('crossbowman',    'Crossbowman',    'human', 'ranger', 1, A.crossbowman),
-  mk('royal_blade',    'Royal Blade',    'human', 'assassin', 3, A.royal_blade),
   mk('field_medic',    'Field Medic',    'human', 'healer', 1, A.field_medic),
+  mk('banner_sergeant','Banner Sergeant','human', 'summoner', 3, A.banner_sergeant),
+  mk('lutanist',       'Lutanist',       'human', 'bard',   1, A.lutanist),
 
-  // ---- Undead ----
+  // ---- Undead (knight · mage · ranger · assassin · summoner · paladin) ----
   mk('bone_guard',     'Bone Guard',     'undead', 'knight', 1, A.bone_guard),
   mk('lich',           'Lich',           'undead', 'mage',   3, A.lich),
   mk('skeleton_archer','Skeleton Archer','undead', 'ranger', 1, A.skeleton_archer),
   mk('wraith',         'Wraith',         'undead', 'assassin', 4, A.wraith),
   mk('necromancer',    'Necromancer',    'undead', 'summoner', 5, A.necromancer),
+  mk('death_knight',   'Death Knight',   'undead', 'paladin', 4, A.death_knight),
 
-  // ---- Elf ----
-  mk('thornguard',     'Thornguard',     'elf', 'knight', 2, A.thornguard),
+  // ---- Elf (mage · ranger · assassin · healer · bard) ----
   mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.moon_priestess),
   mk('wood_ranger',    'Wood Ranger',    'elf', 'ranger', 1, A.wood_ranger),
   mk('shadow_dancer',  'Shadow Dancer',  'elf', 'assassin', 3, A.shadow_dancer),
   mk('grove_healer',   'Grove Healer',   'elf', 'healer', 2, A.grove_healer),
-  mk('spirit_caller',  'Spirit Caller',  'elf', 'summoner', 3, A.spirit_caller),
+  mk('moonsinger',     'Moonsinger',     'elf', 'bard',   3, A.moonsinger),
 
-  // ---- Demon ----
+  // ---- Demon (knight · mage · ranger · assassin · summoner · paladin) ----
   mk('hellguard',      'Hellguard',      'demon', 'knight', 2, A.hellguard),
   mk('warlock',        'Warlock',        'demon', 'mage',   4, A.warlock),
   mk('fel_archer',     'Fel Archer',     'demon', 'ranger', 2, A.fel_archer),
   mk('imp_assassin',   'Imp Assassin',   'demon', 'assassin', 1, A.imp_assassin),
   mk('pit_summoner',   'Pit Summoner',   'demon', 'summoner', 5, A.pit_summoner),
+  mk('oathbreaker',    'Oathbreaker',    'demon', 'paladin', 2, A.oathbreaker),
 
-  // ---- Beast ----
-  mk('beast_hunter',   'Beast Hunter',   'beast', 'ranger', 2, A.beast_hunter),
+  // ---- Beast / the Wilds (knight · ranger · assassin · healer · summoner) ----
+  mk('beast_hunter',   'Quillback',      'beast', 'ranger', 2, A.beast_hunter),
   mk('bramble_brute',  'Bramble Brute',  'beast', 'knight', 4, A.bramble_brute),
   mk('pack_stalker',   'Pack Stalker',   'beast', 'assassin', 3, A.pack_stalker),
   mk('druid_healer',   'Druid Healer',   'beast', 'healer', 3, A.druid_healer),
   mk('beastmaster',    'Beastmaster',    'beast', 'summoner', 4, A.beastmaster),
 
-  // ---- Dragon (elite, expensive) ----
+  // ---- Dragon (elite, expensive — knight · mage · ranger · paladin) ----
   // Dragons are the premium 5-cost elites — strong even at 1★ (rarely reach 3★ in play), so
   // their base is bumped hard to stay board-warping against cheaper units whose 3★ ults now
   // fire. Only the Dragon comp fields ≥2 dragons, so these bumps don't distort other archetypes.
   mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.36, adx: 1.28 }),
   mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.30, adx: 1.24 }),
-  mk('wyrm_archer',    'Wyrm Archer',    'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.30, adx: 1.24 }),
+  mk('wyrm_archer',    'Stormwyrm',      'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.30, adx: 1.24 }),
+  mk('wyrmguard',      'Wyrmguard',      'dragon', 'paladin', 5, A.wyrmguard, { hpx: 1.30, adx: 1.18 }),
 
-  // ---- Bridge champions (new pivots) ----
-  mk('storm_shaman',   'Storm Shaman',   'beast',  'mage',     3, A.storm_shaman),
-  mk('plague_priest',  'Plague Priest',  'undead', 'healer',   2, A.plague_priest),
-  mk('banner_sergeant','Banner Sergeant','human',  'summoner', 3, A.banner_sergeant),
-
-  // ---- Bard (NEW class — team-offence aura, spread across existing origins) ----
-  mk('lutanist',        'Lutanist',        'human',  'bard', 1, A.lutanist),
-  mk('dirgesinger',     'Dirgesinger',     'undead', 'bard', 2, A.dirgesinger),
-  mk('moonsinger',      'Moonsinger',      'elf',    'bard', 3, A.moonsinger),
-  mk('discordant',      'Discordant',      'demon',  'bard', 4, A.discordant),
-  mk('wyrmsong_herald', 'Wyrmsong Herald', 'dragon', 'bard', 5, A.wyrmsong_herald, { hpx: 1.28, adx: 1.20 }),
-
-  // ---- Paladin (NEW class — team damage-reduction aura + holy smite, across existing origins) ----
-  mk('squire',       'Squire',       'human',  'paladin', 1, A.squire),
-  mk('oathbreaker',  'Oathbreaker',  'demon',  'paladin', 2, A.oathbreaker),
-  mk('dawnblade',    'Dawnblade',    'elf',    'paladin', 3, A.dawnblade),
-  mk('death_knight', 'Death Knight', 'undead', 'paladin', 4, A.death_knight),
-  mk('wyrmguard',    'Wyrmguard',    'dragon', 'paladin', 5, A.wyrmguard, { hpx: 1.30, adx: 1.18 }),
-
-  // ---- Dwarf (NEW origin — heavy armour + crowd-control resistance, across existing classes) ----
+  // ---- Dwarf (knight · mage · ranger · paladin) ----
   mk('ironbeard',     'Ironbeard',     'dwarf', 'knight',  1, A.ironbeard),
   mk('sharpshooter',  'Sharpshooter',  'dwarf', 'ranger',  2, A.sharpshooter),
   mk('runeseer',      'Runeseer',      'dwarf', 'mage',    3, A.runeseer),
   mk('oathkeeper',    'Oathkeeper',    'dwarf', 'paladin', 4, A.oathkeeper),
   mk('mountain_king', 'Mountain King', 'dwarf', 'knight',  5, A.mountain_king, { hpx: 1.34, adx: 1.22 }),
 
-  // ---- Giant (NEW origin — colossal HP-as-damage + stagger, across existing classes) ----
+  // ---- Giant (knight · mage · ranger · bard) ----
   mk('hill_brute',     'Hill Brute',    'giant', 'knight', 1, A.hill_brute,     { hpx: 1.10 }),
   mk('boulderthrower', 'Boulderthrower','giant', 'ranger', 2, A.boulderthrower, { hpx: 1.16 }),
   mk('stormjarl',      'Storm Jarl',    'giant', 'mage',   3, A.stormjarl,      { hpx: 1.26 }),
@@ -425,24 +374,24 @@ export const ULT3 = {
   knight_captain: 'Adjacent allies gain +25% Attack Speed for 3s.',
   court_mage: 'The nuke also burns 30 mana from the target.',
   crossbowman: 'All targets hit are slowed 25% for 2s.',
-  royal_blade: 'On a kill, instantly re-casts on a new target (once per fight).',
   field_medic: 'Also cleanses the ally and grants 1.5s crowd-control immunity.',
   bone_guard: 'Also leeches 18% of its attack damage as health.',
   lich: 'Also shreds 30 Magic Resist from everything hit for 4s.',
   skeleton_archer: 'Kills raise a Risen skeleton (up to 2 per fight).',
   wraith: 'On a kill, resets its attack and gains +40% Attack Speed for 3s.',
   necromancer: 'Also raises a greater wight with double stats.',
-  thornguard: 'Stun becomes a 1.25s knock-up and taunts adjacent foes for 2s.',
+  death_knight: 'The smite cuts healing 40% and grants the Death Knight +30% Attack Speed for 3s.',
   moon_priestess: 'The bolt chains to 2 more foes (×0.6 each).',
   wood_ranger: 'Its locked-on focus also shreds the target’s Armor by 25.',
   shadow_dancer: 'After striking, gains +40% dodge and +40% Attack Speed for 3s.',
   grove_healer: 'Heal splashes 50% to adjacent allies and adds 12 HP/s regen for 3s.',
-  spirit_caller: 'Spirits gain +30% dodge and a slowing aura (−15% to nearby foes).',
+  moonsinger: 'Shields the 3 most-wounded allies instead of one.',
   hellguard: 'Also burns 25 mana and cuts healing 40% on all hit for 3s.',
   warlock: 'Adds a 60/s burning DoT for 3s and burns 30 mana.',
   fel_archer: 'Each hit also burns 12 mana (team-wide cast denial).',
   imp_assassin: 'On a kill, burns 40 mana and slows the 2 nearest foes 30%.',
   pit_summoner: 'Also calls 3 meteors (120 magic each) on random foes.',
+  oathbreaker: 'The smite cuts the target’s healing 35% and adds a 45/s burn for 3s.',
   beast_hunter: 'Also marks the lowest-HP foe so the team hits it 40% harder.',
   bramble_brute: 'Gains ramping Attack Speed and +25% thorns.',
   pack_stalker: 'Hits everything next to its target (×0.6); kills grant +30% AS.',
@@ -450,20 +399,10 @@ export const ULT3 = {
   beastmaster: 'Summons stronger wolves with a 15% lifesteal aura.',
   dragon_knight: 'The breath shoves foes back 1 cell and cuts their healing 40% for 3s.',
   dragon_sage: 'Adds 4 meteors (100 magic each) and burns 25 mana.',
-  wyrm_archer: 'Looses a second volley and slows the entire enemy team 20%.',
-  storm_shaman: 'Leaves a 60/s burning field for 3s.',
-  plague_priest: 'Sweeps a 16 HP/s regen over the whole warband for 3s.',
+  wyrm_archer: 'Looses a second cinder-storm and slows the entire enemy team 20%.',
+  wyrmguard: 'The aegis also pours 12 HP/s regen for 4s and the smite knocks the cluster back.',
   banner_sergeant: 'Also conscripts a heavy footman with double stats.',
   lutanist: 'The marching tune also regenerates 9 HP/s to the warband for 3s.',
-  dirgesinger: 'The dirge also burns 22 mana from the nearest foes.',
-  moonsinger: 'Shields the 3 most-wounded allies instead of one.',
-  discordant: 'Adds a 55/s burning DoT and cuts the cluster’s healing 35% for 3s.',
-  wyrmsong_herald: 'The song also pours 14 HP/s regen for 4s and cleanses the warband.',
-  squire: 'The bash also shields adjacent allies for 110.',
-  oathbreaker: 'The smite cuts the target’s healing 35% and adds a 45/s burn for 3s.',
-  dawnblade: 'The smite splashes 120 holy damage to the cluster and cleanses the bearer.',
-  death_knight: 'The smite cuts healing 40% and grants the Death Knight +30% Attack Speed for 3s.',
-  wyrmguard: 'The aegis also pours 12 HP/s regen for 4s and the smite knocks the cluster back.',
   ironbeard: 'Also taunts adjacent foes for 2s.',
   sharpshooter: 'All targets hit are also slowed 25% for 2s.',
   runeseer: 'The blast also stuns the whole cluster for 1s.',

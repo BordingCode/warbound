@@ -104,18 +104,18 @@ function placeComp(defIds, enemy = false) {
 // Realistic archetype builds: each = its synergy carries + a real frontline + a healer/support
 // (a mono-class glass cannon with no frontline is a strawman, not a comp).
 const COMPS = {
-  'Knight': ['knight_captain', 'bone_guard', 'thornguard', 'crossbowman', 'court_mage', 'field_medic'],
-  'Mage': ['court_mage', 'lich', 'warlock', 'bone_guard', 'thornguard', 'field_medic'],
-  'Assassin': ['royal_blade', 'shadow_dancer', 'pack_stalker', 'bone_guard', 'thornguard', 'field_medic'],
-  'Undead': ['bone_guard', 'lich', 'skeleton_archer', 'wraith', 'necromancer', 'thornguard'],
-  'Demon': ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'bone_guard', 'field_medic'],
+  'Knight': ['knight_captain', 'bone_guard', 'hellguard', 'crossbowman', 'court_mage', 'field_medic'],
+  'Mage': ['court_mage', 'lich', 'warlock', 'runeseer', 'bone_guard', 'field_medic'],
+  'Assassin': ['wraith', 'shadow_dancer', 'pack_stalker', 'imp_assassin', 'bone_guard', 'field_medic'],
+  'Undead': ['bone_guard', 'lich', 'skeleton_archer', 'wraith', 'necromancer', 'death_knight'],
+  'Demon': ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'oathbreaker', 'pit_summoner'],
   'Beast': ['bramble_brute', 'beast_hunter', 'pack_stalker', 'knight_captain', 'druid_healer', 'beastmaster'],
-  'Elf': ['thornguard', 'moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'bone_guard'],
-  'Ranger': ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'thornguard', 'field_medic'],
-  'Summoner': ['necromancer', 'pit_summoner', 'beastmaster', 'bone_guard', 'thornguard', 'field_medic'],
+  'Elf': ['moonsinger', 'moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'bone_guard'],
+  'Ranger': ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'sharpshooter', 'field_medic'],
+  'Summoner': ['necromancer', 'pit_summoner', 'beastmaster', 'banner_sergeant', 'bone_guard', 'field_medic'],
   'Dragon': ['dragon_knight', 'dragon_sage', 'knight_captain', 'bone_guard', 'moon_priestess', 'grove_healer'],
-  'Bard': ['moonsinger', 'dirgesinger', 'skeleton_archer', 'crossbowman', 'bone_guard', 'thornguard'],
-  'Paladin': ['squire', 'oathbreaker', 'dawnblade', 'skeleton_archer', 'court_mage', 'field_medic'],
+  'Bard': ['moonsinger', 'lutanist', 'war_drummer', 'skeleton_archer', 'crossbowman', 'bone_guard'],
+  'Paladin': ['oathbreaker', 'death_knight', 'oathkeeper', 'wyrmguard', 'court_mage', 'field_medic'],
   'Dwarf': ['ironbeard', 'sharpshooter', 'runeseer', 'mountain_king', 'skeleton_archer', 'field_medic'],
   'Giant': ['hill_brute', 'boulderthrower', 'stormjarl', 'earthshaker', 'court_mage', 'field_medic'],
 };

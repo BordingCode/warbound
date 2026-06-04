@@ -28,9 +28,9 @@ const casts = (r) => evs(r).filter(e => e.type === 'cast');
 // A tanky, low-threat enemy wall so most fights last long enough to observe effects.
 const WALL = [U('bone_guard', 3, 1, 3), U('bone_guard', 4, 1, 3), U('bone_guard', 3, 2, 3)];
 // strong killers (to force a lone player unit to die — for revive)
-const KILLERS = [U('royal_blade', 3, 1, 3), U('royal_blade', 4, 1, 3), U('bramble_brute', 3, 2, 3)];
+const KILLERS = [U('wraith', 3, 1, 3), U('wraith', 4, 1, 3), U('bramble_brute', 3, 2, 3)];
 // a board that deals real, fast damage (for passives that trigger on taking hits / ally deaths)
-const HURTERS = () => [U('wyrm_archer', 1, 1, 1), U('wyrm_archer', 5, 1, 1), U('royal_blade', 3, 2, 2), U('royal_blade', 4, 2, 2)];
+const HURTERS = () => [U('wyrm_archer', 1, 1, 1), U('wyrm_archer', 5, 1, 1), U('shadow_dancer', 3, 2, 2), U('shadow_dancer', 4, 2, 2)];
 
 console.log('\n=== SYNERGIES (trait A/B: OFF vs ON) ===');
 
@@ -107,7 +107,7 @@ console.log('\n=== SYNERGIES (trait A/B: OFF vs ON) ===');
 }
 // assassin — dive (blink, inherent) + crit from the trait
 {
-  const P = [U('royal_blade', 3, 7)];
+  const P = [U('shadow_dancer', 3, 7)];
   const a = sim(P, WALL), b = sim(P, WALL, { player: { assassin: 4 } });
   ok('Assassin (dive / blink)', count(a, e => e.type === 'blink' && e.id === 0) > 0, 'dive is inherent to the class');
   ok('Assassin (crit from trait)', count(b, e => e.type === 'attack' && e.id === 0 && e.crit) > 0 && count(a, e => e.type === 'attack' && e.id === 0 && e.crit) === 0, `crits ${count(a,e=>e.type==='attack'&&e.crit)}→${count(b,e=>e.type==='attack'&&e.crit)}`);
@@ -115,7 +115,7 @@ console.log('\n=== SYNERGIES (trait A/B: OFF vs ON) ===');
 // healer — healAmp makes Mend heal for more. Front ally must be a squishy under real pressure so
 // the heal isn't clamped (Bone Guard is now a near-unscratched wall, which clamped this heal to 0).
 {
-  const HURT = [U('royal_blade', 3, 1, 3), U('skeleton_archer', 3, 2, 3), U('skeleton_archer', 4, 2, 3)];
+  const HURT = [U('imp_assassin', 3, 1, 3), U('skeleton_archer', 3, 2, 3), U('skeleton_archer', 4, 2, 3)];
   const P = [U('field_medic', 3, 7), U('crossbowman', 3, 5, 1)];
   const a = sim(P, HURT, { player: { human: 6 } });
   const b = sim(P, HURT, { player: { human: 6, healer: 4 } });
@@ -137,7 +137,6 @@ const ABILS = [
   ['Rallying Bash', 'knight_captain', r => casts(r).some(c => c.name === 'Rallying Bash') && count(r, e => e.type === 'cc' && e.kind === 'stun') > 0],
   ['Arcane Nuke', 'court_mage', r => casts(r).some(c => c.name === 'Arcane Nuke') && dmgBy(r, 0, 'magic').length > 0],
   ['Suppressing Volley', 'crossbowman', r => casts(r).some(c => c.name === 'Suppressing Volley')],
-  ['Regicide', 'royal_blade', r => casts(r).some(c => c.name === 'Regicide')],
   ['Mend', 'field_medic', r => casts(r).some(c => c.name === 'Mend') && count(r, e => e.type === 'heal') > 0],
   ['Wild Aegis', 'druid_healer', r => casts(r).some(c => c.name === 'Wild Aegis') && count(r, e => e.type === 'shield') > 0],
   ['Raise Dead (summon)', 'necromancer', r => casts(r).some(c => c.name === 'Raise Dead') && count(r, e => e.type === 'spawn' && e.summon) > 0],
@@ -166,10 +165,10 @@ const ULTS = [
   ['Warlock 3★ burns (DoT)', 'warlock', r => has(r, 'debuff', 'dot')],
   ['Hellguard 3★ heal-cuts', 'hellguard', r => has(r, 'debuff', 'healCut')],
   ['Bone Guard 3★ lifesteal', 'bone_guard', r => has(r, 'buff', 'lifesteal')],
-  ['Thornguard 3★ knockup', 'thornguard', r => has(r, 'cc', 'knockup')],
+  ['Hill Brute 3★ adds stun', 'hill_brute', r => has(r, 'cc', 'stun')],
   ['Moon Priestess 3★ chains', 'moon_priestess', r => has(r, 'arc', null)],
   ['Pit Summoner 3★ meteors', 'pit_summoner', r => has(r, 'meteor', null)],
-  ['Beast Hunter 3★ marks', 'beast_hunter', r => has(r, 'debuff', 'mark')],
+  ['Quillback 3★ marks', 'beast_hunter', r => has(r, 'debuff', 'mark')],
   ['Dragon Knight 3★ heal-cut (roar)', 'dragon_knight', r => has(r, 'debuff', 'healCut')],
 ];
 for (const [label, defId, check, board] of ULTS) {
@@ -262,12 +261,7 @@ console.log('\n=== EMBLEMS (Warpath items grant a trait) + BRIDGE CHAMPIONS ==='
   const db = b.events.find(e => e.type === 'damage' && e.id === 0 && e.dmgType === 'physical');
   ok('Knight Emblem (+1 Knight count → block active)', da && db && db.amount < da.amount, `first hit ${da?.amount}→${db?.amount}`);
 }
-// New bridge champions actually fire: Storm Shaman casts magic; Banner Sergeant summons bodies.
-{
-  const P = [U('storm_shaman', 3, 7, 2), U('bone_guard', 3, 5, 3)];
-  const r = simulate(P, WALL, 7, { aug: { player: { traitBonus: { human: 6 } } } });
-  ok('Storm Shaman (Beast-Mage) casts', dmgBy(r, 0, 'magic').length > 0, `${dmgBy(r, 0, 'magic').length} magic hits`);
-}
+// Bridge champion fires: Banner Sergeant (Human-Summoner) summons bodies.
 {
   const P = [U('banner_sergeant', 3, 7, 2), U('bone_guard', 3, 5, 3)];
   const r = simulate(P, WALL, 7, { aug: { player: { traitBonus: { human: 6 } } } });
