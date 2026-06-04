@@ -53,7 +53,11 @@ export function getEnemyBoard(round, rng, opts = {}) {
   const diff = Math.max(0, opts.diff || 0);
   const i = Math.min(round - 1, LADDER.length - 1);
   const base = LADDER[i];
-  const esc = Math.max(0, round - LADDER.length) + diff;     // total escalation steps
+  // total escalation steps. The within-realm ramp (round/4) is the key fix: previously a realm's
+  // rounds 1–9 were FLAT (esc = diff) and only the round-10 boss spiked, so mid-rounds stomped then
+  // the boss walled. Now difficulty creeps up across the realm (+1 by round 5, +2 by round 9),
+  // easing the climb into the boss without touching the gentle opening rounds.
+  const esc = Math.max(0, round - LADDER.length) + diff + Math.floor((round - 1) / 4);
   let units = base.units.map((u) => ({ ...u }));
   if (esc > 0) {
     const starBump = Math.min(2, Math.floor(esc / 3) + 1);
