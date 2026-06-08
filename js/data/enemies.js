@@ -81,13 +81,19 @@ export function getCreepCamp(round, opts = {}) {
   const diff = Math.max(0, opts.diff || 0);
   const esc = diff + Math.floor((round - 1) / 4);
   const star = Math.min(3, 1 + Math.floor(esc / 4));     // gentler ramp than getEnemyBoard's esc/3
-  const extra = Math.min(3, Math.floor(esc / 4));        // a few more wolves in the harder realms
-  const units = [
+  // pack SIZE scales with the run so the early opener is a tiny camp a 2-unit starter board can
+  // beat (round 1, realm 0 → just 2 monsters), filling out to a full pack deeper in (cap 6). This
+  // tracks the player's growing board limit so a camp is always a breather, never a first-fight wall.
+  const size = Math.max(2, Math.min(6, 2 + Math.floor(round / 3) + Math.floor(diff / 4)));
+  const roster = [
     E('creep_brute', star, 3, 3),
-    E('creep_wolf', star, 2, 3), E('creep_wolf', star, 4, 3),
-    E('creep_spore', star, 3, 1), E('creep_spore', star, 5, 1),
+    E('creep_wolf', star, 2, 3),
+    E('creep_spore', star, 4, 1),
+    E('creep_wolf', star, 5, 3),
+    E('creep_spore', star, 1, 1),
+    E('creep_wolf', star, 3, 2),
   ];
-  for (let k = 0; k < extra; k++) units.push(E('creep_wolf', star, 1 + (k % 5), 2));
+  const units = roster.slice(0, size);
   const NAMES = ['Wolf Pack', 'Troll Warren', 'Spore Grove', 'the Wild Beasts'];
   return { name: 'Neutral Camp — ' + NAMES[round % NAMES.length], traitHint: 'wild monsters · clear them for loot', creep: true, units };
 }

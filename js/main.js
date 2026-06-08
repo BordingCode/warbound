@@ -146,9 +146,11 @@ function buildTraitsEl() {
   // The race banished for this run (Auto-Chess rotation) — a persistent reminder it's off the table.
   if (run.bannedRace && run.mode !== 'ladder' && TRAITS[run.bannedRace]) {
     const d = TRAITS[run.bannedRace];
-    rail.append(el('.trait-chip.banished', { title: `${d.name} is banished this run`, onclick: () => modal2('Banished this run', `${d.name} units never appear in your shop this run — one race sits out each run, drawn from the seed (Auto-Chess style). You'll still face ${d.name} in enemy warbands.`) }, [
+    rail.append(el('.trait-chip.banished', { title: `${d.name} is banished this run — not in your shop`, onclick: () => modal2('Banished this run', `${d.name} units never appear in your shop this run — one race sits out each run, drawn from the seed (Auto-Chess style). You'll still face ${d.name} in enemy warbands.`) }, [
       el('span', { html: ic('ban'), style: { display: 'inline-flex', color: 'var(--danger)' } }),
-      el('span', {}, d.name),
+      el('span.ban-tag', {}, 'Banished'),
+      el('span.dot', { style: { background: d.color } }),
+      el('span.ban-race', {}, d.name),
     ]));
   }
   const entries = Object.entries(active).filter(([t]) => TRAITS[t]).sort((a, b) => (b[1].tier - a[1].tier) || (b[1].count - a[1].count));
@@ -193,10 +195,13 @@ function buildShopEl() {
       el('span.price', {}, `${def.cost}⛁`),
       el('button.card-info', { onclick: (e) => { e.stopPropagation(); showUnitInfo(def, 1, []); } }, 'ⓘ'),
       // copies left in the shared bag (Auto-Chess pool depletion, surfaced): scarce = few left,
-      // contested = rivals are holding copies (Ladder only — solo runs only deplete via you).
-      el(`.pool-cnt${pi.left <= 2 ? ' scarce' : ''}${pi.contested ? ' contested' : ''}`,
-        { title: pi.contested ? `${pi.left}/${pi.total} left in the shared pool — ${pi.others} held by rival warlords` : `${pi.left} of ${pi.total} left in the pool` },
-        `${pi.left}${pi.contested ? ' ⚔' : ''}`),
+      // contested = rivals are holding copies (Ladder only — solo runs only deplete via you). Hidden
+      // while the bag is still full — five identical max numbers on a fresh shop is just noise.
+      (pi.left < pi.total || pi.contested)
+        ? el(`.pool-cnt${pi.left <= 2 ? ' scarce' : ''}${pi.contested ? ' contested' : ''}`,
+            { title: pi.contested ? `${pi.left}/${pi.total} left in the shared pool — ${pi.others} held by rival warlords` : `${pi.left} of ${pi.total} left in the pool` },
+            `${pi.left}${pi.contested ? ' ⚔' : ''}`)
+        : null,
       el('.art', { html: championSVG(def, { size: 46 }) }),
       el('.nm', {}, def.name),
       el('.tags', {}, `${TRAITS[def.origin].name} · ${TRAITS[def.klass].name}`),
@@ -1256,6 +1261,9 @@ async function startCombat() {
   if (won) launchConfetti(2000);
   const sv = result.survivors;
   setBanner(won ? `Round won! (${sv.player} survived)` : winner === 'enemy' ? `Round lost — ${sv.enemy} enemies left` : 'Draw — counts as a loss');
+  // the fight is over — stop the button reading "Fighting…" until the planning screen re-renders
+  // (avoids a brief beat where the result banner contradicts a still-"Fighting…" button).
+  if (ready) ready.textContent = won ? 'Victory!' : winner === 'enemy' ? 'Defeat' : 'Draw';
 
   const finishedRound = run.round;
 

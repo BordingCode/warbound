@@ -62,9 +62,11 @@
 .trait-chip.tier-3 { border-color: var(--tier-gold); box-shadow: 0 0 8px #ffce5c40; }
 .trait-chip.flash { animation: chipflash .4s ease; }
 @keyframes chipflash { 0% { transform: scale(1); } 40% { transform: scale(1.18); box-shadow: 0 0 14px currentColor; } }
-/* banished-race chip: the one race sitting out this run (Auto-Chess rotation) */
-.trait-chip.banished { opacity: 1; border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); color: var(--ink-dim); }
-.trait-chip.banished > span:last-child { text-decoration: line-through; text-decoration-color: var(--danger); }
+/* banished-race chip: the one race sitting out this run (Auto-Chess rotation). Styled as an
+   exclusion (danger-tinted pill + an explicit "BANISHED" tag) so it never reads as a synergy. */
+.trait-chip.banished { opacity: 1; background: color-mix(in srgb, var(--danger) 14%, var(--bg-2)); border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); }
+.trait-chip.banished .ban-tag { font-size: 8.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--danger); }
+.trait-chip.banished .ban-race { text-decoration: line-through; text-decoration-color: var(--danger); color: var(--ink-dim); }
 
 /* ── The Banishment reveal (gameshow spin at run start) ── */
 .ban-overlay { background: #05060bf7; }
