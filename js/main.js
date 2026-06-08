@@ -439,6 +439,7 @@ function renderPlanning() {
   checkBoardHonors();   // 3★ / 6-stack synergy are board-state honours — re-checked each plan render
   const enemy = getOpponent();
   const boardLimitTxt = `${run.board.length}/${Run.boardLimit(run)}`;
+  const overCap = Math.max(0, run.board.length - Run.boardLimit(run));   // you may over-place; just can't fight over-cap
   const { stage, wrap, units } = buildBoardEl();
   // (warband stats moved off the board into a top-bar button overlay — see showStats)
 
@@ -452,7 +453,7 @@ function renderPlanning() {
       el('button.btn#optionsBtn', { style: { padding: '5px 10px' }, title: 'Options & menu', onclick: showOptions, html: ic('bars') }),
     ]),
     el('.topbar', { style: { cursor: 'pointer' }, onclick: showEconomyInfo }, [
-      el('.stat-pill', {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, ` · ${boardLimitTxt} units`)]),
+      el(`.stat-pill${overCap ? ' danger' : ''}`, {}, [el('span', { style: { color: 'var(--gold)' } }, `Lv ${run.level}`), el('span', { style: { color: overCap ? 'var(--danger)' : 'var(--ink-dim)', fontSize: '11px', fontWeight: overCap ? '800' : '400' } }, ` · ${boardLimitTxt} units${overCap ? ` (${overCap} over!)` : ''}`)]),
       el('.xpbar', { title: 'XP to next level (+2 each round)' }, el('.fill', { style: { transform: `scaleX(${Run.xpNeeded(run) ? run.xp / Run.xpNeeded(run) : 1})` } })),
       el('span', { style: { fontSize: '10px', color: 'var(--ink-dim)', whiteSpace: 'nowrap' } }, Run.xpNeeded(run) ? `${run.xp}/${Run.xpNeeded(run)} ⓘ` : 'MAX'),
     ]),
@@ -470,7 +471,7 @@ function renderPlanning() {
     buildEnemyScout(enemy),
     stage,
     el('.combat-ctl', {}, [
-      el('button.btn.primary#readyBtn', { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, 'Ready'),
+      el(`button.btn${overCap ? '.over-cap' : '.primary'}#readyBtn`, { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, overCap ? `Bench ${overCap} to fight` : 'Ready'),
       ...SPEEDS.map(([s, lbl]) => el(`button.btn#spd${spdId(s)}`, { onclick: () => setSpeed(s) }, lbl)),
     ]),
     // Full-width Sell drop bar — always on-screen and the WHOLE bar is the drop target, so it
@@ -1223,6 +1224,10 @@ function verdictCard(v) {
 // ---------- combat ----------
 async function startCombat() {
   if (inCombat) return;
+  // You may PLACE more champions than your level allows, but you can't march to battle over-capped —
+  // bench/sell the excess (or Buy XP to raise the cap) first.
+  const over = run.board.length - Run.boardLimit(run);
+  if (over > 0) { Sfx.click(); modal2('Too many champions', `Your board holds ${run.board.length}, but at level ${run.level} you can field only ${Run.boardLimit(run)}. Bench or sell ${over} champion${over > 1 ? 's' : ''} — or Buy XP to raise your limit — then march.`); return; }
   audioResume();
   inCombat = true;
   lastBattleStats = null;   // a new battle clears the previous battle's per-unit stats

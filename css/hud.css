@@ -103,6 +103,8 @@
 }
 .btn:active { transform: scale(.95); }
 .btn.primary { background: linear-gradient(180deg, #3a6ea5, #2c5688); border-color: #4d86c4; }
+/* Ready button while OVER the board cap — clearly can't march yet (bench the excess first) */
+.btn.over-cap { background: linear-gradient(180deg, #7a2d2d, #571d1d); border-color: var(--danger); color: #ffdede; font-weight: 800; }
 .btn.reroll { color: var(--gold); }
 .shop-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .shop.locked .shop-row { outline: 2px solid var(--mana); outline-offset: 2px; border-radius: var(--radius-sm); }

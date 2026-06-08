@@ -16,7 +16,11 @@ export const SHOP_ODDS = {
 };
 export const XP_TO_NEXT = { 1: 2, 2: 2, 3: 6, 4: 10, 5: 20, 6: 36, 7: 56, 8: 80 };
 export const MAX_LEVEL = 9;
-export const POOL_COPIES = { 1: 22, 2: 18, 3: 14, 4: 6, 5: 4 };
+// Every unit has at least 9 copies — exactly enough to THREE-STAR one (3 → ★★, 9 → ★★★). The old
+// 4-cost=6 / 5-cost=4 made elite 3★s impossible. In solo/Trials/Endless the pool is yours alone
+// (enemies are fixed, scripted boards — they never draw from it); in the Ladder this same bag is
+// shared by all 8 warlords, so 9 still means at most one of you can 3★ a given elite (Auto-Chess scarcity).
+export const POOL_COPIES = { 1: 22, 2: 18, 3: 14, 4: 9, 5: 9 };
 export const SHOP_SIZE = 5;
 export const BENCH_SIZE = 9;
 export const REROLL_COST = 2;
@@ -304,7 +308,8 @@ export function placeOnBoard(run, uid, col, row) {
   // occupant of target tile?
   const occ = run.board.find((s) => s.col === col && s.row === row && s.uid !== uid);
   if (fromBench !== -1) {
-    if (run.board.length >= boardLimit(run) && !occ) return false; // over board limit
+    // You MAY place more units than your limit (e.g. 9 on a 7-cap board) — the over-cap units are
+    // flagged and you simply can't START the battle until you're back within the cap (see startCombat).
     if (occ) { // swap bench<->board
       run.bench[fromBench] = occ;
       const oi = run.board.indexOf(occ); run.board[oi] = { ...u, col, row };
