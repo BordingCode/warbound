@@ -79,10 +79,10 @@ export const TRAITS = {
   },
   assassin: {
     name: 'Assassin', axis: 'class', kind: 'behaviour', color: '#ff7eb6',
-    desc: 'Leap to the back line; lethal crits.',
+    desc: 'Leap to the back line; lethal crits that SHRED armour — the anti-tank answer to a wall.',
     breakpoints: [2, 4],
-    bonuses: { 2: { critChance: 0.33, critDmg: 1.15 }, 4: { critChance: 0.52, critDmg: 2.10 } },
-    bonusText: { 2: 'Dive + 33% crit (+115% dmg)', 4: 'Dive + 52% crit (+210%)' },
+    bonuses: { 2: { critChance: 0.33, critDmg: 1.15, shred: 20 }, 4: { critChance: 0.52, critDmg: 2.10, shred: 34 } },
+    bonusText: { 2: 'Dive + 33% crit (+115%) + shred 20 armour/hit', 4: 'Dive + 52% crit (+210%) + shred 34 armour/hit' },
   },
   healer: {
     name: 'Healer', axis: 'class', kind: 'glue', color: '#7affd6',

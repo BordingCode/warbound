@@ -53,7 +53,7 @@ function makeUnit(entry, team, id, aug = null) {
     alive: true, shield: im.shield, stunUntil: -1,
     // trait-derived (filled by applyTraits) + item-derived
     block: 0, dmgRed: 0, ccResist: 0, critChance: im.critChance, critDmg: 0.4 + im.critDmg, dodge: 0, healAmp: 0, regen: im.regen,
-    revivePct: im.revive, revived: false, burnOnHit: 0, manaBurnOnHit: 0,
+    revivePct: im.revive, revived: false, burnOnHit: 0, manaBurnOnHit: 0, shredOnHit: 0,
     hpDmg: 0, staggerPct: 0, staggerDur: 0,
     ferocity: 0, asStacks: 0, manaRegen: 0, rangerAS: 0, summonPower: 0, moveCd: 0,
     vamp: im.vamp, thorns: im.thorns,
@@ -107,7 +107,7 @@ function applyTraits(units, board, traitBonus = {}) {
     const beast = get('beast'); if (beast && active.beast.tier >= 6) u.ferocity = Math.max(u.ferocity, beast.ferocity);
     // class/origin-tagged — now honoured for Emblem-granted traits too
     if (has('mage')) { const m = get('mage'); if (m) u.apBonus += m.ap; }
-    if (has('assassin')) { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; } }
+    if (has('assassin')) { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; if (a.shred) u.shredOnHit = Math.max(u.shredOnHit, a.shred); } }
     if (has('ranger')) { const r = get('ranger'); if (r) u.rangerAS = r.rangerAS; }
     if (has('beast')) { const b = get('beast'); if (b) { u.ferocity = Math.max(u.ferocity, b.ferocity); if (b.armor) u.armor += b.armor; } }   // beasts ramp AS AND wear thicker hide (survive to ramp)
     // Orc Bloodlust: ramping attack speed (ferocity) AND lifesteal (vamp) for the whole warband —
@@ -548,6 +548,9 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     const ls = u.vamp + (now < u.lifestealUntil ? u.lifestealPct : 0);   // permanent vamp + timed lifesteal verb
     if (ls > 0 && u.alive) heal(u, dealt * ls, now);
     if (u.burnOnHit) applyDamage(target, u.burnOnHit, 'magic', u, now);
+    // Assassin: each strike SHREDS the target's armour (the anti-tank tool — fast crits melt a
+    // bruiser's mitigation, giving the squishiest comp a real role vs armoured boards). Refreshes.
+    if (u.shredOnHit && target.alive) { target.shredArmorAmt = Math.max(now < target.shredArmorUntil ? target.shredArmorAmt : 0, u.shredOnHit); target.shredArmorUntil = now + 3; }
     if (u.manaBurnOnHit && target.alive) target.mana = Math.max(0, target.mana - u.manaBurnOnHit);
     // Giant: each strike smashes for bonus magic = % of the GIANT's own max HP ("the bigger they
     // are") AND staggers the target (a brief attack-speed slow — the CC SOURCE that Dwarf resists).
