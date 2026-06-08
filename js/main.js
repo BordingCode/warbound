@@ -378,7 +378,7 @@ function buildEnemyScout(enemy) {
 }
 
 function buildItemsTray() {
-  const tray = el('.items-tray');
+  const tray = el(`.items-tray${run.items.length ? '' : ' empty'}`);   // '.empty' is hidden on phones (saves space; no items to drag yet)
   tray.append(el('span.tray-label', { html: ic('bag') }));
   if (!run.items.length) { tray.append(el('span', { style: { color: 'var(--ink-faint)', fontSize: '11px' } }, 'No items — win rounds to earn them. Drag an item onto a champion.')); return tray; }
   for (const it of run.items) {

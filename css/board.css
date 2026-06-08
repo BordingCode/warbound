@@ -6,6 +6,11 @@
   aspect-ratio: 1 / 1;
   touch-action: none;            /* drag surface: never scroll the page from here */
 }
+/* phone portrait: shrink the board a notch so the board + shop both fit on one screen during
+   planning (you're placing units, not watching a fight — readability holds at this size). */
+@media (max-width: 480px) {
+  .stage { width: min(84vw, 50svh, 520px); margin-top: 14px; }
+}
 .board-wrap {
   position: absolute; inset: 0;
   border-radius: var(--radius);

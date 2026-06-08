@@ -143,6 +143,17 @@
 .items-tray .tray-label { font-size: 16px; }
 .item-chip { width: 30px; height: 30px; display: grid; place-items: center; font-size: 17px; background: var(--bg-3); border: 1px solid var(--gold-deep); border-radius: 7px; cursor: grab; touch-action: none; }
 .item-chip.dragging { opacity: .4; }
+
+/* Phone portrait: tighten the planning stack so the board + shop fit on one screen (less scroll).
+   The EMPTY items-tray (just a "no items yet" hint) is dropped — there's nothing to drag yet, and
+   it reappears the moment you earn an item. Pairs with the smaller board in board.css. */
+@media (max-width: 480px) {
+  .game.planning { gap: 6px; }
+  .game.planning .items-tray.empty { display: none; }
+  .game.planning .phase-banner { font-size: 12.5px; line-height: 1.16; }
+  .game.planning .sell-zone { padding: 8px; }
+  .game.planning .combat-ctl .btn { padding: 8px 14px; }
+}
 .item-ghost { width: 44px; height: 44px; display: grid; place-items: center; font-size: 26px; background: var(--bg-3); border: 2px solid var(--gold); border-radius: 9px; }
 .draft-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .draft-pick { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 6px; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius-sm); }
