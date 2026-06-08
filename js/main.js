@@ -564,9 +564,38 @@ function offerDraft(after) {
   ]));
   document.body.append(ov);
 }
-function shouldDraft(finishedRound) { return [1, 2, 5, 7, 10].includes(finishedRound); }
+function shouldDraft(finishedRound) { return [1, 2, 7].includes(finishedRound); }
+function shouldCarousel(finishedRound) { return [5, 10].includes(finishedRound); }   // Auto-Chess carousel, every 5 rounds
 function shouldAugment(finishedRound) { return [3, 6, 9].includes(finishedRound); }
 function shouldEmblem(finishedRound) { return [4, 8].includes(finishedRound); }   // Warpath-only
+
+// The Carousel (Auto Chess): grab ONE free champion — each comes carrying an item component. Catch-up
+// is baked into the wheel (further behind → stronger units). Warpath-family only (bots get no carousel,
+// so the Ladder stays fair). Pick the unit you want, the synergy you're building, or the item.
+function offerCarousel(after) {
+  const picks = Run.draftCarousel(run);
+  if (!picks.length) { after ? after() : renderPlanning(); return; }
+  const grab = (p) => {
+    Run.grantUnit(run, p.unitId); Run.addItem(run, p.itemId);
+    Run.save(run); Sfx.fuse(); if (motionOn()) launchConfetti(1200);
+    ov.remove(); after ? after() : renderPlanning();
+  };
+  const ov = el('.overlay', {}, el('.help-card carousel-card', { style: { maxWidth: '470px', width: '95%' } }, [
+    el('h2', {}, '✦ The Carousel'),
+    el('.sub', {}, 'Grab one free champion — it comes carrying an item to forge with. Take the unit, the synergy, or the item.'),
+    el('.carousel-row', {}, picks.map((p) => {
+      const def = UNITS_BY_ID[p.unitId]; const it = COMPONENTS[p.itemId];
+      return el(`button.carousel-pick cost-${def.cost}`, { onclick: () => grab(p) }, [
+        el('.cp-item', { title: it.name, html: ic(it.icon) }),
+        el('.cp-art', { html: championSVG(def, { size: 50 }) }),
+        el('.cp-nm', {}, def.name),
+        el('.cp-tags', {}, `${TRAITS[def.origin].name} · ${TRAITS[def.klass].name}`),
+        el('.cp-cost', {}, `${def.cost}⛁ · + ${it.name}`),
+      ]);
+    })),
+  ]));
+  document.body.append(ov);
+}
 
 // Warpath-only emblem draft: equip on a champion to grant it an extra Origin/Class trait.
 function offerEmblem(after) {
@@ -1240,6 +1269,7 @@ async function startCombat() {
     if (run.over) endScreen();
     else if (shouldAugment(finishedRound)) offerAugment(renderPlanning);
     else if (shouldEmblem(finishedRound)) offerEmblem(renderPlanning);
+    else if (shouldCarousel(finishedRound)) offerCarousel(renderPlanning);
     else if (shouldDraft(finishedRound)) offerDraft(renderPlanning);
     else renderPlanning();
   }, 1100);

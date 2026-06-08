@@ -149,6 +149,26 @@
 .draft-pick .dn { font-weight: 700; font-size: 13px; }
 .draft-pick .dm { font-size: 10px; color: var(--ink-dim); text-align: center; }
 
+/* The Carousel — 5 free champions on a wheel, each carrying an item (Auto Chess) */
+.carousel-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 12px; }
+.carousel-pick { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 4px 8px; background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); border: 1px solid var(--line);
+  border-top-width: 3px; border-radius: var(--radius-sm); overflow: hidden; }
+.carousel-pick:active { transform: scale(.95); }
+.carousel-pick.cost-1 { border-top-color: #9aa6b8; }
+.carousel-pick.cost-2 { border-top-color: #5fd07a; }
+.carousel-pick.cost-3 { border-top-color: #5aa6ff; }
+.carousel-pick.cost-4 { border-top-color: #c79bff; }
+.carousel-pick.cost-5 { border-top-color: var(--gold); }
+.carousel-pick .cp-art { width: 50px; height: 50px; display: grid; place-items: center; }
+.carousel-pick .cp-item { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; display: grid; place-items: center;
+  background: #0008; border-radius: 6px; color: var(--gold); }
+.carousel-pick .cp-item svg, .carousel-pick .cp-item .ic { width: 13px; height: 13px; }
+.carousel-pick .cp-nm { font-size: 10.5px; font-weight: 800; text-align: center; line-height: 1.05; }
+.carousel-pick .cp-tags { font-size: 8px; color: var(--ink-dim); text-align: center; }
+.carousel-pick .cp-cost { font-size: 8.5px; color: var(--gold); text-align: center; margin-top: 1px; }
+@media (max-width: 480px) { .carousel-row { grid-template-columns: repeat(2, 1fr); } }
+
 /* enemy scout */
 .enemy-scout { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: -2px; }
 .enemy-scout .scout-label { font-size: 11px; color: var(--danger); font-weight: 700; }

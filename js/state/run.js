@@ -332,6 +332,42 @@ export function addItem(run, id) { run.items.push({ iid: newUid(), id }); }
 export function draftComponents(run) { const ids = _rng.shuffle(COMPONENT_IDS).slice(0, 3); saveRngState(run); return ids; }
 // Warpath-only: offer 3 distinct emblems (grant a trait to one unit). Ladder never calls this.
 export function draftEmblems(run) { const ids = _rng.shuffle(EMBLEM_IDS.slice()).slice(0, 3); saveRngState(run); return ids; }
+
+// The Carousel (Auto Chess): 5 free champions on a wheel, each carrying an item component. Catch-up
+// — the fewer lives you have, the higher-cost the units on offer. Respects the banished race (only
+// units still in the pool). Seeded, so a shared seed shows the same wheel. Warpath-family only.
+export function draftCarousel(run) {
+  const lives = run.lives != null ? run.lives : START_LIVES;
+  const targetCost = lives >= 4 ? 2 : lives >= 3 ? 3 : 4;             // behind → a richer wheel
+  const weightFor = (cost) => 1 / (1 + Math.abs(cost - targetCost) * 1.4);  // peaks at targetCost, never 0
+  const all = [];
+  for (let c = 1; c <= 5; c++) for (const id of unitsByCost[c]) if ((run.pool[id] || 0) > 0) all.push({ id, cost: c });
+  const picks = [], taken = new Set();
+  let guard = 0;
+  while (picks.length < 5 && guard++ < 500) {
+    const avail = all.filter((u) => !taken.has(u.id));
+    if (!avail.length) break;
+    const total = avail.reduce((a, u) => a + weightFor(u.cost), 0);
+    let r = _rng.next() * total, chosen = avail[avail.length - 1];
+    for (const u of avail) { r -= weightFor(u.cost); if (r < 0) { chosen = u; break; } }
+    taken.add(chosen.id);
+    picks.push({ unitId: chosen.id, itemId: COMPONENT_IDS[Math.floor(_rng.next() * COMPONENT_IDS.length)] });
+  }
+  saveRngState(run);
+  return picks;
+}
+
+// Grant a free 1★ champion straight to the bench (carousel pick): no gold, no shop slot. Decrements
+// the shared pool and auto-fuses like a normal buy. Returns the new unit's uid (or null if no def).
+export function grantUnit(run, defId) {
+  const def = UNITS_BY_ID[defId]; if (!def) return null;
+  run.pool[defId] = Math.max(0, (run.pool[defId] || 0) - 1);
+  const idx = benchFreeIndex(run);
+  const unit = { uid: newUid(), defId, star: 1, items: [] };
+  if (idx !== -1) run.bench[idx] = unit; else run.bench.push(unit);   // transient overflow; fuse reclaims
+  fuseAll(run); normalizeBench(run);
+  return unit.uid;
+}
 export function equipItem(run, iid, uid) {
   const it = run.items.find((x) => x.iid === iid); if (!it) return false;
   if (isEmblem(it.id) && run.mode === 'ladder') return false;   // emblems are Warpath-only (keep PvP pure)
