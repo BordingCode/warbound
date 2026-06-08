@@ -657,7 +657,10 @@ function abilityDesc(def, star) {
   const a = def.ability, v = abilityValue(def, star);
   if (a.noCast) return passiveSummary(a) || 'A purely passive champion.';   // no cast — identity is the passive
   let s;
-  if (a.type === 'magic') s = `Deals ${v} magic damage${a.target === 'cluster' ? ' to all nearby foes' : ''}.`;
+  // A hand-written blurb (when present) describes the spell's distinct IDENTITY — preferred over the
+  // generic by-type text below; `{v}` is filled with the headline value at the current star.
+  if (a.blurb) s = a.blurb.replace(/\{v\}/g, v);
+  else if (a.type === 'magic') s = `Deals ${v} magic damage${a.target === 'cluster' ? ' to all nearby foes' : ''}.`;
   else if (a.type === 'physical') s = a.target === 'lowestEnemyHP' ? `Executes the lowest-HP enemy for ${Math.round(v * 1.3)}.` : a.target === 'mostEnemies' ? `Hits several foes for ${Math.round(v * 0.9)} each.` : a.stun ? `Smashes for ${v} and stuns.` : `Cleaves nearby foes for ${v}.`;
   else if (a.type === 'heal') s = `Heals the most wounded ally for ${v}.`;
   else if (a.type === 'shield') s = `Shields the most wounded ally for ${v}.`;

@@ -119,7 +119,9 @@ const A = {
     passive: { on: 'cast', verbs: [v.buffAS(0.09, 2, 'adjacentAllies')] },
     ult: { verbs: [v.buffAS(0.30, 4, 'allies')] } },
   // PASSIVE — Conduit: gains AP for each allied caster (mage/healer/summoner) on the board.
+  // Mage c2 — the BASELINE burst caster: a clean radius-1 nuke. (Entry-level: smallest mage spell.)
   court_mage: { name: 'Arcane Nuke', type: 'magic', target: 'cluster', radius: 1, ap: 220,
+    blurb: 'Blasts {v} magic damage to a knot of nearby foes.',
     verbs: [v.cluster({ radius: 1 })], passive: { on: 'spawn', verbs: [v.casterScale(16)] },
     ult: { verbs: [v.manaBurn(30), { op: 'magic', target: 'cluster', radius: 2, ap: 160 }] } },
   // Suppressing Volley: fires at the FRONT cluster (nearest 4) and softens it with a slow.
@@ -137,9 +139,12 @@ const A = {
   bone_guard: { name: 'Bonewall', type: 'physical', noCast: true, verbs: [],
     passive: [{ on: 'attacked', every: 3, verbs: [v.shieldSelf(85)] },
       { on: 'spawn', verbs: [v.thorns(0.12, 999, 'self')], ult: [v.lifesteal(0.18, 999, 'self')] }] },
-  lich: { name: 'Frost Nova', type: 'magic', target: 'cluster', radius: 1, ap: 320,
-    verbs: [v.cluster({ radius: 1 }), v.slow(0.30, 2, 'cluster')],
-    ult: { verbs: [v.shred('mr', 30, 4, 'cluster')] } },
+  // Mage c3 — the CONTROL caster: a chilling burst that cripples attack speed; at 3★ it FREEZES
+  // the whole cluster solid (stun) and shreds their magic resist — a lockdown spike.
+  lich: { name: 'Frost Nova', type: 'magic', target: 'cluster', radius: 1, ap: 300,
+    blurb: 'Erupts for {v} frost damage and chills nearby foes (−35% attack speed for 2s).',
+    verbs: [v.cluster({ radius: 1 }), v.slow(0.35, 2, 'cluster')],
+    ult: { verbs: [v.stun(1, 'cluster'), v.shred('mr', 30, 4, 'cluster')] } },
   // PASSIVE — Splintering Bone: every 4th auto looses a free bonus bolt (swarm machine-gun).
   skeleton_archer: { name: 'Bone Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.0,
     verbs: [v.volley({ adRatio: 2.0, onKill: [{ op: 'raise', max: 2 }] })],
@@ -163,8 +168,11 @@ const A = {
     ult: { verbs: [v.healCut(0.40, 3, 'current'), v.buffAS(0.3, 4, 'self'), v.lifesteal(0.30, 4, 'self')] } },
 
   // Elf
-  moon_priestess: { name: 'Lunar Bolt', type: 'magic', target: 'current', ap: 560,
-    verbs: [v.magic({ ap: 560 })], ult: { verbs: [v.chain({ count: 2, falloff: 0.6 })] } },
+  // Mage c4 — the ASSASSIN caster: a precision bolt that ignores position and snipes the enemy's
+  // strongest unit (their carry) for huge single-target burst; at 3★ it splinters and chains.
+  moon_priestess: { name: 'Lunar Bolt', type: 'magic', target: 'highestValueEnemy', ap: 620,
+    blurb: 'Snipes the enemy’s strongest unit for {v} magic damage, wherever it stands.',
+    verbs: [v.magic({ target: 'highestValueEnemy' })], ult: { verbs: [v.chain({ count: 2, falloff: 0.6 })] } },
   // PURE PASSIVE — Marksman's Focus: no cast; locks one target and ramps escalating bonus damage
   // the longer it fires on it (resets on a new target); at 3★ the focus also shreds its armor.
   wood_ranger: { name: "Marksman's Focus", type: 'physical', noCast: true, verbs: [],
@@ -182,8 +190,12 @@ const A = {
   hellguard: { name: 'Fel Cleave', type: 'physical', target: 'cluster', radius: 1, adRatio: 1.9,
     verbs: [v.cleave({ adRatio: 1.9 })], passive: { on: 'hit', verbs: [v.sacrifice(0.015, 2.4)] },
     ult: { verbs: [v.manaBurn(25, 'cluster'), v.healCut(0.40, 3, 'cluster')] } },
-  warlock: { name: 'Doom Bolt', type: 'magic', target: 'cluster', radius: 1, ap: 400,
-    verbs: [v.cluster({ radius: 1 })], ult: { verbs: [v.dot(60, 3, 'cluster'), v.manaBurn(30)] } },
+  // Mage c4 — the CURSE caster: little upfront, but rots a cluster with damage-over-time AND cuts
+  // their healing 40% (the anti-sustain answer to healer comps); at 3★ the curse deepens + mana-burns.
+  warlock: { name: 'Curse of Doom', type: 'magic', target: 'cluster', radius: 1, ap: 230,
+    blurb: 'Curses nearby foes: {v} now, then 75/s for 3s, and cuts their healing 40%.',
+    verbs: [v.cluster({ radius: 1 }), v.dot(75, 3, 'cluster'), v.healCut(0.40, 4, 'cluster')],
+    ult: { verbs: [v.dot(120, 3, 'cluster'), v.manaBurn(30, 'cluster')] } },
   // Caster-hunter: its volley targets the enemy's highest-mana units to deny their spells.
   fel_archer: { name: 'Searing Volley', type: 'physical', target: 'mostEnemies', adRatio: 2.3,
     verbs: [{ op: 'phys', target: 'mostMana', count: 4, mult: 0.7, adRatio: 2.3 }],
@@ -226,8 +238,12 @@ const A = {
   dragon_knight: { name: 'Dragon Breath', type: 'magic', target: 'cluster', radius: 2, ap: 250,
     verbs: [v.cluster({ radius: 2 })], passive: { on: 'spawn', verbs: [v.guard(0.15)] },
     ult: { verbs: [v.knockback(1, 'cluster'), v.healCut(0.40, 3, 'cluster')] } },
-  dragon_sage: { name: 'Cataclysm', type: 'magic', target: 'cluster', radius: 2, ap: 340,
-    verbs: [v.cluster({ radius: 2 })], ult: { verbs: [v.meteors({ n: 4, ap: 100, radius: 1 }), v.manaBurn(25)] } },
+  // Mage c5 — the APEX caster (elite 5-cost): the single strongest spell — a WIDE radius-2 blast
+  // AND a meteor storm baked into the base; at 3★ even more meteors, mana-burn, and a shockwave.
+  dragon_sage: { name: 'Cataclysm', type: 'magic', target: 'cluster', radius: 2, ap: 360,
+    blurb: 'Rains ruin: {v} across a wide blast, plus 3 meteors (120 magic each).',
+    verbs: [v.cluster({ radius: 2 }), v.meteors({ n: 3, ap: 120, radius: 1 })],
+    ult: { verbs: [v.meteors({ n: 5, ap: 130, radius: 1 }), v.manaBurn(25, 'cluster'), v.knockback(1, 'cluster')] } },
   // Dragon-RANGER: a fire-breathing skywyrm — its "volley" is a storm of cinders, not arrows.
   wyrm_archer: { name: 'Storm of Cinders', type: 'physical', target: 'mostEnemies', adRatio: 2.8,
     verbs: [v.volley({ adRatio: 2.8 })],
@@ -254,10 +270,12 @@ const A = {
   orc_grunt: { name: 'Brutal Bash', type: 'physical', target: 'current', adRatio: 2.0, stun: 0.9,
     verbs: [v.phys({ adRatio: 2.0 }), v.stun(0.9), v.shieldSelf(60)],
     ult: { verbs: [v.knockback(1), v.thorns(0.30, 6, 'self'), v.taunt(1, 1.5)] } },
-  // Orc-MAGE: a spirit-shaman that calls forked lightning down on the cluster.
-  orc_shaman: { name: 'Spirit Lightning', type: 'magic', target: 'cluster', radius: 1, ap: 300,
-    verbs: [v.cluster({ radius: 1 }), v.slow(0.18, 1.5, 'cluster')],
-    ult: { verbs: [v.chain({ count: 2, falloff: 0.6 })] } },
+  // Orc-MAGE (Mage c3) — the BOUNCE caster: a lightning bolt that leaps from foe to foe (strong vs
+  // spread-out boards, unlike a fixed AoE); at 3★ it forks a second, farther storm and slows the team.
+  orc_shaman: { name: 'Chain Lightning', type: 'magic', target: 'current', ap: 250,
+    blurb: 'Looses lightning — {v} to the first foe, arcing to 2 more (×0.6 each jump).',
+    verbs: [v.chain({ count: 2, falloff: 0.6 })],
+    ult: { verbs: [v.chain({ count: 3, falloff: 0.7 }), v.slow(0.22, 2, 'allEnemies')] } },
   // Orc-RANGER: hurls a spread of cleaving axes across the front line.
   axethrower: { name: 'Cleaving Axes', type: 'physical', target: 'mostEnemies', adRatio: 2.6,
     verbs: [v.volley({ adRatio: 2.6 })],
@@ -331,17 +349,17 @@ export const ULT3 = {
   crossbowman: 'All targets hit are slowed 25%, and it looses a second volley into the back line.',
   field_medic: 'Cleanses + 1.5s CC immunity, and surges a 200 heal across the 3 most-wounded allies.',
   bone_guard: 'Also leeches 18% of its attack damage as health.',
-  lich: 'Also shreds 30 Magic Resist from everything hit for 4s.',
+  lich: 'FREEZES the whole cluster solid for 1s and shreds 30 Magic Resist for 4s.',
   skeleton_archer: 'Kills raise a Risen, and it looses a SECOND volley at the back line.',
   wraith: 'On a kill, resets its attack and gains +40% Attack Speed for 3s.',
   necromancer: 'Also raises a greater wight with double stats.',
   death_knight: 'Cuts healing 40%, and the Death Knight gains +30% Attack Speed AND 30% lifesteal for 4s — nearly unkillable.',
-  moon_priestess: 'The bolt chains to 2 more foes (×0.6 each).',
+  moon_priestess: 'The bolt splinters off the carry, chaining to 2 more foes (×0.6 each).',
   wood_ranger: 'Its locked-on focus also shreds the target’s Armor by 25.',
   shadow_dancer: 'After striking, gains +40% dodge and +40% Attack Speed for 3s.',
   grove_healer: 'Heal splashes 50% to adjacent allies and adds 12 HP/s regen for 3s.',
   hellguard: 'Also burns 25 mana and cuts healing 40% on all hit for 3s.',
-  warlock: 'Adds a 60/s burning DoT for 3s and burns 30 mana.',
+  warlock: 'Deepens the curse to 120/s for 3s and burns 30 mana from all cursed foes.',
   fel_archer: 'Each volley burns 30 mana and slows the enemy casters 25% — total cast lockdown.',
   imp_assassin: 'On a kill, burns 40 mana and slows the 2 nearest foes 30%.',
   pit_summoner: 'Also calls 3 meteors (120 magic each) on random foes.',
@@ -352,7 +370,7 @@ export const ULT3 = {
   druid_healer: 'Shields the 3 most-wounded allies; shielded allies gain +20% AS.',
   beastmaster: 'Summons stronger wolves with a 15% lifesteal aura.',
   dragon_knight: 'The breath shoves foes back 1 cell and cuts their healing 40% for 3s.',
-  dragon_sage: 'Adds 4 meteors (100 magic each) and burns 25 mana.',
+  dragon_sage: 'Calls 5 MORE meteors (130 each), burns 25 mana, and hurls the cluster back.',
   wyrm_archer: 'Looses a second cinder-storm and slows the entire enemy team 20%.',
   wyrmguard: 'The aegis also pours 12 HP/s regen for 4s and the smite knocks the cluster back.',
   banner_sergeant: 'Also conscripts a heavy footman with double stats.',
