@@ -90,10 +90,10 @@ export const CREATURES_LIST = [
   //       (heal-cut + knockback), and it hatches grasping tentacle-spawn when wounded. New element
   //       (water) past the Void Maw — the gauntlet's first "post-final" abyssal terror.
   boss('abyssal_kraken', 'Abyssal Kraken', 'kraken', '#2ea0c0',
-    { hp: 40000, ad: 250, as: 0.7, armor: 55, mr: 50, range: 2, maxMana: 80, startMana: 25, manaPer: 8 },
+    { hp: 52000, ad: 300, as: 0.74, armor: 62, mr: 55, range: 2, maxMana: 80, startMana: 25, manaPer: 8 },
     { name: 'Maelstrom', type: 'magic', target: 'cluster', ap: 400,
-      verbs: [{ op: 'magic', target: 'cluster', radius: 2, ap: 400 }, { op: 'healCut', pct: 0.6, dur: 3, target: 'cluster' }, { op: 'knockback', cells: 1, target: 'cluster' }],
-      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'summon', count: 2, hp: 3000, ad: 150 }] } }),
+      verbs: [{ op: 'magic', target: 'cluster', radius: 2, ap: 400 }, { op: 'stun', dur: 0.9, target: 'cluster' }, { op: 'healCut', pct: 0.6, dur: 3, target: 'cluster' }, { op: 'knockback', cells: 1, target: 'cluster' }],
+      passive: { on: 'lowHp', threshold: 0.5, verbs: [{ op: 'summon', count: 3, hp: 3400, ad: 165 }] } }),
 
   // 11 — THUNDER ROC: a living storm with wings — chains lightning across your whole team and STUNS
   //       them, attacks blisteringly fast, and whips up a meteor-storm of hail below half. Air/shock.

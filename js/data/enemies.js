@@ -160,11 +160,11 @@ const TRIALS = [
   { id: 'void_maw', name: 'The Void Maw', tier: 'Trial IX', gimmickName: 'Unmaking', gimmickDesc: 'Drains and BURNS your team’s mana, rots them with void-fire, then below half phases out (dodge) and rains meteors while tearing open void-spawn. The gate to the abyss beyond.', col: 4, row: 1,
     minions: [['warlock', 3, 6, 0], ['wraith', 3, 5, 2], ['dragon_knight', 2, 2, 3], ['pit_summoner', 2, 1, 1]] },
   { id: 'abyssal_kraken', name: 'Abyssal Kraken', tier: 'Trial X', gimmickName: 'Maelstrom', gimmickDesc: 'A whirlpool CRUSHES a wide cluster, DROWNS them (your healing is cut) and hurls them back, then it hatches grasping tentacle-spawn when wounded. Spread out and keep your healers clear.', col: 4, row: 1,
-    minions: [['wraith', 3, 6, 2], ['lich', 3, 6, 0], ['bone_guard', 3, 2, 3], ['skeleton_archer', 3, 1, 1]] },
+    minions: [['wraith', 3, 6, 2], ['lich', 3, 6, 0], ['dragon_knight', 2, 2, 3], ['necromancer', 2, 1, 1]] },
   { id: 'thunder_roc', name: 'Thunder Roc', tier: 'Trial XI', gimmickName: 'Tempest', gimmickDesc: 'Chains lightning across your WHOLE team and stuns them, strikes blisteringly fast, and below half it whips up a hail of meteors. Burst it down before the storm builds — and don’t clump your carries.', col: 4, row: 0,
     minions: [['wyrm_archer', 3, 1, 1], ['wyrm_archer', 3, 6, 1], ['dragon_sage', 2, 6, 0], ['bone_guard', 3, 2, 3]] },
   { id: 'worldbreaker', name: 'The Worldbreaker', tier: 'FINAL TRIAL', gimmickName: 'Cataclysm', gimmickDesc: 'A colossus of stone and starlight: its slam STUNS and shatters the armour of a wide cluster, then below half it walls behind a vast shield, enrages, rains the sky down and tears open spawn. The absolute end of the gauntlet.', col: 4, row: 1,
-    minions: [['dragon_knight', 3, 2, 3], ['dragon_sage', 2, 6, 0], ['wyrm_archer', 2, 1, 1]] },
+    minions: [['dragon_knight', 3, 2, 3], ['dragon_sage', 2, 6, 0], ['wyrm_archer', 3, 1, 1]] },
 ];
 export const TRIAL_COUNT = TRIALS.length;
 export function getTrialBoard(index) {
