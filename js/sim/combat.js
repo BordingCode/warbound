@@ -609,12 +609,17 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     }
   }
 
-  const pAlive = units.filter((u) => u.alive && u.team === 'player' && !u.isSummon);
-  const eAlive = units.filter((u) => u.alive && u.team === 'enemy' && !u.isSummon);
+  // A board is only truly defeated when NOTHING it owns is left standing — summoned creatures count
+  // as the owner's board. Real (non-summon) champions decide the winner first; when those tie (e.g.
+  // one side has only summons left, the other is wiped), surviving SUMMONS break the tie — a board
+  // still standing beats a board that's been cleared. Only an utterly empty board on both sides draws.
+  const pAlive = units.filter((u) => u.alive && u.team === 'player');   // includes summons (they're your units)
+  const eAlive = units.filter((u) => u.alive && u.team === 'enemy');
+  const pReal = pAlive.filter((u) => !u.isSummon).length;
+  const eReal = eAlive.filter((u) => !u.isSummon).length;
   let winner = 'draw';
-  if (pAlive.length && !eAlive.length) winner = 'player';
-  else if (eAlive.length && !pAlive.length) winner = 'enemy';
-  else if (pAlive.length !== eAlive.length) winner = pAlive.length > eAlive.length ? 'player' : 'enemy';
+  if (pReal !== eReal) winner = pReal > eReal ? 'player' : 'enemy';            // real champions decide first
+  else if (pAlive.length !== eAlive.length) winner = pAlive.length > eAlive.length ? 'player' : 'enemy';   // tie → surviving summons win it
   ev(tick * DT, 'end', { winner });
 
   return {
