@@ -169,15 +169,32 @@ function buildTraitsEl() {
 }
 
 // ---------- shop / bench ----------
+// Live shared-pool accounting for a unit: how many of its copies are still in the bag, how many
+// YOU hold (a 2★ = 3 copies, 3★ = 9), and how many rivals are sitting on (Ladder's shared pool).
+function poolInfo(id) {
+  const def = UNITS_BY_ID[id]; const total = def ? (Run.POOL_COPIES[def.cost] || 0) : 0;
+  const left = (run.pool && run.pool[id] != null) ? run.pool[id] : total;
+  const copiesForStar = (s) => (s >= 3 ? 9 : s >= 2 ? 3 : 1);
+  let mine = 0;
+  for (const u of [...run.board, ...run.bench]) if (u && u.defId === id) mine += copiesForStar(u.star || 1);
+  const others = Math.max(0, total - left - mine);
+  return { total, left, mine, others, contested: others > 0 };
+}
 function buildShopEl() {
   const row = el('.shop-row');
   run.shop.forEach((id, i) => {
     const def = id && UNITS_BY_ID[id];
     if (!def) { row.append(el('.shop-card.empty')); return; }
     const owned = [...run.board, ...run.bench.filter(Boolean)].some((u) => u.defId === id);
+    const pi = poolInfo(id);
     const card = el(`.shop-card.cost-${def.cost}${owned ? ' owned' : ''}`, { onclick: () => doBuy(i) }, [
       el('span.price', {}, `${def.cost}⛁`),
       el('button.card-info', { onclick: (e) => { e.stopPropagation(); showUnitInfo(def, 1, []); } }, 'ⓘ'),
+      // copies left in the shared bag (Auto-Chess pool depletion, surfaced): scarce = few left,
+      // contested = rivals are holding copies (Ladder only — solo runs only deplete via you).
+      el(`.pool-cnt${pi.left <= 2 ? ' scarce' : ''}${pi.contested ? ' contested' : ''}`,
+        { title: pi.contested ? `${pi.left}/${pi.total} left in the shared pool — ${pi.others} held by rival warlords` : `${pi.left} of ${pi.total} left in the pool` },
+        `${pi.left}${pi.contested ? ' ⚔' : ''}`),
       el('.art', { html: championSVG(def, { size: 46 }) }),
       el('.nm', {}, def.name),
       el('.tags', {}, `${TRAITS[def.origin].name} · ${TRAITS[def.klass].name}`),
