@@ -56,10 +56,7 @@ const ART2 = {
   wyrmsong_herald: { accent: '#ffd24a', cape: '#6a3fa0', weapon: 'lute',      build: 'normal', head: 'hood', wings: true, sig: ['scales'] },
   // Paladins — plate torso (PLATE set) + shield + the holy sunburst class badge (classMark).
   squire:          { accent: '#ffe7a0', cape: null,      weapon: 'mace',      build: 'broad', head: 'helm',  plume: '#ffe7a0', shield: true, sig: ['epaulets'] },
-  oathbreaker:     { accent: '#ff8a4c', cape: '#5a1414', weapon: 'sword',     build: 'broad', head: 'horns', shield: true, sig: ['tail'] },
   dawnblade:       { accent: '#fff0c0', cape: '#2f7d6b', weapon: 'sword',     build: 'normal', head: 'helm',  plume: '#fff0c0', shield: true, sig: ['sash'] },
-  death_knight:    { accent: '#9effc0', cape: '#16261c', weapon: 'greatsword', build: 'broad', head: 'helm',  sig: ['ribcage'] },
-  wyrmguard:       { accent: '#ffd24a', cape: null,      weapon: 'greatsword', build: 'broad', head: 'helm', wings: true, plume: '#ffd24a', shield: true, sig: ['scales'] },
   // Orc / the Warhorde — green-skinned brutes (PALETTES.orc); jutting fangs + heavy iron read "orc".
   berserker:       { accent: '#8fd24a', cape: null,      weapon: 'daggers',   build: 'broad', head: 'bare',  sig: ['fangs'] },
   orc_grunt:       { accent: '#7fc24a', cape: null,      weapon: 'club',      build: 'broad', head: 'helm',  shield: true, sig: ['fangs'] },

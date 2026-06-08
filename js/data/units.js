@@ -6,11 +6,11 @@
 //
 // ORIGIN → CLASS palette (— = deliberately empty, off-theme for that race):
 //   Human   knight mage ranger  --     healer summoner --        (disciplined, supportive)
-//   Undead  knight mage ranger  assassin --   summoner paladin   (the grave: skeletons→death knight)
+//   Undead  knight mage ranger  assassin --   summoner          (the grave: skeletons & the risen)
 //   Elf     --     mage ranger  assassin healer --      --        (fey grace — no armour, no brutes)
-//   Demon   knight mage ranger  assassin --   summoner paladin   (relentless aggression + oathbreaker)
+//   Demon   knight mage ranger  assassin --   summoner          (relentless aggression)
 //   Beast   knight --   ranger  assassin healer summoner --       (the Wilds — no casters, no holy)
-//   Dragon  knight mage ranger  --     --     --       paladin   (elite 5-cost capstones)
+//   Dragon  knight mage ranger  --     --     --                (elite 5-cost capstones)
 //   Orc     knight mage ranger  assassin --   --       --        (the Warhorde — savage Bloodlust)
 
 // Base 1-star stats per cost tier.
@@ -160,11 +160,6 @@ const A = {
     verbs: [v.summon({ kind: 'risen', count: 2, hp: 1040, ad: 108, armor: 22 })],
     passive: { on: 'allyDeath', verbs: [v.raiseCorpse(700, 95)] },
     ult: { verbs: [v.summon({ kind: 'risen', count: 1, hp: 1040, ad: 108, armor: 22, statMult: 2 }), v.summon({ kind: 'risen', count: 1, hp: 1040, ad: 108, armor: 22 })] } },
-  // Undead-PALADIN (death knight): an unholy smite that leeches — a fallen oath that will not die.
-  death_knight: { name: 'Unholy Smite', type: 'physical', target: 'current', adRatio: 2.7, ap: 240,
-    verbs: [v.phys({ adRatio: 2.7 }), v.magic({ ap: 240 }), v.lifesteal(0.22, 4, 'self')],
-    passive: { on: 'spawn', verbs: [v.thorns(0.10, 999, 'self')] },
-    ult: { verbs: [v.healCut(0.40, 3, 'current'), v.buffAS(0.3, 4, 'self'), v.lifesteal(0.30, 4, 'self')] } },
 
   // Elf
   // Mage c4 — the ASSASSIN caster: a precision bolt that ignores position and snipes the enemy's
@@ -206,10 +201,6 @@ const A = {
   // Imp: volatile glass-cannon — frail, but DETONATES for AoE magic on death.
   pit_summoner: { name: 'Open the Pit', type: 'summon', summonHp: 950, summonAd: 115,
     verbs: [v.summon({ kind: 'imp', count: 2, hp: 720, ad: 96, armor: 8, explode: 160 })], ult: { verbs: [v.meteors({ n: 3, ap: 120, radius: 1 })] } },
-  // Demon-PALADIN (oathbreaker): a corrupted smite that burns the target's mana as it sears.
-  oathbreaker: { name: 'Fel Smite', type: 'physical', target: 'current', adRatio: 2.3,
-    verbs: [v.phys({ adRatio: 2.3 }), v.magic({ ap: 190 }), v.manaBurn(18)],
-    ult: { verbs: [v.healCut(0.35, 3, 'current'), v.dot(45, 3, 'current')] } },
 
   // Beast (the Wilds)
   // PASSIVE — Hunter's Mark: marks the enemy CARRY (highest cost×star); the WHOLE team's autos
@@ -247,10 +238,6 @@ const A = {
   wyrm_archer: { name: 'Storm of Cinders', type: 'physical', target: 'mostEnemies', adRatio: 2.8,
     verbs: [v.volley({ adRatio: 2.8 })],
     ult: { verbs: [v.volley({ adRatio: 2.8, offset: 4 }), v.slow(0.20, 2, 'allEnemies')] } },
-  // Dragon-PALADIN (elite capstone): the Wyrmguard — wards the whole warband and smites a cluster.
-  wyrmguard: { name: 'Aegis of the Wyrm', type: 'shield', target: 'allies', ap: 160,
-    verbs: [{ op: 'shield', target: 'allies', ap: 160 }, v.cluster({ radius: 1 })],
-    ult: { verbs: [v.regen(12, 4, 'allies'), v.knockback(1, 'cluster')] } },
 
   // ── Bridge champion: Human-SUMMONER — disciplined ranks + a mana engine. PASSIVE — Rally: every
   // muster also shields the soldiers beside the banner. 3★ ult: conscripts a heavy footman.
@@ -299,7 +286,6 @@ export const UNITS = [
   mk('skeleton_archer','Skeleton Archer','undead', 'ranger', 1, A.skeleton_archer),
   mk('wraith',         'Wraith',         'undead', 'assassin', 4, A.wraith),
   mk('necromancer',    'Necromancer',    'undead', 'summoner', 5, A.necromancer),
-  mk('death_knight',   'Death Knight',   'undead', 'knight', 4, A.death_knight, { hpx: 0.90, adx: 1.04 }),
 
   // ---- Elf (mage · ranger · assassin · healer) ----
   mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.moon_priestess),
@@ -313,7 +299,6 @@ export const UNITS = [
   mk('fel_archer',     'Fel Archer',     'demon', 'ranger', 2, A.fel_archer),
   mk('imp_assassin',   'Imp Assassin',   'demon', 'assassin', 1, A.imp_assassin),
   mk('pit_summoner',   'Pit Summoner',   'demon', 'summoner', 5, A.pit_summoner),
-  mk('oathbreaker',    'Oathbreaker',    'demon', 'knight', 2, A.oathbreaker, { hpx: 0.90, adx: 1.04 }),
 
   // ---- Beast / the Wilds (knight · ranger · assassin · healer · summoner) ----
   mk('beast_hunter',   'Quillback',      'beast', 'ranger', 2, A.beast_hunter),
@@ -329,7 +314,6 @@ export const UNITS = [
   mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.36, adx: 1.28 }),
   mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.30, adx: 1.24 }),
   mk('wyrm_archer',    'Stormwyrm',      'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.30, adx: 1.24 }),
-  mk('wyrmguard',      'Wyrmguard',      'dragon', 'knight', 5, A.wyrmguard, { hpx: 1.17, adx: 1.22 }),
 
   // ---- Orc / the Warhorde (knight · mage · ranger · assassin) ----
   mk('berserker',   'Blood Berserker', 'orc', 'assassin', 1, A.berserker),
@@ -352,7 +336,6 @@ export const ULT3 = {
   skeleton_archer: 'Kills raise a Risen, and it looses a SECOND volley at the back line.',
   wraith: 'On a kill, resets its attack and gains +40% Attack Speed for 3s.',
   necromancer: 'Also raises a greater wight with double stats.',
-  death_knight: 'Cuts healing 40%, and the Death Knight gains +30% Attack Speed AND 30% lifesteal for 4s — nearly unkillable.',
   moon_priestess: 'The bolt splinters off the carry, chaining to 2 more foes (×0.6 each).',
   wood_ranger: 'Its locked-on focus also shreds the target’s Armor by 25.',
   shadow_dancer: 'After striking, gains +40% dodge and +40% Attack Speed for 3s.',
@@ -362,7 +345,6 @@ export const ULT3 = {
   fel_archer: 'Each volley burns 30 mana and slows the enemy casters 25% — total cast lockdown.',
   imp_assassin: 'On a kill, burns 40 mana and slows the 2 nearest foes 30%.',
   pit_summoner: 'Also calls 3 meteors (120 magic each) on random foes.',
-  oathbreaker: 'The smite cuts the target’s healing 35% and adds a 45/s burn for 3s.',
   beast_hunter: 'Also marks the lowest-HP foe so the team hits it 40% harder.',
   bramble_brute: 'Gains ramping Attack Speed and +25% thorns.',
   pack_stalker: 'Hits everything next to its target (×0.6); kills grant +30% AS.',
@@ -371,7 +353,6 @@ export const ULT3 = {
   dragon_knight: 'The breath shoves foes back 1 cell and cuts their healing 40% for 3s.',
   dragon_sage: 'Calls 5 MORE meteors (130 each), burns 25 mana, and hurls the cluster back.',
   wyrm_archer: 'Looses a second cinder-storm and slows the entire enemy team 20%.',
-  wyrmguard: 'The aegis also pours 12 HP/s regen for 4s and the smite knocks the cluster back.',
   banner_sergeant: 'Also conscripts a heavy footman with double stats.',
   berserker: 'On a kill, gains +35% Attack Speed and 25% lifesteal for 3s.',
   orc_grunt: 'Knocks the foe back, wreathes itself in heavy thorns, and taunts adjacent foes.',

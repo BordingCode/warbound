@@ -107,14 +107,13 @@ const COMPS = {
   'Knight': ['knight_captain', 'bone_guard', 'hellguard', 'crossbowman', 'court_mage', 'field_medic'],
   'Mage': ['court_mage', 'lich', 'warlock', 'orc_shaman', 'bone_guard', 'field_medic'],
   'Assassin': ['wraith', 'shadow_dancer', 'pack_stalker', 'imp_assassin', 'bone_guard', 'field_medic'],
-  'Undead': ['bone_guard', 'lich', 'skeleton_archer', 'wraith', 'necromancer', 'death_knight'],
-  'Demon': ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'oathbreaker', 'pit_summoner'],
+  'Undead': ['bone_guard', 'lich', 'skeleton_archer', 'wraith', 'necromancer', 'field_medic'],
+  'Demon': ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'pit_summoner', 'bone_guard'],
   'Beast': ['bramble_brute', 'beast_hunter', 'pack_stalker', 'knight_captain', 'druid_healer', 'beastmaster'],
   'Elf': ['moon_priestess', 'wood_ranger', 'shadow_dancer', 'grove_healer', 'bone_guard', 'knight_captain'],
   'Ranger': ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'axethrower', 'field_medic'],
   'Summoner': ['necromancer', 'pit_summoner', 'beastmaster', 'banner_sergeant', 'bone_guard', 'field_medic'],
   'Dragon': ['dragon_knight', 'dragon_sage', 'knight_captain', 'bone_guard', 'moon_priestess', 'grove_healer'],
-  'Paladin': ['oathbreaker', 'death_knight', 'wyrmguard', 'bone_guard', 'court_mage', 'field_medic'],
   'Orc': ['warboss', 'orc_grunt', 'berserker', 'axethrower', 'orc_shaman', 'field_medic'],
 };
 function roundRobin() {

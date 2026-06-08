@@ -20,15 +20,15 @@ const UNIT_FX = {
   // Human
   knight_captain: { c: '#ffd95c', fx: 'stomp', fx2: 'teamAura' }, court_mage: { c: '#6fb1ff', fx: 'ringBurst' }, crossbowman: { c: '#dfe7f2', fx: 'arrows', fx2: 'frost' }, field_medic: { c: '#7affc0', fx: 'heal' }, banner_sergeant: { c: '#ffe08a', fx: 'rune', fx2: 'teamAura' },
   // Undead
-  bone_guard: { c: '#d8e6cc', fx: 'stomp' }, lich: { c: '#8cff9e', fx: 'ringBurst', fx2: 'frost' }, skeleton_archer: { c: '#b6e0a0', fx: 'arrows' }, wraith: { c: '#b0ffd8', fx: 'execMark', fx2: 'drain' }, necromancer: { c: '#6effa0', fx: 'rune' }, death_knight: { c: '#7fffb0', fx: 'chop', fx2: 'drain' },
+  bone_guard: { c: '#d8e6cc', fx: 'stomp' }, lich: { c: '#8cff9e', fx: 'ringBurst', fx2: 'frost' }, skeleton_archer: { c: '#b6e0a0', fx: 'arrows' }, wraith: { c: '#b0ffd8', fx: 'execMark', fx2: 'drain' }, necromancer: { c: '#6effa0', fx: 'rune' },
   // Elf
   moon_priestess: { c: '#aef0ff', fx: 'ringBurst' }, wood_ranger: { c: '#8fe07a', fx: 'arrows' }, shadow_dancer: { c: '#9fb0ff', fx: 'execMark' }, grove_healer: { c: '#7affc0', fx: 'heal' },
   // Demon
-  hellguard: { c: '#ff8a4c', fx: 'sweep' }, warlock: { c: '#ff5a3c', fx: 'pillar' }, fel_archer: { c: '#ff7a5c', fx: 'arrows', fx2: 'hexSeal' }, imp_assassin: { c: '#ff9a6c', fx: 'execMark' }, pit_summoner: { c: '#ff5e8a', fx: 'rune' }, oathbreaker: { c: '#ff6a8a', fx: 'chop', fx2: 'hexSeal' },
+  hellguard: { c: '#ff8a4c', fx: 'sweep' }, warlock: { c: '#ff5a3c', fx: 'pillar' }, fel_archer: { c: '#ff7a5c', fx: 'arrows', fx2: 'hexSeal' }, imp_assassin: { c: '#ff9a6c', fx: 'execMark' }, pit_summoner: { c: '#ff5e8a', fx: 'rune' },
   // Beast / the Wilds
   beast_hunter: { c: '#ffc46a', fx: 'arrows' }, bramble_brute: { c: '#c8e06a', fx: 'sweep' }, pack_stalker: { c: '#ffb15a', fx: 'execMark' }, druid_healer: { c: '#9be86a', fx: 'shield' }, beastmaster: { c: '#ffd24a', fx: 'rune' },
   // Dragon
-  dragon_knight: { c: '#ff7a3c', fx: 'cone' }, dragon_sage: { c: '#c79bff', fx: 'cone' }, wyrm_archer: { c: '#ff7a3c', fx: 'arrows' }, wyrmguard: { c: '#ffd24a', fx: 'shield', fx2: 'teamAura' },
+  dragon_knight: { c: '#ff7a3c', fx: 'cone' }, dragon_sage: { c: '#c79bff', fx: 'cone' }, wyrm_archer: { c: '#ff7a3c', fx: 'arrows' },
   // Orc / the Warhorde
   berserker: { c: '#8fd24a', fx: 'execMark', fx2: 'drain' }, orc_grunt: { c: '#7fc24a', fx: 'stomp' }, orc_shaman: { c: '#aef06a', fx: 'ringBurst', fx2: 'frost' }, axethrower: { c: '#9bd05a', fx: 'arrows' }, warboss: { c: '#6fae3a', fx: 'slam', fx2: 'stomp' },
 };

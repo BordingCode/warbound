@@ -453,6 +453,10 @@ export function load() {
     if (run.augRerollLeft == null) run.augRerollLeft = 1;
     run.items = run.items || [];
     run.freeRerollsUsed = run.freeRerollsUsed || 0;
+    // drop any units a roster change removed (e.g. retired champions) so an old save can't crash
+    // the renderer with an unknown defId.
+    run.board = (run.board || []).filter((u) => u && UNITS_BY_ID[u.defId]);
+    run.bench = (run.bench || []).map((u) => (u && UNITS_BY_ID[u.defId]) ? u : null);
     ensureRng(run);
     // uids ('u<n>') come from a module counter that resets to 1 on every page load. A reloaded
     // run already holds uids u1..uN, so without this a freshly bought unit would reuse an existing

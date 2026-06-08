@@ -26,7 +26,7 @@ let run = null;            // set by boot (solo resume) or a mode start
 let lobby = null;          // ladder-mode warlord lobby
 // Endless mode reinforcement pool — a rich cross-race mix so the infinite waves stay varied.
 const ENDLESS_POOL = ['warboss', 'berserker', 'axethrower', 'dragon_knight', 'warlock', 'lich', 'wraith',
-  'necromancer', 'pit_summoner', 'moon_priestess', 'bramble_brute', 'death_knight', 'beastmaster', 'hellguard'];
+  'necromancer', 'pit_summoner', 'moon_priestess', 'bramble_brute', 'beastmaster', 'hellguard'];
 const SPEEDS = [[0.5, '½×'], [1, '1×'], [2, '2×'], [4, '4×']];   // ½× is the new, calmer default
 const spdId = (s) => String(s).replace('.', '');
 let combatSpeed = (() => { try { const v = parseFloat(localStorage.getItem('warbound_speed')); return SPEEDS.some(([s]) => s === v) ? v : 0.5; } catch { return 0.5; } })();

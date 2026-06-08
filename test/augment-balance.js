@@ -22,7 +22,7 @@ const COMPS = {
   Mage: ['court_mage', 'lich', 'moon_priestess', 'warlock', 'knight_captain', 'field_medic'],
   Knight: ['knight_captain', 'bone_guard', 'hellguard', 'bramble_brute', 'court_mage', 'field_medic'],
   Assassin: ['imp_assassin', 'wraith', 'shadow_dancer', 'pack_stalker', 'bone_guard', 'druid_healer'],
-  Undead: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer', 'death_knight'],
+  Undead: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer', 'field_medic'],
   Ranger: ['skeleton_archer', 'crossbowman', 'wood_ranger', 'fel_archer', 'beast_hunter', 'knight_captain'],
   Mixed: ['knight_captain', 'court_mage', 'skeleton_archer', 'imp_assassin', 'field_medic', 'bone_guard'],
 };

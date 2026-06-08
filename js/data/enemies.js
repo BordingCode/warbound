@@ -13,14 +13,14 @@ export const LADDER = [
   { name: 'Hex Coven', traitHint: 'Mage burst', units: [E('court_mage', 2, 4, 1), E('court_mage', 1, 2, 1), E('knight_captain', 1, 3, 3), E('field_medic', 1, 5, 0)] },
   { name: 'The Wolf Pack', traitHint: 'Beast ferocity', units: [E('beast_hunter', 2, 4, 1), E('bramble_brute', 1, 3, 3), E('pack_stalker', 1, 6, 3), E('druid_healer', 1, 2, 0)] },
   { name: 'Warhorde Raiders', traitHint: 'Orc Bloodlust — ramps as it fights', units: [E('orc_grunt', 2, 3, 3), E('berserker', 2, 6, 3), E('axethrower', 1, 5, 1), E('orc_shaman', 1, 4, 0)] },
-  { name: 'The Oathsworn', traitHint: 'Paladin ward — all foes take less', units: [E('death_knight', 2, 3, 3), E('oathbreaker', 2, 5, 3), E('court_mage', 2, 4, 0), E('field_medic', 1, 2, 0), E('crossbowman', 1, 6, 1)] },
+  { name: 'The Ironsworn', traitHint: 'Knight wall — a heavy frontline', units: [E('bone_guard', 2, 3, 3), E('hellguard', 2, 5, 3), E('court_mage', 2, 4, 0), E('field_medic', 1, 2, 0), E('crossbowman', 1, 6, 1)] },
   { name: 'Shadow Cell', traitHint: 'Assassin dive!', units: [E('imp_assassin', 2, 2, 1), E('shadow_dancer', 2, 5, 1), E('hellguard', 2, 3, 3), E('court_mage', 2, 4, 0), E('bone_guard', 2, 2, 3)] },
   { name: 'Undead Horde', traitHint: 'Undead revive', units: [E('bone_guard', 2, 3, 3), E('skeleton_archer', 2, 2, 1), E('lich', 2, 4, 0), E('wraith', 2, 6, 1), E('necromancer', 1, 1, 0), E('bone_guard', 2, 5, 3)] },
   { name: 'Infernal Legion', traitHint: 'Demon mana-burn', units: [E('hellguard', 2, 3, 3), E('warlock', 2, 4, 0), E('fel_archer', 2, 2, 1), E('imp_assassin', 2, 6, 2), E('hellguard', 2, 5, 3), E('bramble_brute', 1, 1, 3)] },
   { name: 'Elf Sentinels', traitHint: 'Elf evasion', units: [E('bramble_brute', 2, 3, 3), E('moon_priestess', 2, 4, 0), E('wood_ranger', 2, 2, 1), E('grove_healer', 2, 5, 0), E('shadow_dancer', 2, 6, 1), E('moon_priestess', 2, 1, 0)] },
   { name: 'The Dragonsworn', traitHint: 'BOSS · Dragon', units: [E('dragon_knight', 2, 3, 3), E('dragon_sage', 2, 4, 0), E('knight_captain', 2, 2, 3), E('moon_priestess', 2, 5, 1), E('grove_healer', 2, 1, 0), E('wyrm_archer', 1, 6, 1)] },
   { name: 'Frost Wardens', traitHint: 'Elf wall + casters', units: [E('bramble_brute', 3, 3, 3), E('bramble_brute', 2, 5, 3), E('moon_priestess', 3, 4, 0), E('grove_healer', 2, 2, 0), E('wood_ranger', 3, 1, 1), E('shadow_dancer', 2, 6, 1), E('knight_captain', 2, 0, 3)] },
-  { name: 'The Bone Legion', traitHint: 'Undead swarm', units: [E('bone_guard', 3, 3, 3), E('bone_guard', 2, 1, 3), E('necromancer', 3, 4, 0), E('lich', 3, 5, 0), E('skeleton_archer', 3, 2, 1), E('wraith', 2, 6, 1), E('death_knight', 2, 0, 3)] },
+  { name: 'The Bone Legion', traitHint: 'Undead swarm', units: [E('bone_guard', 3, 3, 3), E('bone_guard', 2, 1, 3), E('necromancer', 3, 4, 0), E('lich', 3, 5, 0), E('skeleton_archer', 3, 2, 1), E('wraith', 2, 6, 1), E('bone_guard', 2, 0, 3)] },
   { name: 'Hellfire Host', traitHint: 'Demon burn', units: [E('hellguard', 3, 3, 3), E('bramble_brute', 3, 5, 3), E('warlock', 3, 4, 0), E('fel_archer', 3, 2, 1), E('imp_assassin', 3, 6, 1), E('pit_summoner', 2, 1, 0), E('hellguard', 2, 0, 3)] },
   { name: 'The Worldwyrm', traitHint: 'FINAL BOSS · Dragons', units: [E('dragon_knight', 3, 3, 3), E('dragon_sage', 3, 4, 0), E('wyrm_archer', 3, 5, 1), E('bramble_brute', 3, 2, 3), E('moon_priestess', 2, 1, 0), E('grove_healer', 2, 6, 0), E('knight_captain', 2, 0, 3)] },
 ];
@@ -32,13 +32,13 @@ export const LADDER = [
 export const REALMS = [
   { name: 'The Marches',     hint: 'Border skirmishers — a fair first test',  color: '#9aa6b8', pool: null,                                                                       diff: 0 },
   { name: 'The Deepwood',    hint: 'Elven ambush — evasive, healing lines',   color: '#54e6c0', pool: ['bramble_brute', 'wood_ranger', 'moon_priestess', 'grove_healer', 'shadow_dancer'], diff: 2 },
-  { name: 'The Bonelands',   hint: 'Undead horde — the dead keep rising',     color: '#8cff9e', pool: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer', 'death_knight'],  diff: 4 },
-  { name: 'The Inferno',     hint: 'Demon legions — relentless mana-burn',    color: '#ff5a3c', pool: ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'pit_summoner', 'oathbreaker'], diff: 6 },
+  { name: 'The Bonelands',   hint: 'Undead horde — the dead keep rising',     color: '#8cff9e', pool: ['bone_guard', 'skeleton_archer', 'lich', 'wraith', 'necromancer'],  diff: 4 },
+  { name: 'The Inferno',     hint: 'Demon legions — relentless mana-burn',    color: '#ff5a3c', pool: ['hellguard', 'warlock', 'fel_archer', 'imp_assassin', 'pit_summoner'], diff: 6 },
   { name: 'The Warhorde',    hint: 'Orc bloodlust — they only hit faster',    color: '#7fc24a', pool: ['berserker', 'orc_grunt', 'orc_shaman', 'axethrower', 'warboss'],                diff: 9 },
-  { name: 'The Dragonspire', hint: 'Dragonsworn — overwhelming raw power',    color: '#ffd24a', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'wyrmguard', 'knight_captain'],     diff: 12 },
+  { name: 'The Dragonspire', hint: 'Dragonsworn — overwhelming raw power',    color: '#ffd24a', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'knight_captain'],     diff: 12 },
   { name: 'The Voidreach',   hint: 'Every horror at its fiercest',            color: '#c79bff', pool: ['dragon_knight', 'warlock', 'lich', 'wraith', 'pit_summoner', 'moon_priestess', 'warboss', 'berserker'], diff: 15 },
   // SECRET finale — only revealed once all the realms before it are conquered (see showRealms).
-  { name: 'The Astral Throne', hint: 'Beyond the realms — ascend, if you can', color: '#ffe9a8', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'lich', 'warlock', 'death_knight', 'warboss', 'orc_shaman'], diff: 18, secret: true },
+  { name: 'The Astral Throne', hint: 'Beyond the realms — ascend, if you can', color: '#ffe9a8', pool: ['dragon_knight', 'dragon_sage', 'wyrm_archer', 'lich', 'warlock', 'warboss', 'orc_shaman'], diff: 18, secret: true },
 ];
 // realm by index (endless beyond the authored list — diff keeps climbing for completionists).
 export function realmAt(i) {
