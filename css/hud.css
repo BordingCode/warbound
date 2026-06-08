@@ -6,6 +6,25 @@
   max-width: 600px; margin: 0 auto; width: 100%;
 }
 
+/* Wide + short viewports (landscape tablets, desktop): a single column can't hold the board AND
+   all the bars without scrolling — the board alone eats most of the height. Split into two
+   columns — board on the LEFT (height-bound), every rail/control/shop stacked on the RIGHT — so
+   the whole planning screen stays on one screen with no scroll. Portrait/phones (tall) keep the
+   single column (they already fit). Ladder keeps its own single-column layout. */
+@media (min-width: 760px) and (max-height: 920px) {
+  #app { justify-content: center; }
+  .game.planning:not(.ladder-mode) {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+    align-items: start; column-gap: 16px; row-gap: 0; max-width: 1080px;
+  }
+  /* every rail/control flows down the RIGHT column; spacing via margin (row-gap must stay 0, or the
+     board's tall row-span below multiplies the gap across dozens of empty tracks). */
+  .game.planning:not(.ladder-mode) > * { grid-column: 2; min-width: 0; margin-bottom: 7px; }
+  .game.planning:not(.ladder-mode) > .stage {
+    grid-column: 1; grid-row: 1 / span 40; align-self: center; justify-self: center; margin: 0;
+  }
+}
+
 /* top bar */
 .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .stat-pill {
@@ -43,6 +62,26 @@
 .trait-chip.tier-3 { border-color: var(--tier-gold); box-shadow: 0 0 8px #ffce5c40; }
 .trait-chip.flash { animation: chipflash .4s ease; }
 @keyframes chipflash { 0% { transform: scale(1); } 40% { transform: scale(1.18); box-shadow: 0 0 14px currentColor; } }
+/* banished-race chip: the one race sitting out this run (Auto-Chess rotation) */
+.trait-chip.banished { opacity: 1; border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); color: var(--ink-dim); }
+.trait-chip.banished > span:last-child { text-decoration: line-through; text-decoration-color: var(--danger); }
+
+/* ── The Banishment reveal (gameshow spin at run start) ── */
+.ban-overlay { background: #05060bf7; }
+.ban-card { position: relative; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px;
+  background: radial-gradient(120% 90% at 50% 8%, #1a1320, var(--bg-2)); border: 2px solid color-mix(in srgb, var(--danger) 60%, var(--line));
+  border-radius: 18px; padding: 26px 30px; max-width: 320px; box-shadow: 0 0 40px #ff2d2d33; animation: rankPop .5s cubic-bezier(.34,1.6,.5,1); }
+.ban-kicker { font-size: 13px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: var(--danger); }
+.ban-face { --rc: #fff; display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 122px; justify-content: center; }
+.ban-ico { color: var(--rc); filter: drop-shadow(0 0 14px color-mix(in srgb, var(--rc) 60%, transparent)); }
+.ban-ico svg, .ban-ico .ic { width: 64px; height: 64px; }
+.ban-name { font-size: 30px; font-weight: 900; color: var(--rc); letter-spacing: .01em; }
+.ban-face.landed { animation: banLand .55s cubic-bezier(.2,1.5,.4,1); }
+.ban-face.landed .ban-name { position: relative; }
+.ban-face.landed .ban-name::after { content: ''; position: absolute; left: -10%; right: -10%; top: 52%; height: 4px; background: var(--danger); border-radius: 3px; transform: rotate(-7deg); box-shadow: 0 0 10px var(--danger); animation: strike .35s ease .12s both; }
+@keyframes banLand { 0% { transform: scale(1.5) rotate(-3deg); } 60% { transform: scale(.92); } 100% { transform: scale(1); } }
+@keyframes strike { from { transform: rotate(-7deg) scaleX(0); } to { transform: rotate(-7deg) scaleX(1); } }
+.ban-sub { font-size: 13.5px; line-height: 1.45; color: var(--ink-dim); min-height: 38px; }
 
 /* bench */
 .bench { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }

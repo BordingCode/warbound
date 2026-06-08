@@ -1,7 +1,7 @@
 // Run state + economy. The persistent "truth" between fights. Pure-ish logic (uses an
 // injected seeded RNG for shop rolls); no DOM. Serialised to localStorage by IDs only.
 import { RNG, seedFromString } from '../rng.js';
-import { UNITS, UNITS_BY_ID } from '../data/units.js';
+import { UNITS, UNITS_BY_ID, ORIGINS } from '../data/units.js';
 import { COMPONENT_IDS, isComponent, combine, isEmblem, EMBLEM_IDS } from '../data/items.js';
 import { AUGMENTS, AUGMENT_IDS, augmentEcon, OFFER_TIER_WEIGHTS } from '../data/augments.js';
 import { activeTraits } from '../data/traits.js';
@@ -35,9 +35,15 @@ const unitsByCost = (() => {
 
 export function freshRun(seedStr = 'warbound-' + Date.now()) {
   const seed = seedFromString(String(seedStr));
+  _rng = new RNG(seed);
+  // Auto-Chess-style rotation: ONE random race sits out this whole run — none of its units ever
+  // appear in your shop (you'll still FACE that race in enemy warbands). Drawn from the seed first,
+  // so a shared seed always banishes the same race. revealed to the player in a "gameshow" spin.
+  const bannedRace = ORIGINS[Math.floor(_rng.next() * ORIGINS.length)];
   const pool = {};
-  for (const u of UNITS) pool[u.defId] = POOL_COPIES[u.cost];
+  for (const u of UNITS) pool[u.defId] = (u.origin === bannedRace) ? 0 : POOL_COPIES[u.cost];
   const run = {
+    bannedRace,
     v: 1, seedStr, seed,
     round: 1, gold: 10, lives: START_LIVES, wins: 0, losses: 0,   // enough to buy a starting team freely
     level: 2, xp: 0,

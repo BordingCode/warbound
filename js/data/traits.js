@@ -98,13 +98,6 @@ export const TRAITS = {
     bonuses: { 2: { summonPower: 0.13 }, 4: { summonPower: 0.28 } },
     bonusText: { 2: '+13% summon HP/dmg', 4: '+28% summon HP/dmg' },
   },
-  paladin: {
-    name: 'Paladin', axis: 'class', kind: 'glue', color: '#ffe7a0',
-    desc: 'Oathbound protectors raise a holy ward — the whole warband takes reduced damage.',
-    breakpoints: [2, 3],
-    bonuses: { 2: { dmgRed: 0.07 }, 3: { dmgRed: 0.12 } },
-    bonusText: { 2: 'All allies take 7% less damage', 3: 'All allies take 12% less damage' },
-  },
 };
 
 // Given a list of unit defs on the board, compute active trait counts (distinct units per

@@ -33,7 +33,6 @@ const ROLE = {
   assassin: { hpx: 0.90, adx: 1.08, range: 1, manaPer: 10, startMana: 0.20, dive: true },   // trimmed — c3 assassins got strong with the steeper curve
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
   summoner: { hpx: 1.12, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
-  paladin:  { hpx: 1.30, adx: 1.16, range: 1, manaPer: 8, startMana: 0.30 },   // holy frontline: sturdy BRUISER that smites (real damage + bonus magic), not a pure wall
 };
 
 // `tune` = optional per-unit balance overrides: { hpx, adx } multipliers.
@@ -294,13 +293,13 @@ export const UNITS = [
   mk('field_medic',    'Field Medic',    'human', 'healer', 1, A.field_medic),
   mk('banner_sergeant','Banner Sergeant','human', 'summoner', 3, A.banner_sergeant),
 
-  // ---- Undead (knight · mage · ranger · assassin · summoner · paladin) ----
+  // ---- Undead (knight · mage · ranger · assassin · summoner) ----
   mk('bone_guard',     'Bone Guard',     'undead', 'knight', 1, A.bone_guard),
   mk('lich',           'Lich',           'undead', 'mage',   3, A.lich),
   mk('skeleton_archer','Skeleton Archer','undead', 'ranger', 1, A.skeleton_archer),
   mk('wraith',         'Wraith',         'undead', 'assassin', 4, A.wraith),
   mk('necromancer',    'Necromancer',    'undead', 'summoner', 5, A.necromancer),
-  mk('death_knight',   'Death Knight',   'undead', 'paladin', 4, A.death_knight),
+  mk('death_knight',   'Death Knight',   'undead', 'knight', 4, A.death_knight, { hpx: 0.90, adx: 1.04 }),
 
   // ---- Elf (mage · ranger · assassin · healer) ----
   mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.moon_priestess),
@@ -308,13 +307,13 @@ export const UNITS = [
   mk('shadow_dancer',  'Shadow Dancer',  'elf', 'assassin', 3, A.shadow_dancer),
   mk('grove_healer',   'Grove Healer',   'elf', 'healer', 2, A.grove_healer),
 
-  // ---- Demon (knight · mage · ranger · assassin · summoner · paladin) ----
+  // ---- Demon (knight · mage · ranger · assassin · summoner) ----
   mk('hellguard',      'Hellguard',      'demon', 'knight', 2, A.hellguard),
   mk('warlock',        'Warlock',        'demon', 'mage',   4, A.warlock),
   mk('fel_archer',     'Fel Archer',     'demon', 'ranger', 2, A.fel_archer),
   mk('imp_assassin',   'Imp Assassin',   'demon', 'assassin', 1, A.imp_assassin),
   mk('pit_summoner',   'Pit Summoner',   'demon', 'summoner', 5, A.pit_summoner),
-  mk('oathbreaker',    'Oathbreaker',    'demon', 'paladin', 2, A.oathbreaker),
+  mk('oathbreaker',    'Oathbreaker',    'demon', 'knight', 2, A.oathbreaker, { hpx: 0.90, adx: 1.04 }),
 
   // ---- Beast / the Wilds (knight · ranger · assassin · healer · summoner) ----
   mk('beast_hunter',   'Quillback',      'beast', 'ranger', 2, A.beast_hunter),
@@ -323,14 +322,14 @@ export const UNITS = [
   mk('druid_healer',   'Druid Healer',   'beast', 'healer', 3, A.druid_healer),
   mk('beastmaster',    'Beastmaster',    'beast', 'summoner', 4, A.beastmaster),
 
-  // ---- Dragon (elite, expensive — knight · mage · ranger · paladin) ----
+  // ---- Dragon (elite, expensive — knight · mage · ranger) ----
   // Dragons are the premium 5-cost elites — strong even at 1★ (rarely reach 3★ in play), so
   // their base is bumped hard to stay board-warping against cheaper units whose 3★ ults now
   // fire. Only the Dragon comp fields ≥2 dragons, so these bumps don't distort other archetypes.
   mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.36, adx: 1.28 }),
   mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.30, adx: 1.24 }),
   mk('wyrm_archer',    'Stormwyrm',      'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.30, adx: 1.24 }),
-  mk('wyrmguard',      'Wyrmguard',      'dragon', 'paladin', 5, A.wyrmguard, { hpx: 1.30, adx: 1.18 }),
+  mk('wyrmguard',      'Wyrmguard',      'dragon', 'knight', 5, A.wyrmguard, { hpx: 1.17, adx: 1.22 }),
 
   // ---- Orc / the Warhorde (knight · mage · ranger · assassin) ----
   mk('berserker',   'Blood Berserker', 'orc', 'assassin', 1, A.berserker),
@@ -386,6 +385,10 @@ import { CREATURES } from './creatures.js';
 // shop, draft, Codex) iterates the UNITS array, which excludes creatures — so bosses never appear
 // as buyable/draftable units.
 export const UNITS_BY_ID = Object.assign(Object.fromEntries(UNITS.map((u) => [u.defId, u])), CREATURES);
+
+// The recruitable races, in roster order. One of these sits out each run (Auto-Chess-style
+// rotation) — see freshRun(). Derived from the roster so it never drifts from the actual units.
+export const ORIGINS = [...new Set(UNITS.map((u) => u.origin))];
 
 // Star scaling: ~1.7x stats per star (HP + AD). Ability scaling follows AD/AP ratios.
 export const STAR_MULT = { 1: 1, 2: 1.7, 3: 1.7 * 1.7 };

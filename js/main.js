@@ -1,7 +1,7 @@
 // Warbound — game loop. Planning phase (interactive shop/bench/board + drag) → combat
 // (sim + timeline playback) → resolve → next round, until 10 wins or 0 lives.
 import { el, $, $$ } from './dom.js';
-import { UNITS, UNITS_BY_ID, statsForStar, STAR_MULT, ULT3 } from './data/units.js';
+import { UNITS, UNITS_BY_ID, ORIGINS, statsForStar, STAR_MULT, ULT3 } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
 import { championSVG, getArtSet, setArtSet } from './champ-art.js';
 import { ic, iconEl, crest, rankMedal } from './icons.js';
@@ -141,6 +141,14 @@ function buildTraitsEl() {
   const defs = defsWithGrants(run.board);
   const active = activeTraits(defs, teamTraitBonus());
   const rail = el('.traits-rail');
+  // The race banished for this run (Auto-Chess rotation) — a persistent reminder it's off the table.
+  if (run.bannedRace && run.mode !== 'ladder' && TRAITS[run.bannedRace]) {
+    const d = TRAITS[run.bannedRace];
+    rail.append(el('.trait-chip.banished', { title: `${d.name} is banished this run`, onclick: () => modal2('Banished this run', `${d.name} units never appear in your shop this run — one race sits out each run, drawn from the seed (Auto-Chess style). You'll still face ${d.name} in enemy warbands.`) }, [
+      el('span', { html: ic('ban'), style: { display: 'inline-flex', color: 'var(--danger)' } }),
+      el('span', {}, d.name),
+    ]));
+  }
   const entries = Object.entries(active).filter(([t]) => TRAITS[t]).sort((a, b) => (b[1].tier - a[1].tier) || (b[1].count - a[1].count));
   if (!entries.length) rail.append(el('.trait-chip', {}, 'Place champions to form synergies'));
   const tiers = {};
@@ -410,7 +418,7 @@ function renderPlanning() {
   const { stage, wrap, units } = buildBoardEl();
   // (warband stats moved off the board into a top-bar button overlay — see showStats)
 
-  const game = el('.game', {}, [
+  const game = el(`.game.planning${run.mode === 'ladder' ? '.ladder-mode' : ''}`, {}, [
     el('.topbar', {}, [
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       run.mode === 'ladder'
@@ -1109,7 +1117,7 @@ function fightVerdict(events, won) {
   let text;
   if (won) text = byDealt[0] && byDealt[0].dealt > 0 ? `Clean win — ${nm(byDealt[0])} carried with ${Math.round(byDealt[0].dealt)} damage.` : 'Victory — well fought.';
   else if (carry && carry.died && carry.casts === 0) text = `Your carry ${nm(carry)} died before it could cast — tuck it in a back corner behind your frontline.`;
-  else if (pDealt > eDealt * 1.08 && pTank < eTank) text = `You out-damaged them but folded fast — add a tankier frontline (Knight/Paladin) to buy your carries time.`;
+  else if (pDealt > eDealt * 1.08 && pTank < eTank) text = `You out-damaged them but folded fast — add a tankier frontline (Knight) to buy your carries time.`;
   else if (eTank > pTank * 1.25) text = `Their frontline out-tanked yours — bring armor/MR shred, or upgrade a damage carry.`;
   else if (byDealt[0] && byDealt[0].dealt < eDealt * 0.4) text = `Your damage came up short — three-star a carry or deepen a damage synergy.`;
   else text = `Their board was simply stronger — upgrade a unit to 3★ or push a synergy to its next tier.`;
@@ -1531,7 +1539,14 @@ function startSolo(fresh, realm = 0, seedStr = null) {
   run.mode = 'solo'; lobby = null;
   if (!resumed) { run.realm = realm; applyGear(run); }   // a NEW realm run resets + starts with your gear boosts
   Run.save(run); renderPlanning();
-  if (!seenIntro()) showHelp();
+  postStart(resumed);
+}
+// After entering planning: a BRAND-NEW run plays the Banishment reveal, then the intro tip (if
+// unseen); a RESUMED run just shows the intro tip. Keeps the two overlays from stacking.
+function postStart(resumed) {
+  const intro = () => { if (!seenIntro()) showHelp(); };
+  if (resumed) { intro(); return; }
+  showBanReveal(run.bannedRace, intro);
 }
 // The Trials — boss-rush mode. Reuses the Warpath economy/planning; the foe each round is a
 // unique boss CREATURE. Beat all TRIAL_COUNT bosses to win. Your Armory gear applies; Spoils earned.
@@ -1544,7 +1559,7 @@ function startTrials(fresh) {
   if (!resumed) applyGear(run);
   run.winTarget = TRIAL_COUNT;
   Run.save(run); renderPlanning();
-  if (!seenIntro()) showHelp();
+  postStart(resumed);
 }
 // Endless — infinite escalating waves on a life pool; bank Spoils scaled to the depth you reach.
 // Reuses the whole Warpath economy/planning; only the foe source (getOpponent) + end logic differ.
@@ -1556,7 +1571,7 @@ function startEndless(fresh) {
   run.mode = 'endless'; lobby = null;
   if (!resumed) applyGear(run);
   Run.save(run); renderPlanning();
-  if (!seenIntro()) showHelp();
+  postStart(resumed);
 }
 // apply the equipped Champion gear's start-of-run boosts to a fresh solo run.
 function applyGear(run) {
@@ -1744,6 +1759,43 @@ function forgePanel(m, rar, render) {
     rows.length ? el('.forge-list', {}, rows) : el('.forge-empty', {}, 'Collect two of the same slot AND rarity to fuse them into a higher tier.'),
   ]);
 }
+// A representative icon per race for the banishment reveal (icons from icons.js).
+const RACE_ICON = { human: 'banner', undead: 'skull', elf: 'bow', demon: 'flame', beast: 'paw', dragon: 'fang', orc: 'axe' };
+
+// "The Banishment" — a quick gameshow spin at the start of every NEW run that reveals which race
+// sits out (Auto-Chess-style rotation). Purely cosmetic; dismisses straight into planning. The
+// banished race is already decided in the run state (freshRun) — the spin only theatricalises it.
+function showBanReveal(banned, onDone) {
+  const finish = () => { if (ov.isConnected) ov.remove(); onDone && onDone(); };
+  if (!banned || !TRAITS[banned]) { onDone && onDone(); return; }
+  const meta = (r) => ({ name: TRAITS[r] ? TRAITS[r].name : r, color: TRAITS[r] ? TRAITS[r].color : '#fff', icon: RACE_ICON[r] || 'skull' });
+  const face = el('.ban-face');
+  const sub = el('.ban-sub', {}, 'Spinning the wheel of banishment…');
+  const go = el('button.btn.primary.go', { style: { visibility: 'hidden' }, onclick: finish }, 'March on ▶');
+  const paint = (r, landed) => { const m = meta(r); face.style.setProperty('--rc', m.color); face.classList.toggle('landed', !!landed); face.replaceChildren(el('.ban-ico', { html: ic(m.icon) }), el('.ban-name', {}, m.name)); };
+  paint(ORIGINS[0]);
+  const ov = el('.overlay.ban-overlay', {}, el('.ban-card', {}, [el('.ban-kicker', {}, 'The Banishment'), face, sub, go]));
+  document.body.append(ov);
+  const land = () => {
+    const m = meta(banned);
+    paint(banned, true);
+    Sfx.reward(3);
+    sub.replaceChildren(el('b', { style: { color: m.color } }, m.name), el('span', {}, ' sits out this run — none appear in your shop. You’ll still face them in battle.'));
+    go.style.visibility = 'visible';
+    if (motionOn()) launchConfetti(1600);
+  };
+  if (!motionOn()) { land(); return; }
+  // decelerating slot-machine spin, then forced to land on `banned`
+  let i = 0, delay = 55;
+  const spin = () => {
+    paint(ORIGINS[i % ORIGINS.length]); Sfx.click(); i++;
+    delay *= 1.14;
+    if (delay < 340) setTimeout(spin, delay);
+    else { land(); setTimeout(() => { if (ov.isConnected) finish(); }, 4200); }
+  };
+  setTimeout(spin, 220);
+}
+
 function revealItem(item, after, opts = {}) {
   const tier = Math.max(0, Meta.RARITIES.findIndex((r) => r.id === item.rarity));   // 0 common … 5 ascended
   const rar = Meta.RARITIES[tier] || Meta.RARITIES[0];

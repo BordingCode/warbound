@@ -119,9 +119,6 @@ function applyTraits(units, board, traitBonus = {}) {
     // Bard: team OFFENCE aura — flat attack speed (via asStacks, folded through the single effAS
     // cap) + ability power to EVERY ally. The offensive twin of the Healer's defensive aura.
     if (has('bard')) { const bd = get('bard'); if (bd) { if (bd.as) u.asStacks += bd.as; if (bd.ap) u.apBonus += bd.ap; } }
-    // Paladin: team DEFENCE aura — flat % incoming-damage reduction to every ally (the protective
-    // twin of Bard's offence aura). Capped small (≤15%); applied in applyDamage via target.dmgRed.
-    if (has('paladin')) { const pl = get('paladin'); if (pl && pl.dmgRed) u.dmgRed = Math.max(u.dmgRed, pl.dmgRed); }
     // Dwarf: stubborn mountain-folk — heavy armour/MR + TENACITY (ccResist shrinks incoming
     // stun/slow/taunt/mana-lock duration). The rock-paper-scissors answer to CC-heavy boards.
     const dwarf = get('dwarf'); if (dwarf) { u.armor += dwarf.armor || 0; u.mr += dwarf.mr || 0; if (dwarf.ccResist) u.ccResist = Math.max(u.ccResist, dwarf.ccResist); }
@@ -214,8 +211,8 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
     // mitigate by EFFECTIVE resist (armor/mr shred folded in); true/heal ignore resist.
     let post = (type === 'true' || type === 'heal') ? raw : raw * (100 / (100 + effResist(target, type, now)));
     if (type !== 'true') post = Math.max(0, post - target.block);
-    // Paladin aura: flat % incoming-damage reduction to the WHOLE team — distinct from Knight's
-    // FLAT per-hit block above (% vs flat: strong vs big hits, where flat block is weak). Non-true only.
+    // Generic % incoming-damage reduction hook (dormant — no source sets dmgRed currently).
+    // Distinct from Knight's FLAT per-hit block above (% vs flat). Non-true, non-heal only.
     if (type !== 'true' && type !== 'heal' && target.dmgRed) post = post * (1 - target.dmgRed);
     // shield soak
     if (target.shield > 0) { const s = Math.min(target.shield, post); target.shield -= s; post -= s; }
