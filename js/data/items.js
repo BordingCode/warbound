@@ -53,6 +53,7 @@ export const EMBLEMS = {
   emblem_assassin:{ name: 'Assassin Emblem',icon: 'crown', emblem: true, mods: { critChance: 0.12 }, traitGrant: { assassin: 1 } },
   emblem_healer:  { name: 'Healer Emblem',  icon: 'crown', emblem: true, mods: { regen: 7 },         traitGrant: { healer: 1 } },
   emblem_summoner:{ name: 'Summoner Emblem',icon: 'crown', emblem: true, mods: { hp: 0.10 },         traitGrant: { summoner: 1 } },
+  emblem_paladin: { name: 'Paladin Emblem', icon: 'crown', emblem: true, mods: { armor: 16 },        traitGrant: { paladin: 1 } },
 };
 export const EMBLEM_IDS = Object.keys(EMBLEMS);
 export function isEmblem(id) { return !!EMBLEMS[id]; }

@@ -1106,7 +1106,7 @@ function fightVerdict(events, won) {
   let text;
   if (won) text = byDealt[0] && byDealt[0].dealt > 0 ? `Clean win — ${nm(byDealt[0])} carried with ${Math.round(byDealt[0].dealt)} damage.` : 'Victory — well fought.';
   else if (carry && carry.died && carry.casts === 0) text = `Your carry ${nm(carry)} died before it could cast — tuck it in a back corner behind your frontline.`;
-  else if (pDealt > eDealt * 1.08 && pTank < eTank) text = `You out-damaged them but folded fast — add a tankier Knight frontline to buy your carries time.`;
+  else if (pDealt > eDealt * 1.08 && pTank < eTank) text = `You out-damaged them but folded fast — add a tankier frontline (Knight/Paladin) to buy your carries time.`;
   else if (eTank > pTank * 1.25) text = `Their frontline out-tanked yours — bring armor/MR shred, or upgrade a damage carry.`;
   else if (byDealt[0] && byDealt[0].dealt < eDealt * 0.4) text = `Your damage came up short — three-star a carry or deepen a damage synergy.`;
   else text = `Their board was simply stronger — upgrade a unit to 3★ or push a synergy to its next tier.`;

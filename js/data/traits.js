@@ -58,10 +58,10 @@ export const TRAITS = {
   // ---------- CLASSES ----------
   knight: {
     name: 'Knight', axis: 'class', kind: 'glue', color: '#b9c4d0',
-    desc: 'Oathbound wall — ignores a flat chunk of every hit, and at higher tiers raises a holy ward so the whole warband takes less damage. (Merged the old Knight + Paladin.)',
+    desc: 'A wall that ignores a flat chunk of every hit.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { block: 12 }, 4: { block: 20, dmgRed: 0.08 }, 6: { block: 28, dmgRed: 0.14 } },
-    bonusText: { 2: 'Ignore 12 dmg/hit', 4: 'ignore 20 & −8% dmg to all', 6: 'ignore 28 & −14% dmg to all' },
+    bonuses: { 2: { block: 12 }, 4: { block: 20 }, 6: { block: 28 } },
+    bonusText: { 2: 'Ignore 12 dmg/hit', 4: 'ignore 20', 6: 'ignore 28' },
   },
   mage: {
     name: 'Mage', axis: 'class', kind: 'glue', color: '#c79bff',
@@ -97,6 +97,13 @@ export const TRAITS = {
     breakpoints: [2, 4],
     bonuses: { 2: { summonPower: 0.13 }, 4: { summonPower: 0.28 } },
     bonusText: { 2: '+13% summon HP/dmg', 4: '+28% summon HP/dmg' },
+  },
+  paladin: {
+    name: 'Paladin', axis: 'class', kind: 'glue', color: '#ffe7a0',
+    desc: 'Oathbound protectors raise a holy ward — the whole warband takes reduced damage.',
+    breakpoints: [2, 3],
+    bonuses: { 2: { dmgRed: 0.07 }, 3: { dmgRed: 0.12 } },
+    bonusText: { 2: 'All allies take 7% less damage', 3: 'All allies take 12% less damage' },
   },
 };
 

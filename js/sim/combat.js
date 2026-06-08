@@ -100,9 +100,7 @@ function applyTraits(units, board, traitBonus = {}) {
     const has = (t) => u.klass === t || u.origin === t || granted.includes(t);
     // whole-team
     const human = get('human'); if (human) u.manaRegen = Math.max(u.manaRegen, human.manaRegen);
-    // Knight (merged Knight+Paladin): a flat per-hit BLOCK wall, plus at higher tiers a holy WARD
-    // (% incoming-damage reduction to the whole warband) — both applied in applyDamage.
-    const knight = get('knight'); if (knight) { u.block = Math.max(u.block, knight.block || 0); if (knight.dmgRed) u.dmgRed = Math.max(u.dmgRed, knight.dmgRed); }
+    const knight = get('knight'); if (knight) u.block = Math.max(u.block, knight.block);
     const healer = get('healer'); if (healer) { u.healAmp = Math.max(u.healAmp, healer.healAmp); u.regen = Math.max(u.regen, healer.regen); }
     const elf = get('elf'); if (elf) { u.dodge = Math.max(u.dodge, elf.dodge); u.shield += elf.shield; if (elf.as) u.asStacks += elf.as; }   // elven precision: flat attack speed at the top breakpoint (offensive kicker)
     const dragon = get('dragon'); if (dragon) { u.mr += dragon.mr; if (dragon.adPct) u.ad = Math.round(u.ad * (1 + dragon.adPct)); if (dragon.ap) u.apBonus += dragon.ap; }   // dragons hit as hard as they're tough
@@ -121,6 +119,9 @@ function applyTraits(units, board, traitBonus = {}) {
     // Bard: team OFFENCE aura — flat attack speed (via asStacks, folded through the single effAS
     // cap) + ability power to EVERY ally. The offensive twin of the Healer's defensive aura.
     if (has('bard')) { const bd = get('bard'); if (bd) { if (bd.as) u.asStacks += bd.as; if (bd.ap) u.apBonus += bd.ap; } }
+    // Paladin: team DEFENCE aura — flat % incoming-damage reduction to every ally (the protective
+    // twin of Bard's offence aura). Capped small (≤15%); applied in applyDamage via target.dmgRed.
+    if (has('paladin')) { const pl = get('paladin'); if (pl && pl.dmgRed) u.dmgRed = Math.max(u.dmgRed, pl.dmgRed); }
     // Dwarf: stubborn mountain-folk — heavy armour/MR + TENACITY (ccResist shrinks incoming
     // stun/slow/taunt/mana-lock duration). The rock-paper-scissors answer to CC-heavy boards.
     const dwarf = get('dwarf'); if (dwarf) { u.armor += dwarf.armor || 0; u.mr += dwarf.mr || 0; if (dwarf.ccResist) u.ccResist = Math.max(u.ccResist, dwarf.ccResist); }

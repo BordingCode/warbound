@@ -1,21 +1,17 @@
-// Champion roster (35 units) across a 7 Origins × 6 Classes matrix that is DELIBERATELY PARTIAL:
+// Champion roster (35 units) across a 7 Origins × 7 Classes matrix that is DELIBERATELY PARTIAL:
 // each origin fields only a thematic subset of classes (no origin has them all), so the race you
 // commit to defines how your board plays. Stats are 1-star base values, cost-scaled, then
 // role-adjusted. Ability is data the combat sim's ability handlers read (sim/rules.js). These are
 // STARTING numbers — the headless autobalancer (sim/autobalance.js) will tune the outliers.
 //
-// Knight is now a HYBRID class (the old Knight + Paladin merged): a flat-block wall whose
-// holy-smite bruisers (Death Knight / Oathbreaker / Wyrmguard) sit alongside the pure walls,
-// and the Knight synergy adds a team damage-ward at higher tiers.
-//
 // ORIGIN → CLASS palette (— = deliberately empty, off-theme for that race):
-//   Human   knight mage ranger  --     healer summoner   (disciplined, supportive)
-//   Undead  knight mage ranger  assassin --   summoner   (bone wall + death-knight; raises the dead)
-//   Elf     --     mage ranger  assassin healer --        (fey grace — no armour, no brutes)
-//   Demon   knight mage ranger  assassin --   summoner   (relentless aggression + the oathbreaker)
-//   Beast   knight --   ranger  assassin healer summoner  (the Wilds — no casters, no holy)
-//   Dragon  knight mage ranger  --     --     --          (elite 5-cost capstones)
-//   Orc     knight mage ranger  assassin --   --          (the Warhorde — savage Bloodlust)
+//   Human   knight mage ranger  --     healer summoner --        (disciplined, supportive)
+//   Undead  knight mage ranger  assassin --   summoner paladin   (the grave: skeletons→death knight)
+//   Elf     --     mage ranger  assassin healer --      --        (fey grace — no armour, no brutes)
+//   Demon   knight mage ranger  assassin --   summoner paladin   (relentless aggression + oathbreaker)
+//   Beast   knight --   ranger  assassin healer summoner --       (the Wilds — no casters, no holy)
+//   Dragon  knight mage ranger  --     --     --       paladin   (elite 5-cost capstones)
+//   Orc     knight mage ranger  assassin --   --       --        (the Warhorde — savage Bloodlust)
 
 // Base 1-star stats per cost tier.
 const COST_BASE = {
@@ -37,6 +33,7 @@ const ROLE = {
   assassin: { hpx: 0.90, adx: 1.08, range: 1, manaPer: 10, startMana: 0.20, dive: true },   // trimmed — c3 assassins got strong with the steeper curve
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
   summoner: { hpx: 1.12, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
+  paladin:  { hpx: 1.30, adx: 1.16, range: 1, manaPer: 8, startMana: 0.30 },   // holy frontline: sturdy BRUISER that smites (real damage + bonus magic), not a pure wall
 };
 
 // `tune` = optional per-unit balance overrides: { hpx, adx } multipliers.
@@ -285,7 +282,7 @@ export const UNITS = [
   mk('skeleton_archer','Skeleton Archer','undead', 'ranger', 1, A.skeleton_archer),
   mk('wraith',         'Wraith',         'undead', 'assassin', 4, A.wraith),
   mk('necromancer',    'Necromancer',    'undead', 'summoner', 5, A.necromancer),
-  mk('death_knight',   'Death Knight',   'undead', 'knight', 4, A.death_knight),
+  mk('death_knight',   'Death Knight',   'undead', 'paladin', 4, A.death_knight),
 
   // ---- Elf (mage · ranger · assassin · healer) ----
   mk('moon_priestess', 'Moon Priestess', 'elf', 'mage',   4, A.moon_priestess),
@@ -299,7 +296,7 @@ export const UNITS = [
   mk('fel_archer',     'Fel Archer',     'demon', 'ranger', 2, A.fel_archer),
   mk('imp_assassin',   'Imp Assassin',   'demon', 'assassin', 1, A.imp_assassin),
   mk('pit_summoner',   'Pit Summoner',   'demon', 'summoner', 5, A.pit_summoner),
-  mk('oathbreaker',    'Oathbreaker',    'demon', 'knight', 2, A.oathbreaker),
+  mk('oathbreaker',    'Oathbreaker',    'demon', 'paladin', 2, A.oathbreaker),
 
   // ---- Beast / the Wilds (knight · ranger · assassin · healer · summoner) ----
   mk('beast_hunter',   'Quillback',      'beast', 'ranger', 2, A.beast_hunter),
@@ -315,7 +312,7 @@ export const UNITS = [
   mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.36, adx: 1.28 }),
   mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.30, adx: 1.24 }),
   mk('wyrm_archer',    'Stormwyrm',      'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.30, adx: 1.24 }),
-  mk('wyrmguard',      'Wyrmguard',      'dragon', 'knight', 5, A.wyrmguard, { hpx: 1.30, adx: 1.18 }),
+  mk('wyrmguard',      'Wyrmguard',      'dragon', 'paladin', 5, A.wyrmguard, { hpx: 1.30, adx: 1.18 }),
 
   // ---- Orc / the Warhorde (knight · mage · ranger · assassin) ----
   mk('berserker',   'Blood Berserker', 'orc', 'assassin', 1, A.berserker),

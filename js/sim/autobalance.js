@@ -114,6 +114,7 @@ const COMPS = {
   'Ranger': ['crossbowman', 'wood_ranger', 'fel_archer', 'knight_captain', 'axethrower', 'field_medic'],
   'Summoner': ['necromancer', 'pit_summoner', 'beastmaster', 'banner_sergeant', 'bone_guard', 'field_medic'],
   'Dragon': ['dragon_knight', 'dragon_sage', 'knight_captain', 'bone_guard', 'moon_priestess', 'grove_healer'],
+  'Paladin': ['oathbreaker', 'death_knight', 'wyrmguard', 'bone_guard', 'court_mage', 'field_medic'],
   'Orc': ['warboss', 'orc_grunt', 'berserker', 'axethrower', 'orc_shaman', 'field_medic'],
 };
 function roundRobin() {
