@@ -630,6 +630,9 @@ export function simulate(playerBoard, enemyBoard, seed = 1, opts = {}) {
 }
 
 // Player damage on a loss: base(round) + sum(survivor cost*star) + 2*count.
+// NOTE: the damage SHAPE is intentionally unchanged — games are lengthened purely via a larger
+// START_HP pool (bots.js), which scales longevity while preserving the relative death-order (so
+// the difficulty balance / placement gradient is untouched; you just get more rounds).
 const BASE_DMG = [0, 0, 2, 5, 8, 10, 12, 17];
 export function playerDamage(enemySurvivors, round) {
   const base = BASE_DMG[Math.min(round, 7)] ?? 17;

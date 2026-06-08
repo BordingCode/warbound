@@ -21,7 +21,7 @@ import { augmentBundle, AUGMENT_IDS, AUGMENTS } from '../data/augments.js';
 // doesn't model interest/reroll perks). Bots draft RANDOMLY, so a thinking player still wins.
 const BOT_AUGMENTS = AUGMENT_IDS.filter((id) => AUGMENTS[id].cat !== 'econ');
 
-export const START_HP = 130;     // ladder HP pool — tuned for ~12-20 round games
+export const START_HP = 200;     // ladder HP pool — enlarged from 130 for longer (~19-round) games + less punishing per-loss; damage shape unchanged so difficulty/placement balance is preserved
 const INTEREST_CAP = 5;
 
 const byCost = { 1: [], 2: [], 3: [], 4: [], 5: [] };

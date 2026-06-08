@@ -1572,8 +1572,16 @@ function teamTraitBonus() {
 }
 // Pick a Warlord (your signature power) before the ladder begins — identity + run variety.
 function startLadder() { chooseWarlord(); }
+// Offer THREE random warlords to pick from each game (was: the full roster of 8). Whichever you
+// choose, the other seven styles become your rivals — so a 3-of-8 offer keeps the lobby intact.
+function pickThreeWarlords() {
+  const pool = Bots.STYLES.slice();
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return pool.slice(0, 3);
+}
 function chooseWarlord() {
   Run.clearSave(); clearLobby(); run = Run.freshRun(); run.mode = 'menu'; lobby = null;
+  const offered = pickThreeWarlords();
   const card = (s) => { const p = Bots.POWERS[s.id]; const cdef = UNITS_BY_ID[s.champ];
     return el('.warlord-pick', { style: { '--wc': s.color }, onclick: () => beginLadder(s.id) }, [
       el('.wp-portrait', { html: cdef ? championSVG(cdef, { size: 56 }) : crest(s.color, s.sigil, 28) }),
@@ -1584,8 +1592,8 @@ function chooseWarlord() {
   $('#app').replaceChildren(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '10px', padding: '14px' } }, [
     el('h1', { style: { fontSize: '26px', margin: '0', textAlign: 'center' } }, 'Choose your Warlord'),
     el('.rank-pill', { style: { borderColor: rk.color } }, [el('span', { html: rankMedal(rk.color, 16) }), el('span', { style: { color: rk.color } }, ` ${rk.name}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px' } }, rk.nextAt ? `${rk.inTier}/${rk.nextAt} RP` : `${rk.rp} RP`)]),
-    el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-4px' } }, `Your power shapes the run; the other seven are your rivals — playing at ${rk.name} skill.`),
-    el('.warlord-grid', {}, Bots.STYLES.map(card)),
+    el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-4px' } }, `Pick one of three; your power shapes the run, and the other seven warlords are your rivals — playing at ${rk.name} skill.`),
+    el('.warlord-grid', {}, offered.map(card)),
     el('button.btn', { style: { marginTop: '4px' }, onclick: () => chooseMode() }, '← Back'),
   ]));
 }
