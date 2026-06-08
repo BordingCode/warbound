@@ -23,15 +23,15 @@ export const TRAITS = {
     name: 'Elf', axis: 'origin', kind: 'behaviour', color: '#54e6c0',
     desc: 'Elves slip past blows and start shielded.',
     breakpoints: [2, 4],
-    bonuses: { 2: { dodge: 0.28, shield: 200 }, 4: { dodge: 0.46, shield: 360, as: 0.40 } },
-    bonusText: { 2: '28% dodge + 200 shield', 4: '46% dodge + 360 shield + 40% atk speed' },
+    bonuses: { 2: { dodge: 0.32, shield: 240, as: 0.18 }, 4: { dodge: 0.50, shield: 440, as: 0.55 } },
+    bonusText: { 2: '32% dodge + 240 shield + 18% atk speed', 4: '50% dodge + 440 shield + 55% atk speed' },
   },
   demon: {
     name: 'Demon', axis: 'origin', kind: 'behaviour', color: '#ff5a3c',
     desc: 'Every Demon attack sears its target: bonus magic damage on each hit AND it drains the enemy\'s mana, delaying the ability they\'re charging. A strong soft-counter to caster-heavy enemy boards.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { burn: 82, manaBurn: 8 }, 4: { burn: 128, manaBurn: 12 }, 6: { burn: 184, manaBurn: 21 } },
-    bonusText: { 2: '+82 magic dmg & −8 enemy mana per hit', 4: '+128 magic dmg & −12 enemy mana per hit', 6: '+184 magic dmg & −21 enemy mana per hit' },
+    bonuses: { 2: { burn: 98, manaBurn: 9 }, 4: { burn: 150, manaBurn: 14 }, 6: { burn: 210, manaBurn: 22 } },
+    bonusText: { 2: '+98 magic dmg & −9 enemy mana per hit', 4: '+150 magic dmg & −14 enemy mana per hit', 6: '+210 magic dmg & −22 enemy mana per hit' },
   },
   beast: {
     name: 'Beast', axis: 'origin', kind: 'behaviour', color: '#ffb15a',
@@ -95,8 +95,8 @@ export const TRAITS = {
     name: 'Summoner', axis: 'class', kind: 'behaviour', color: '#ffcf5a',
     desc: 'Summoned creatures hit harder and last longer.',
     breakpoints: [2, 4],
-    bonuses: { 2: { summonPower: 0.10 }, 4: { summonPower: 0.22 } },
-    bonusText: { 2: '+10% summon HP/dmg', 4: '+22% summon HP/dmg' },
+    bonuses: { 2: { summonPower: 0.05 }, 4: { summonPower: 0.12 } },
+    bonusText: { 2: '+5% summon HP/dmg', 4: '+12% summon HP/dmg' },
   },
 };
 

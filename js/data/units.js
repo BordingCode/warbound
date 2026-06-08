@@ -157,9 +157,9 @@ const A = {
   // PASSIVE — Corpse Harvest: raises a Risen whenever an ally falls (budget 2/fight).
   // Risen: bony bruiser — tanky, slow, standard melee.
   necromancer: { name: 'Raise Dead', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ kind: 'risen', count: 2, hp: 1040, ad: 108, armor: 22 })],
+    verbs: [v.summon({ kind: 'risen', count: 2, hp: 870, ad: 100, armor: 22 })],
     passive: { on: 'allyDeath', verbs: [v.raiseCorpse(700, 95)] },
-    ult: { verbs: [v.summon({ kind: 'risen', count: 1, hp: 1040, ad: 108, armor: 22, statMult: 2 }), v.summon({ kind: 'risen', count: 1, hp: 1040, ad: 108, armor: 22 })] } },
+    ult: { verbs: [v.summon({ kind: 'risen', count: 1, hp: 870, ad: 100, armor: 22, statMult: 2 }), v.summon({ kind: 'risen', count: 1, hp: 870, ad: 100, armor: 22 })] } },
 
   // Elf
   // Mage c4 — the ASSASSIN caster: a precision bolt that ignores position and snipes the enemy's
@@ -200,7 +200,7 @@ const A = {
     ult: { verbs: [{ op: 'enableOnKill' }], onKill: [v.manaBurn(40, 'nearestN', 0), v.slow(0.30, 2, 'nearestN')], onKillN: 2 } },
   // Imp: volatile glass-cannon — frail, but DETONATES for AoE magic on death.
   pit_summoner: { name: 'Open the Pit', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ kind: 'imp', count: 2, hp: 720, ad: 96, armor: 8, explode: 160 })], ult: { verbs: [v.meteors({ n: 3, ap: 120, radius: 1 })] } },
+    verbs: [v.summon({ kind: 'imp', count: 2, hp: 640, ad: 92, armor: 8, explode: 160 })], ult: { verbs: [v.meteors({ n: 3, ap: 120, radius: 1 })] } },
 
   // Beast (the Wilds)
   // PASSIVE — Hunter's Mark: marks the enemy CARRY (highest cost×star); the WHOLE team's autos
@@ -220,8 +220,8 @@ const A = {
     ult: { verbs: [{ op: 'shield', target: 'lowestNAllies', n: 3, ap: 210 }, v.buffAS(0.2, 3, 'shielded')] } },
   // Wolf: fast feral skirmisher — quick attacks that ramp (rage), but squishier than other summons.
   beastmaster: { name: 'Summon Pack', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ kind: 'wolf', count: 2, hp: 770, ad: 122, as: 0.92, armor: 10, rage: 0.04 })],
-    ult: { verbs: [v.summon({ kind: 'wolf', count: 2, hp: 770, ad: 122, as: 0.92, armor: 10, rage: 0.05, lifestealAura: 0.15 })] } },
+    verbs: [v.summon({ kind: 'wolf', count: 2, hp: 680, ad: 112, as: 0.92, armor: 10, rage: 0.04 })],
+    ult: { verbs: [v.summon({ kind: 'wolf', count: 2, hp: 680, ad: 112, as: 0.92, armor: 10, rage: 0.05, lifestealAura: 0.15 })] } },
 
   // Dragon (elite, expensive)
   // PASSIVE — Dragonscale: soaks 15% of adjacent allies' incoming damage (the elite protector).
@@ -243,8 +243,8 @@ const A = {
   // muster also shields the soldiers beside the banner. 3★ ult: conscripts a heavy footman.
   // Soldier: armoured line-holder — sturdy, well-armoured, marches in with a shield up; low damage.
   banner_sergeant: { name: 'Muster the Ranks', type: 'summon', summonHp: 950, summonAd: 115,
-    verbs: [v.summon({ kind: 'soldier', count: 2, hp: 1080, ad: 104, armor: 28, shieldStart: 240 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
-    ult: { verbs: [v.summon({ kind: 'soldier', count: 1, hp: 1080, ad: 104, armor: 28, shieldStart: 240, statMult: 2 })] } },
+    verbs: [v.summon({ kind: 'soldier', count: 2, hp: 910, ad: 100, armor: 28, shieldStart: 185 })], passive: { on: 'cast', verbs: [v.shield({ target: 'adjacentAllies', ap: 150 })] },
+    ult: { verbs: [v.summon({ kind: 'soldier', count: 1, hp: 910, ad: 100, armor: 28, shieldStart: 185, statMult: 2 })] } },
 
   // ── Orc (NEW origin — the Warhorde: savage warriors who feed on slaughter (Bloodlust trait =
   // ramping attack speed + lifesteal for the whole warband). No healers, no holy, no summons. ──
