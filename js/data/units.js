@@ -380,11 +380,11 @@ export const ULT3 = {
   warboss: 'Taunts all foes within 2 cells for 2.5s and gains a 420 shield.',
 };
 
-import { CREATURES } from './creatures.js';
+import { CREATURES, CREEPS } from './creatures.js';
 // UNITS_BY_ID includes boss creatures for COMBAT/render lookup only. The player economy (pool,
 // shop, draft, Codex) iterates the UNITS array, which excludes creatures — so bosses never appear
 // as buyable/draftable units.
-export const UNITS_BY_ID = Object.assign(Object.fromEntries(UNITS.map((u) => [u.defId, u])), CREATURES);
+export const UNITS_BY_ID = Object.assign(Object.fromEntries(UNITS.map((u) => [u.defId, u])), CREATURES, CREEPS);
 
 // The recruitable races, in roster order. One of these sits out each run (Auto-Chess-style
 // rotation) — see freshRun(). Derived from the roster so it never drifts from the actual units.

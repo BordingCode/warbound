@@ -73,6 +73,25 @@ export function getEnemyBoard(round, rng, opts = {}) {
   return { name, traitHint: base.traitHint, units };
 }
 
+// A NEUTRAL CREEP CAMP for Warpath's "Neutral Camp" rounds (Auto-Chess creep round). A pack of wild
+// monsters — deliberately a notch WEAKER than a same-round warband (star scales on esc/4 vs the
+// warband's esc/3) so it reads as a beatable breather that drops loot. They grant no synergy and
+// never cast. Scales with the realm difficulty so it stays relevant deep in the run.
+export function getCreepCamp(round, opts = {}) {
+  const diff = Math.max(0, opts.diff || 0);
+  const esc = diff + Math.floor((round - 1) / 4);
+  const star = Math.min(3, 1 + Math.floor(esc / 4));     // gentler ramp than getEnemyBoard's esc/3
+  const extra = Math.min(3, Math.floor(esc / 4));        // a few more wolves in the harder realms
+  const units = [
+    E('creep_brute', star, 3, 3),
+    E('creep_wolf', star, 2, 3), E('creep_wolf', star, 4, 3),
+    E('creep_spore', star, 3, 1), E('creep_spore', star, 5, 1),
+  ];
+  for (let k = 0; k < extra; k++) units.push(E('creep_wolf', star, 1 + (k % 5), 2));
+  const NAMES = ['Wolf Pack', 'Troll Warren', 'Spore Grove', 'the Wild Beasts'];
+  return { name: 'Neutral Camp — ' + NAMES[round % NAMES.length], traitHint: 'wild monsters · clear them for loot', creep: true, units };
+}
+
 // ---- Realm BOSSES: each realm's 10th/final warband is a hand-crafted boss with a GIMMICK.
 // The gimmick is an aug.enemy bundle ({flat,cond,traitBonus}) — the SAME channel augments use —
 // applied to the boss board only, and named/telegraphed pre-fight (the "answer key" pillar).

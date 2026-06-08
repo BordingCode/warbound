@@ -10,7 +10,7 @@ import { simulate } from './sim/combat.js';
 import { hashSeed } from './rng.js';
 import { CombatPlayer, unitStatsPanel } from './render/player.js';
 import { createDragController } from './input/drag.js';
-import { getEnemyBoard, REALMS, realmAt, bossForRealm, getTrialBoard, TRIAL_COUNT } from './data/enemies.js';
+import { getEnemyBoard, REALMS, realmAt, bossForRealm, getTrialBoard, getCreepCamp, TRIAL_COUNT } from './data/enemies.js';
 import { COMPONENTS, ITEMS, itemDef, itemLabel, traitGrantsFor, isEmblem, EMBLEMS, combine as combineItems } from './data/items.js';
 import { CREATURES_LIST } from './data/creatures.js';
 import { AUGMENTS, TIER_LABEL, augmentBundle } from './data/augments.js';
@@ -66,6 +66,8 @@ function getOpponent() {
     return { ...b, name: 'Wave ' + wave, traitHint: 'the horde grows — survive' };
   }
   const realm = realmAt(run.realm || 0);
+  // Neutral Camp (creep) rounds — a wild-monster breather that drops loot, doesn't count as a warband.
+  if (Run.isCreepRound(run)) return getCreepCamp(run.round, { diff: realm.diff });
   // the realm's 10th/final warband is a themed BOSS with a gimmick (telegraphed pre-fight).
   if (run.wins + 1 === Run.WIN_TARGET) return bossForRealm(realm.index);
   return getEnemyBoard(run.wins + 1, null, { diff: realm.diff, pool: realm.pool });
@@ -564,7 +566,7 @@ function offerDraft(after) {
   ]));
   document.body.append(ov);
 }
-function shouldDraft(finishedRound) { return [1, 2, 7].includes(finishedRound); }
+function shouldDraft(finishedRound) { return [2].includes(finishedRound); }   // rounds 1 & 7 are Neutral Camps now
 function shouldCarousel(finishedRound) { return [5, 10].includes(finishedRound); }   // Auto-Chess carousel, every 5 rounds
 function shouldAugment(finishedRound) { return [3, 6, 9].includes(finishedRound); }
 function shouldEmblem(finishedRound) { return [4, 8].includes(finishedRound); }   // Warpath-only
@@ -612,6 +614,24 @@ function offerEmblem(after) {
         el('span.dm', { style: { color: tr.color } }, `+1 ${tr.name}${stat ? ' · ' + stat : ''}`),
       ]);
     })),
+  ]));
+  document.body.append(ov);
+}
+
+// Loot from a cleared Neutral Camp (creep round): one guaranteed item component, auto-granted.
+function dropCreepLoot(after) {
+  const id = Run.randomComponent(run);
+  Run.addItem(run, id); Run.save(run); Sfx.fuse();
+  if (motionOn()) launchConfetti(1100);
+  const d = COMPONENTS[id];
+  const ov = el('.overlay', {}, el('.help-card', { style: { maxWidth: '300px' } }, [
+    el('h2', {}, '⚑ Camp cleared!'),
+    el('.sub', {}, 'The wild monsters dropped an item — combine two on a champion to forge gear.'),
+    el('.draft-row', {}, [el('.draft-pick', { style: { flex: 'none', minWidth: '120px', margin: '0 auto' } }, [
+      el('span.di', { html: ic(d.icon) }), el('span.dn', {}, d.name),
+      el('span.dm', {}, Object.entries(d.mods).map(([k, v]) => `+${v < 1 ? Math.round(v * 100) + '%' : v} ${k}`).join(', ')),
+    ])]),
+    el('button.btn.primary.go', { onclick: () => { ov.remove(); after ? after() : renderPlanning(); } }, 'Take the loot ▶'),
   ]));
   document.body.append(ov);
 }
@@ -1270,6 +1290,7 @@ async function startCombat() {
     else if (shouldAugment(finishedRound)) offerAugment(renderPlanning);
     else if (shouldEmblem(finishedRound)) offerEmblem(renderPlanning);
     else if (shouldCarousel(finishedRound)) offerCarousel(renderPlanning);
+    else if (Run.isCreepRoundNum(finishedRound)) { if (won) dropCreepLoot(renderPlanning); else renderPlanning(); }
     else if (shouldDraft(finishedRound)) offerDraft(renderPlanning);
     else renderPlanning();
   }, 1100);

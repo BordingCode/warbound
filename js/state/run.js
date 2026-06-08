@@ -330,6 +330,8 @@ export function benchUnit(run, uid) { // move a board unit back to bench
 // ---- items ----
 export function addItem(run, id) { run.items.push({ iid: newUid(), id }); }
 export function draftComponents(run) { const ids = _rng.shuffle(COMPONENT_IDS).slice(0, 3); saveRngState(run); return ids; }
+// One random component (seeded) — the guaranteed loot a Neutral Camp drops when cleared.
+export function randomComponent(run) { const id = COMPONENT_IDS[Math.floor(_rng.next() * COMPONENT_IDS.length)]; saveRngState(run); return id; }
 // Warpath-only: offer 3 distinct emblems (grant a trait to one unit). Ladder never calls this.
 export function draftEmblems(run) { const ids = _rng.shuffle(EMBLEM_IDS.slice()).slice(0, 3); saveRngState(run); return ids; }
 
@@ -398,9 +400,17 @@ export function income(run) {
   return { base, interest, streakBonus, total: base + interest + streakBonus };
 }
 
+// Warpath "Neutral Camp" rounds (Auto-Chess creep rounds): a breather PvE round vs wild monsters
+// that drops loot and does NOT count toward the realm's 10 warbands. Keyed to the ROUND number
+// (decoupled from wins). Warpath only — Trials/Endless/Ladder are unaffected.
+export const CREEP_ROUNDS = [1, 7];
+export function isCreepRoundNum(round) { return CREEP_ROUNDS.includes(round); }
+export function isCreepRound(run) { return run.mode === 'solo' && CREEP_ROUNDS.includes(run.round); }
+
 export function resolveRound(run, won) {
+  const creep = isCreepRound(run);   // a camp win pays gold but doesn't advance warband progress
   if (won) {
-    run.wins++;
+    if (!creep) run.wins++;
     run.streak = { type: 'win', n: run.streak.type === 'win' ? run.streak.n + 1 : 1 };
   } else {
     run.lives--; run.losses++;

@@ -114,3 +114,25 @@ export const CREATURES_LIST = [
 ];
 
 export const CREATURES = Object.fromEntries(CREATURES_LIST.map((c) => [c.defId, c]));
+
+// ── NEUTRAL CREEPS ──────────────────────────────────────────────────────────────────────────
+// Lightweight wild monsters for Warpath's "Neutral Camp" rounds — an Auto-Chess creep round: an
+// easier PvE breather that DROPS LOOT. Deliberately weaker than a warband and PURE AUTO-ATTACKERS
+// (no mana, never cast) so they never nuke a fragile early board. origin/klass 'boss' → grant the
+// enemy NO synergy. Enemy-only: merged into UNITS_BY_ID for combat lookup, but never appear in the
+// shop, pool, draft, Codex, or the Trials. Scaled to the round via star bumps in getCreepCamp().
+function creep(defId, name, shape, accent, stats) {
+  return {
+    defId, name, shape, accent, creature: true, creep: true,
+    origin: 'boss', klass: 'boss', cost: 0,
+    range: stats.range || 1, hp: stats.hp, ad: stats.ad, as: stats.as || 0.7,
+    armor: stats.armor || 12, mr: stats.mr || 12,
+    maxMana: 9999, startMana: 0, manaPer: 0,   // no mana gain → never casts; a plain beast
+    dive: false, ability: { name: name + ' bite', type: 'physical', target: 'current', adRatio: 1, verbs: [] },
+  };
+}
+export const CREEPS = Object.fromEntries([
+  creep('creep_brute', 'Cave Troll',  'golem',  '#8a9a6a', { hp: 1150, ad: 60, as: 0.50, armor: 34, mr: 22, range: 1 }),  // tanky front
+  creep('creep_wolf',  'Dire Wolf',   'wraith', '#9aa6b8', { hp: 460,  ad: 74, as: 0.95, armor: 10, mr: 10, range: 1 }),  // fast biters
+  creep('creep_spore', 'Spore Beast', 'slime',  '#7dff9e', { hp: 380,  ad: 56, as: 0.80, armor: 8,  mr: 18, range: 2 }),  // weak ranged
+].map((c) => [c.defId, c]));
