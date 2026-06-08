@@ -30,7 +30,7 @@ const ROLE = {
   knight:   { hpx: 1.44, adx: 1.12, range: 1, manaPer: 7, startMana: 0.20 },   // small tank bump for the slower march; realistic 3★ play shows knights don't need the big buff
   mage:     { hpx: 0.78, adx: 0.70, range: 3, manaPer: 8, startMana: 0.35 },   // squishier — Mage burst over-performs; easier to punish
   ranger:   { hpx: 0.86, adx: 0.65, range: 3, manaPer: 10, startMana: 0.10 },   // toned down hard — all-3★ Ranger comp (every volley ult firing) was the runaway outlier; now dies if the front breaks
-  assassin: { hpx: 0.90, adx: 1.08, range: 1, manaPer: 10, startMana: 0.20, dive: true },   // trimmed — c3 assassins got strong with the steeper curve
+  assassin: { hpx: 1.02, adx: 1.08, range: 1, manaPer: 10, startMana: 0.20, dive: true },   // bumped from 0.90: assassins dived into the wall and DIED before their (now buffed) crits landed — they need to survive the dive
   healer:   { hpx: 0.95, adx: 0.65, range: 2, manaPer: 8, startMana: 0.40 },
   summoner: { hpx: 1.12, adx: 0.70, range: 2, manaPer: 8, startMana: 0.30 },
 };
@@ -119,7 +119,7 @@ const A = {
     ult: { verbs: [v.buffAS(0.30, 4, 'allies')] } },
   // PASSIVE — Conduit: gains AP for each allied caster (mage/healer/summoner) on the board.
   // Mage c2 — the BASELINE burst caster: a clean radius-1 nuke. (Entry-level: smallest mage spell.)
-  court_mage: { name: 'Arcane Nuke', type: 'magic', target: 'cluster', radius: 1, ap: 220,
+  court_mage: { name: 'Arcane Nuke', type: 'magic', target: 'cluster', radius: 1, ap: 170,
     blurb: 'Blasts {v} magic damage to a knot of nearby foes.',
     verbs: [v.cluster({ radius: 1 })], passive: { on: 'spawn', verbs: [v.casterScale(16)] },
     ult: { verbs: [v.manaBurn(30), { op: 'magic', target: 'cluster', radius: 2, ap: 160 }] } },
