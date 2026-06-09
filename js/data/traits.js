@@ -7,10 +7,13 @@ export const TRAITS = {
   // ---------- ORIGINS ----------
   human: {
     name: 'Human', axis: 'origin', kind: 'glue', color: '#6fb1ff',
-    desc: 'Disciplined ranks channel mana to the whole warband.',
-    breakpoints: [2, 4, 6],
-    bonuses: { 2: { manaRegen: 3 }, 4: { manaRegen: 5 }, 6: { manaRegen: 8 } },
-    bonusText: { 2: '+3 mana/s to all allies', 4: '+5 mana/s', 6: '+8 mana/s' },
+    desc: 'Disciplined ranks channel mana to the whole warband — a splash at 2, a true court at 6.',
+    // Two breakpoints (was 2/4/6): the old +5 at 4 humans was a free powerspike ONLY the all-cheap
+    // Knight comp reached (it runs exactly 4 humans). Now 4 humans = the 2-splash; the bigger regen
+    // wants a dedicated 6-human court. See DESIGN — this was a key lever on Knight's late-game.
+    breakpoints: [2, 6],
+    bonuses: { 2: { manaRegen: 2 }, 6: { manaRegen: 5 } },
+    bonusText: { 2: '+2 mana/s to all allies', 6: '+5 mana/s to all allies' },
   },
   undead: {
     name: 'Undead', axis: 'origin', kind: 'behaviour', color: '#8cff9e',
@@ -30,8 +33,8 @@ export const TRAITS = {
     name: 'Demon', axis: 'origin', kind: 'behaviour', color: '#ff5a3c',
     desc: 'Every Demon attack sears its target: bonus magic damage on each hit AND it drains the enemy\'s mana, delaying the ability they\'re charging. A strong soft-counter to caster-heavy enemy boards.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { burn: 98, manaBurn: 9 }, 4: { burn: 150, manaBurn: 14 }, 6: { burn: 210, manaBurn: 22 } },
-    bonusText: { 2: '+98 magic dmg & −9 enemy mana per hit', 4: '+150 magic dmg & −14 enemy mana per hit', 6: '+210 magic dmg & −22 enemy mana per hit' },
+    bonuses: { 2: { burn: 86, manaBurn: 9 }, 4: { burn: 128, manaBurn: 14 }, 6: { burn: 182, manaBurn: 22 } },
+    bonusText: { 2: '+86 magic dmg & −9 enemy mana per hit', 4: '+128 magic dmg & −14 enemy mana per hit', 6: '+182 magic dmg & −22 enemy mana per hit' },
   },
   beast: {
     name: 'Beast', axis: 'origin', kind: 'behaviour', color: '#ffb15a',
@@ -57,11 +60,15 @@ export const TRAITS = {
 
   // ---------- CLASSES ----------
   knight: {
-    name: 'Knight', axis: 'class', kind: 'glue', color: '#b9c4d0',
-    desc: 'A wall that ignores a flat chunk of every hit.',
+    name: 'Knight', axis: 'class', kind: 'behaviour', color: '#b9c4d0',
+    // Was a TEAM-WIDE flat per-hit `block` — but flat block is binary/un-tunable (it negates chip
+    // damage entirely on already-tanky bodies) AND team-wide it turned the squishy carries into walls
+    // too, which was the engine of the Knight comp's dominance. Now it's a % reduction (tunable, can't
+    // zero a hit) and KNIGHTS-ONLY (the wall is tough; the archers behind it are not). See DESIGN.
+    desc: 'A wall: knights shrug off a share of every hit they take. The line holds — what hides behind it does not.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { block: 10 }, 4: { block: 16 }, 6: { block: 22 } },
-    bonusText: { 2: 'Ignore 10 dmg/hit', 4: 'ignore 16', 6: 'ignore 22' },
+    bonuses: { 2: { dmgRed: 0.12 }, 4: { dmgRed: 0.20 }, 6: { dmgRed: 0.28 } },
+    bonusText: { 2: 'Knights take 12% less damage', 4: 'Knights take 20% less', 6: 'Knights take 28% less' },
   },
   mage: {
     name: 'Mage', axis: 'class', kind: 'glue', color: '#c79bff',

@@ -165,7 +165,10 @@ const ULTS = [
   ['Warlock 3★ burns (DoT)', 'warlock', r => has(r, 'debuff', 'dot')],
   ['Hellguard 3★ heal-cuts', 'hellguard', r => has(r, 'debuff', 'healCut')],
   ['Bone Guard 3★ lifesteal', 'bone_guard', r => has(r, 'buff', 'lifesteal')],
-  ['Warboss buries the cluster (stun)', 'warboss', r => has(r, 'cc', 'stun')],
+  // curated board: warboss's own knockback scatters the cluster its stun targets, so it needs a
+  // position where the stun lands on a live foe at this seed (same reason knight_captain has one).
+  ['Warboss buries the cluster (stun)', 'warboss', r => has(r, 'cc', 'stun'),
+    [U('warboss', 3, 5, 3), U('bone_guard', 3, 7, 3), U('field_medic', 5, 7)]],
   ['Moon Priestess 3★ chains', 'moon_priestess', r => has(r, 'arc', null)],
   ['Pit Summoner 3★ meteors', 'pit_summoner', r => has(r, 'meteor', null)],
   ['Quillback 3★ marks', 'beast_hunter', r => has(r, 'debuff', 'mark')],

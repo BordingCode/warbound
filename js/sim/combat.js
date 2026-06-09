@@ -100,7 +100,7 @@ function applyTraits(units, board, traitBonus = {}) {
     const has = (t) => u.klass === t || u.origin === t || granted.includes(t);
     // whole-team
     const human = get('human'); if (human) u.manaRegen = Math.max(u.manaRegen, human.manaRegen);
-    const knight = get('knight'); if (knight) u.block = Math.max(u.block, knight.block);
+    const knight = get('knight'); if (knight && knight.dmgRed && has('knight')) u.dmgRed = Math.max(u.dmgRed, knight.dmgRed);   // Knights: the WALL shrugs off a % of every hit (knights only, not the squishies behind them). Was a team-wide flat per-hit block — team-wide mitigation on an all-tank comp is un-tunably oppressive (see DESIGN).
     const healer = get('healer'); if (healer) { u.healAmp = Math.max(u.healAmp, healer.healAmp); u.regen = Math.max(u.regen, healer.regen); }
     const elf = get('elf'); if (elf) { u.dodge = Math.max(u.dodge, elf.dodge); u.shield += elf.shield; if (elf.as) u.asStacks += elf.as; }   // elven precision: flat attack speed at the top breakpoint (offensive kicker)
     const dragon = get('dragon'); if (dragon) { u.mr += dragon.mr; if (dragon.adPct) u.ad = Math.round(u.ad * (1 + dragon.adPct)); if (dragon.ap) u.apBonus += dragon.ap; }   // dragons hit as hard as they're tough
