@@ -1,6 +1,5 @@
 // Warbound — game loop. Planning phase (interactive shop/bench/board + drag) → combat
-// (sim + timeline playback) → resolve → next round. Warpath: beat 10 warbands (a loss replays the
-// same warband until you win). Trials/Endless: win/survive on lives. Ladder: outlast 7 rivals on HP.
+// (sim + timeline playback) → resolve → next round, until 10 wins or 0 lives.
 import { el, $, $$ } from './dom.js';
 import { UNITS, UNITS_BY_ID, ORIGINS, statsForStar, STAR_MULT, ULT3 } from './data/units.js';
 import { TRAITS, activeTraits } from './data/traits.js';
@@ -449,11 +448,7 @@ function renderPlanning() {
       el('.stat-pill.gold', {}, [el('span.ico', {}, '⛁'), el('span', {}, run.gold)]),
       run.mode === 'ladder'
         ? el(`.stat-pill hppill${lobby.human.hp <= 30 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${Math.max(0, Math.round(lobby.human.hp))}`), el('span', { style: { color: 'var(--ink-dim)', fontSize: '11px', marginLeft: '4px' } }, `${Bots.aliveCount(lobby)} left`)])
-        : run.mode === 'solo'
-          // Warpath can't be lost — show warband progress (not lives) + a retry badge when you're stuck on a wall.
-          ? el('.stat-pill', {}, [iconEl('trophy', 'hp-ic'), el('span', { style: { marginLeft: '4px' }, title: `${realmAt(run.realm || 0).name} · conquer all 10 warbands` }, `${run.wins}/${run.winTarget || Run.WIN_TARGET}`),
-              run.retries > 0 ? el('span', { style: { color: 'var(--danger)', marginLeft: '8px', fontWeight: '800' }, title: `Defeated by this warband ${run.retries}×. Regroup and beat them — Warpath replays each fight until you win.` }, `⟳ ${run.retries}`) : null])
-          : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: run.mode === 'trials' ? `Slay all ${TRIAL_COUNT} bosses` : 'Endless — survive as deep as you can' }, run.mode === 'endless' ? `Wave ${run.wins + 1}` : `${run.wins}/${run.winTarget || Run.WIN_TARGET}`)]),
+        : el(`.stat-pill${run.lives <= 2 ? ' danger' : ''}`, {}, [iconEl('heart', 'hp-ic'), el('span', {}, ` ${run.lives}`), el('span', { style: { color: 'var(--hp)', marginLeft: '6px' }, title: run.mode === 'trials' ? `Slay all ${TRIAL_COUNT} bosses` : run.mode === 'endless' ? 'Endless — survive as deep as you can' : `${realmAt(run.realm || 0).name} · conquer all 10` }, run.mode === 'endless' ? `Wave ${run.wins + 1}` : `${run.wins}/${run.winTarget || Run.WIN_TARGET}`)]),
       el('.stat-pill.round', {}, `Rd ${run.round}`),
       el('button.btn#optionsBtn', { style: { padding: '5px 10px' }, title: 'Options & menu', onclick: showOptions, html: ic('bars') }),
     ]),
@@ -1158,7 +1153,7 @@ function showHelp() {
         ? ['trophy', `Slay all <b>${TRIAL_COUNT} boss monsters</b> of the gauntlet (survive on <b>5 lives</b>). Each boss has its own deadly mechanic — learn it, then build to beat it.`]
         : run.mode === 'endless'
           ? ['trophy', 'Hold against <b>endless escalating waves</b> on <b>5 lives</b> — every 10th wave is a boss. There is no winning: <b>bank Spoils for how deep you march.</b>']
-          : ['trophy', 'Beat all <b>10 warbands</b> to <b>conquer the realm</b>. Lose a fight? <b>You replay that warband until you win</b> — your gold & board keep growing each try, and you get extra help while you\'re stuck, so press on. Each realm conquered unlocks the next, harder one.'],
+          : ['trophy', 'Beat all <b>10 warbands</b> to <b>conquer the realm</b> (survive on <b>5 lives</b>). Lose a fight and you <b>replay the same warband</b> — but each loss costs a life, so break the wall before they run out. Each realm conquered unlocks the next, harder one.'],
   ];
   const ov = el('.overlay', {}, el('.help-card', {}, [
     el('h2', {}, 'How to play'),
@@ -1270,14 +1265,10 @@ async function startCombat() {
   won ? Sfx.victory() : Sfx.defeat();
   if (won) launchConfetti(2000);
   const sv = result.survivors;
-  // Warpath can't be lost: a defeat (or draw) replays the SAME warband, so frame it as "try again".
-  const soloRetry = !won && run.mode === 'solo';
-  setBanner(won ? `Round won! (${sv.player} survived)`
-    : soloRetry ? 'Defeated — regroup and beat this warband to advance. You replay until you win.'
-    : winner === 'enemy' ? `Round lost — ${sv.enemy} enemies left` : 'Draw — counts as a loss');
+  setBanner(won ? `Round won! (${sv.player} survived)` : winner === 'enemy' ? `Round lost — ${sv.enemy} enemies left` : 'Draw — counts as a loss');
   // the fight is over — stop the button reading "Fighting…" until the planning screen re-renders
   // (avoids a brief beat where the result banner contradicts a still-"Fighting…" button).
-  if (ready) ready.textContent = won ? 'Victory!' : soloRetry ? 'Try again' : winner === 'enemy' ? 'Defeat' : 'Draw';
+  if (ready) ready.textContent = won ? 'Victory!' : winner === 'enemy' ? 'Defeat' : 'Draw';
 
   const finishedRound = run.round;
 
