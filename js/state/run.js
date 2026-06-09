@@ -49,7 +49,7 @@ export function freshRun(seedStr = 'warbound-' + Date.now()) {
   const run = {
     bannedRace,
     v: 1, seedStr, seed,
-    round: 1, gold: 10, lives: START_LIVES, wins: 0, losses: 0,   // enough to buy a starting team freely
+    round: 1, gold: 10, lives: START_LIVES, wins: 0, losses: 0, retries: 0,   // enough to buy a starting team freely
     level: 2, xp: 0,
     bench: Array(BENCH_SIZE).fill(null),
     board: [],
@@ -87,8 +87,14 @@ function pickCostTier(level) {
   for (let c = 1; c <= 5; c++) { acc += odds[c - 1]; if (roll < acc) return c; }
   return 1;
 }
-// P1.1 — "behind" check for the underdog supply. Solo/Trials/Endless run on lives; ≤2 = danger.
-export function isUnderdog(run) { return run.mode !== 'ladder' && (run.lives || 0) <= 2; }
+// P1.1 — "behind" check for the underdog supply. Warpath can't be lost (you replay a warband until
+// you beat it), so its "behind" signal is being STUCK on the wall — one or more retries on the
+// current warband turns on catch-up help. Trials/Endless still ride on lives (≤2 = danger).
+export function isUnderdog(run) {
+  if (run.mode === 'ladder') return false;
+  if (run.mode === 'solo') return (run.retries || 0) >= 1;
+  return (run.lives || 0) <= 2;
+}
 // origins+classes currently on your board — what the underdog supply favours (helps you complete
 // the synergies you're already building, rather than handing you a random pivot).
 function boardTraitSet(run) {
@@ -415,11 +421,16 @@ export function isCreepRound(run) { return run.mode === 'solo' && CREEP_ROUNDS.i
 export function resolveRound(run, won) {
   const creep = isCreepRound(run);   // a camp win pays gold but doesn't advance warband progress
   if (won) {
-    if (!creep) run.wins++;
+    if (!creep) { run.wins++; run.retries = 0; }   // wall cleared → reset the attempt counter
     run.streak = { type: 'win', n: run.streak.type === 'win' ? run.streak.n + 1 : 1 };
   } else {
-    run.lives--; run.losses++;
+    run.losses++;
     run.streak = { type: 'loss', n: run.streak.type === 'loss' ? run.streak.n + 1 : 1 };
+    // Warpath: a defeat is not fatal — you replay the SAME warband until you win (the foe is keyed
+    // to wins, so it stays fixed while your economy grows). Count the attempt to drive catch-up help.
+    // Trials/Endless still spend a life on a loss.
+    if (run.mode === 'solo') run.retries = (run.retries || 0) + 1;
+    else run.lives--;
   }
   // payout (win bonus +1)
   const inc = income(run);
@@ -434,7 +445,8 @@ export function resolveRound(run, won) {
   // beat all (winTarget) foes to win (Warpath=10 warbands, Trials=5 bosses), or run out of lives.
   // Endless never "wins" by count — it only ends when your lives run out (depth = how far you got).
   if (run.mode !== 'endless' && run.wins >= (run.winTarget || WIN_TARGET)) { run.over = true; run.won = true; }
-  if (run.lives <= 0) { run.over = true; run.won = false; }
+  // Warpath never ends on a loss — only Trials/Endless run out of lives.
+  if (run.mode !== 'solo' && run.lives <= 0) { run.over = true; run.won = false; }
   ensureRng(run);
   rollShop(run);                   // respects shopLocked (frozen shop persists)
   run.shopLocked = false;          // freeze lasts one round (TFT-style auto-unfreeze)
