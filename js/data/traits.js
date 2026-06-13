@@ -19,8 +19,8 @@ export const TRAITS = {
     name: 'Undead', axis: 'origin', kind: 'behaviour', color: '#8cff9e',
     desc: 'Slain Undead claw back from the grave, once.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { revivePct: 0.46 }, 4: { revivePct: 0.68, vamp: 0.34 }, 6: { revivePct: 0.88, vamp: 0.46 } },
-    bonusText: { 2: 'Revive once at 46% HP', 4: 'at 68% HP + 34% lifesteal', 6: 'at 88% HP + 46% lifesteal' },
+    bonuses: { 2: { revivePct: 0.46 }, 4: { revivePct: 0.68, vamp: 0.34, adPct: 0.18 }, 6: { revivePct: 0.88, vamp: 0.46, adPct: 0.26 } },
+    bonusText: { 2: 'Revive once at 46% HP', 4: 'at 68% HP + 34% lifesteal + 18% AD', 6: 'at 88% HP + 46% lifesteal + 26% AD' },
   },
   elf: {
     name: 'Elf', axis: 'origin', kind: 'behaviour', color: '#54e6c0',
@@ -33,22 +33,22 @@ export const TRAITS = {
     name: 'Demon', axis: 'origin', kind: 'behaviour', color: '#ff5a3c',
     desc: 'Every Demon attack sears its target: bonus magic damage on each hit AND it drains the enemy\'s mana, delaying the ability they\'re charging. A strong soft-counter to caster-heavy enemy boards.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { burn: 86, manaBurn: 9 }, 4: { burn: 128, manaBurn: 14 }, 6: { burn: 182, manaBurn: 22 } },
-    bonusText: { 2: '+86 magic dmg & −9 enemy mana per hit', 4: '+128 magic dmg & −14 enemy mana per hit', 6: '+182 magic dmg & −22 enemy mana per hit' },
+    bonuses: { 2: { burn: 100, manaBurn: 9 }, 4: { burn: 160, manaBurn: 14 }, 6: { burn: 235, manaBurn: 22 } },
+    bonusText: { 2: '+100 magic dmg & −9 enemy mana per hit', 4: '+160 magic dmg & −14 enemy mana per hit', 6: '+235 magic dmg & −22 enemy mana per hit' },
   },
   beast: {
     name: 'Beast', axis: 'origin', kind: 'behaviour', color: '#ffb15a',
     desc: 'The Wilds grow more ferocious as the fight drags on.',
     breakpoints: [2, 4],
-    bonuses: { 2: { ferocity: 0.28, armor: 16 }, 4: { ferocity: 0.52, armor: 32 } },
-    bonusText: { 2: '+28% atk speed/strike & +16 armor', 4: '+52% atk speed/strike & +32 armor (whole team)' },
+    bonuses: { 2: { ferocity: 0.34, armor: 20 }, 4: { ferocity: 0.62, armor: 40 } },
+    bonusText: { 2: '+34% atk speed/strike & +20 armor', 4: '+62% atk speed/strike & +40 armor (whole team)' },
   },
   dragon: {
     name: 'Dragon', axis: 'origin', kind: 'behaviour', color: '#ffd24a',
     desc: 'Few but mighty — dragons shrug off magic.',
     breakpoints: [1, 2],
-    bonuses: { 1: { mr: 26, adPct: 0.17, ap: 50 }, 2: { mr: 46, adPct: 0.27, ap: 95 } },
-    bonusText: { 1: '+26 MR, +17% AD, +50 AP', 2: '+46 MR, +27% AD, +95 AP (resists spells)' },
+    bonuses: { 1: { mr: 26, adPct: 0.12, ap: 38 }, 2: { mr: 46, adPct: 0.18, ap: 70 } },
+    bonusText: { 1: '+26 MR, +12% AD, +38 AP', 2: '+46 MR, +18% AD, +70 AP (resists spells)' },
   },
   orc: {
     name: 'Orc', axis: 'origin', kind: 'behaviour', color: '#7fc24a',
@@ -67,8 +67,8 @@ export const TRAITS = {
     // zero a hit) and KNIGHTS-ONLY (the wall is tough; the archers behind it are not). See DESIGN.
     desc: 'A wall: knights shrug off a share of every hit they take. The line holds — what hides behind it does not.',
     breakpoints: [2, 4, 6],
-    bonuses: { 2: { dmgRed: 0.12 }, 4: { dmgRed: 0.20 }, 6: { dmgRed: 0.28 } },
-    bonusText: { 2: 'Knights take 12% less damage', 4: 'Knights take 20% less', 6: 'Knights take 28% less' },
+    bonuses: { 2: { dmgRed: 0.07 }, 4: { dmgRed: 0.14 }, 6: { dmgRed: 0.20 } },
+    bonusText: { 2: 'Knights take 7% less damage', 4: 'Knights take 14% less', 6: 'Knights take 20% less' },
   },
   mage: {
     name: 'Mage', axis: 'class', kind: 'glue', color: '#c79bff',
@@ -102,8 +102,8 @@ export const TRAITS = {
     name: 'Summoner', axis: 'class', kind: 'behaviour', color: '#ffcf5a',
     desc: 'Summoned creatures hit harder and last longer.',
     breakpoints: [2, 4],
-    bonuses: { 2: { summonPower: 0.05 }, 4: { summonPower: 0.12 } },
-    bonusText: { 2: '+5% summon HP/dmg', 4: '+12% summon HP/dmg' },
+    bonuses: { 2: { summonPower: 0.10 }, 4: { summonPower: 0.22 } },
+    bonusText: { 2: '+10% summon HP/dmg', 4: '+22% summon HP/dmg' },
   },
 };
 

@@ -44,7 +44,7 @@ function mk(defId, name, origin, klass, cost, ability, tune = {}) {
     hp: Math.round(b.hp * r.hpx * (tune.hpx || 1)),
     ad: Math.round(b.ad * r.adx * (tune.adx || 1)),
     as: b.as,
-    armor: b.armor + (klass === 'knight' ? 20 : 0),
+    armor: b.armor + (klass === 'knight' ? 14 : 0),
     mr: b.mr + (klass === 'knight' ? 10 : 0),
     maxMana: b.mana,
     startMana: Math.round(b.mana * r.startMana),
@@ -311,9 +311,9 @@ export const UNITS = [
   // Dragons are the premium 5-cost elites — strong even at 1★ (rarely reach 3★ in play), so
   // their base is bumped hard to stay board-warping against cheaper units whose 3★ ults now
   // fire. Only the Dragon comp fields ≥2 dragons, so these bumps don't distort other archetypes.
-  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.36, adx: 1.28 }),
-  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.30, adx: 1.24 }),
-  mk('wyrm_archer',    'Stormwyrm',      'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.30, adx: 1.24 }),
+  mk('dragon_knight',  'Dragon Knight',  'dragon', 'knight', 5, A.dragon_knight, { hpx: 1.20, adx: 1.18 }),
+  mk('dragon_sage',    'Dragon Sage',    'dragon', 'mage',   5, A.dragon_sage, { hpx: 1.16, adx: 1.16 }),
+  mk('wyrm_archer',    'Stormwyrm',      'dragon', 'ranger', 5, A.wyrm_archer, { hpx: 1.16, adx: 1.16 }),
 
   // ---- Orc / the Warhorde (knight · mage · ranger · assassin) ----
   mk('berserker',   'Blood Berserker', 'orc', 'assassin', 1, A.berserker),

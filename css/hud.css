@@ -129,7 +129,7 @@
   padding: 2px 5px 2px 3px; color: var(--ink-dim); background: #0007; border-radius: 0 7px 0 7px; font-variant-numeric: tabular-nums; }
 .shop-card .pool-cnt.scarce { color: #ff8a6a; }                                   /* few left — buy now or lose the 3★ */
 .shop-card .pool-cnt.contested { color: var(--gold); background: #4a2d00cc; box-shadow: inset 0 0 0 1px #ffb03155; }  /* rivals are hoarding it */
-.shop-card .card-info { position: absolute; top: 0; left: 0; width: 18px; height: 18px; padding: 0; border: none; background: #0006; color: var(--ink-dim); border-radius: 0 0 7px 0; font-size: 12px; line-height: 18px; }
+.shop-card .card-info { position: absolute; top: 0; left: 0; width: 28px; height: 28px; padding: 0; border: none; background: #0006; color: var(--ink-dim); border-radius: 0 0 7px 0; font-size: 12px; line-height: 28px; }
 .shop-card .card-info:active { color: var(--ink); }
 .shop-card .art { width: 46px; height: 55px; }
 
@@ -143,7 +143,7 @@
 /* items tray */
 .items-tray { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 30px; padding: 4px 6px; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .items-tray .tray-label { font-size: 16px; }
-.item-chip { width: 30px; height: 30px; display: grid; place-items: center; font-size: 17px; background: var(--bg-3); border: 1px solid var(--gold-deep); border-radius: 7px; cursor: grab; touch-action: none; }
+.item-chip { width: 38px; height: 38px; display: grid; place-items: center; font-size: 17px; background: var(--bg-3); border: 1px solid var(--gold-deep); border-radius: 7px; cursor: grab; touch-action: none; }
 .item-chip.dragging { opacity: .4; }
 
 /* Phone portrait: tighten the planning stack so the board + shop fit on one screen (less scroll).

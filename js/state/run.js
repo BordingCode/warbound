@@ -106,7 +106,7 @@ function pickUnitOfCost(cost, run) {
   const w = {}; let total = 0;
   for (const id of ids) {
     let weight = run.pool[id];
-    if (fav) { const d = UNITS_BY_ID[id]; if (d && (fav.has(d.origin) || fav.has(d.klass))) weight *= 2.2; }
+    if (fav) { const d = UNITS_BY_ID[id]; if (d && (fav.has(d.origin) || fav.has(d.klass))) weight *= 1.6; }
     w[id] = weight; total += weight;
   }
   let roll = _rng.next() * total;

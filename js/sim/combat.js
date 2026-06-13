@@ -104,7 +104,7 @@ function applyTraits(units, board, traitBonus = {}) {
     const healer = get('healer'); if (healer) { u.healAmp = Math.max(u.healAmp, healer.healAmp); u.regen = Math.max(u.regen, healer.regen); }
     const elf = get('elf'); if (elf) { u.dodge = Math.max(u.dodge, elf.dodge); u.shield += elf.shield; if (elf.as) u.asStacks += elf.as; }   // elven precision: flat attack speed at the top breakpoint (offensive kicker)
     const dragon = get('dragon'); if (dragon) { u.mr += dragon.mr; if (dragon.adPct) u.ad = Math.round(u.ad * (1 + dragon.adPct)); if (dragon.ap) u.apBonus += dragon.ap; }   // dragons hit as hard as they're tough
-    const beast = get('beast'); if (beast && active.beast.tier >= 6) u.ferocity = Math.max(u.ferocity, beast.ferocity);
+    const beast = get('beast'); if (beast && active.beast.tier >= 4) u.ferocity = Math.max(u.ferocity, beast.ferocity);
     // class/origin-tagged — now honoured for Emblem-granted traits too
     if (has('mage')) { const m = get('mage'); if (m) u.apBonus += m.ap; }
     if (has('assassin')) { const a = get('assassin'); if (a) { u.critChance += a.critChance; u.critDmg += a.critDmg; if (a.shred) u.shredOnHit = Math.max(u.shredOnHit, a.shred); } }
@@ -113,7 +113,7 @@ function applyTraits(units, board, traitBonus = {}) {
     // Orc Bloodlust: ramping attack speed (ferocity) AND lifesteal (vamp) for the whole warband —
     // reuses the same engine hooks as Beast ferocity + Undead vamp, so it composes cleanly.
     if (has('orc')) { const o = get('orc'); if (o) { if (o.ferocity) u.ferocity = Math.max(u.ferocity, o.ferocity); if (o.vamp) u.vamp += o.vamp; } }
-    if (has('undead')) { const ud = get('undead'); if (ud) { u.revivePct = Math.max(u.revivePct, ud.revivePct); if (ud.vamp) u.vamp += ud.vamp; } }   // undead leech: sustain kicker so the rainbow board has an offensive edge
+    if (has('undead')) { const ud = get('undead'); if (ud) { u.revivePct = Math.max(u.revivePct, ud.revivePct); if (ud.vamp) u.vamp += ud.vamp; if (ud.adPct) u.ad = Math.round(u.ad * (1 + ud.adPct)); } }   // undead leech: sustain kicker so the rainbow board has an offensive edge; top breakpoint also adds an AD term
     if (has('demon')) { const d = get('demon'); if (d) { u.burnOnHit = d.burn; u.manaBurnOnHit = d.manaBurn; } }
     if (has('summoner')) { const s = get('summoner'); if (s) u.summonPower = s.summonPower; }
     // Bard: team OFFENCE aura — flat attack speed (via asStacks, folded through the single effAS
