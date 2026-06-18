@@ -59,7 +59,7 @@ export function load() {
       const old = JSON.parse(localStorage.getItem(OLD_KEY) || 'null');   // carry over Spoils only
       m = { spoils: old && old.spoils ? old.spoils : 0, inventory: [], equipped: {} };
     }
-    m.spoils = m.spoils || 0; m.inventory = m.inventory || []; m.equipped = m.equipped || {}; m.realmsCleared = m.realmsCleared || 0;
+    m.spoils = m.spoils || 0; m.inventory = m.inventory || []; m.equipped = m.equipped || {}; m.realmsCleared = m.realmsCleared || 0; m.ascension = m.ascension || {};
     for (const it of m.inventory) { const n = parseInt(String(it.iid).replace(/\D/g, ''), 10); if (n >= _uid) _uid = n + 1; }
     return m;
   } catch { return { spoils: 0, inventory: [], equipped: {}, realmsCleared: 0 }; }
@@ -71,6 +71,26 @@ export function save(m) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(m)
 export function realmsCleared() { return load().realmsCleared || 0; }
 // mark realm index `idx` conquered; returns true only if this ADVANCED the frontier (a new conquest).
 export function conquerRealm(idx) { const m = load(); if (idx + 1 > (m.realmsCleared || 0)) { m.realmsCleared = idx + 1; save(m); return true; } return false; }
+
+// ---- Ascension (opt-in difficulty ladder) ----
+// Each realm tracks the HIGHEST ascension rung you've cleared it at (default 0 = off). Opt-in
+// only — never auto-raised. Stored next to realmsCleared as a per-realm map { realmIndex: rung }.
+export const ASCENSION_MAX = 4;
+// Each rung is a RULE CHANGE (not a flat multiplier), cumulative. Telegraphed on the realm screen.
+export const ASCENSIONS = [
+  { rung: 0, name: 'Normal',       rule: 'The realm as intended.' },
+  { rung: 1, name: 'A1 · No Quarter',   rule: 'No Neutral Camps — the loot-breather rounds become real warbands.' },
+  { rung: 2, name: 'A2 · Thin Ranks',   rule: 'Start with one fewer life.' },
+  { rung: 3, name: 'A3 · Reinforced',   rule: 'Every enemy warband fields one extra reinforcement.' },
+  { rung: 4, name: 'A4 · No Mercy',     rule: 'Lose the round-3 free life — no safety net.' },
+];
+export function ascensionCleared(realmIdx) { const a = load().ascension || {}; return a[realmIdx] || 0; }
+// mark realm `idx` cleared at rung `rung`; returns true only if it's a NEW personal high for that realm.
+export function recordAscension(idx, rung) {
+  const m = load(); m.ascension = m.ascension || {};
+  if ((rung | 0) > (m.ascension[idx] || 0)) { m.ascension[idx] = rung | 0; save(m); return true; }
+  return false;
+}
 export function addSpoils(n) { const m = load(); m.spoils = Math.max(0, m.spoils + Math.round(n)); save(m); return m.spoils; }
 
 // ---- personal bests (Endless depth, Trials bosses) — at-a-glance progress on the mode menu. ----

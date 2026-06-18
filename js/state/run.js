@@ -410,7 +410,8 @@ export function income(run) {
 // (decoupled from wins). Warpath only — Trials/Endless/Ladder are unaffected.
 export const CREEP_ROUNDS = [1, 7];
 export function isCreepRoundNum(round) { return CREEP_ROUNDS.includes(round); }
-export function isCreepRound(run) { return run.mode === 'solo' && CREEP_ROUNDS.includes(run.round); }
+// Ascension A1 ("No Quarter"): the Neutral-Camp breather rounds become real warbands instead.
+export function isCreepRound(run) { return run.mode === 'solo' && (run.ascension || 0) < 1 && CREEP_ROUNDS.includes(run.round); }
 
 export function resolveRound(run, won) {
   const creep = isCreepRound(run);   // a camp win pays gold but doesn't advance warband progress
@@ -430,8 +431,8 @@ export function resolveRound(run, won) {
   const bonusXp = 2 + (augmentEcon(run.augments).xpPerRound || 0);
   if (bonusXp && run.level < MAX_LEVEL) { run.xp += bonusXp; while (run.level < MAX_LEVEL && run.xp >= XP_TO_NEXT[run.level]) { run.xp -= XP_TO_NEXT[run.level]; run.level++; } }
   run.freeRerollsUsed = 0;
-  // life back at round 3 if hurt (anti-stomp floor)
-  if (run.round === 3 && run.lives < START_LIVES) run.lives++;
+  // life back at round 3 if hurt (anti-stomp floor) — Ascension A4 ("No Mercy") removes this net.
+  if (run.round === 3 && run.lives < (run.startLives || START_LIVES) && (run.ascension || 0) < 4) run.lives++;
   run.round++;
   // beat all (winTarget) foes to win (Warpath=10 warbands, Trials=5 bosses), or run out of lives.
   // Endless never "wins" by count — it only ends when your lives run out (depth = how far you got).
@@ -456,6 +457,7 @@ export function load() {
     run.augments = run.augments || run.relics || [];   // relics were renamed to augments
     run.augments = run.augments.filter((id) => AUGMENTS[id]);  // drop any ids no longer valid
     run.banished = run.banished || [];
+    if (run.ascension == null) run.ascension = 0;     // opt-in difficulty rung (Warpath only)
     if (run.banishLeft == null) run.banishLeft = 1;
     if (run.augRerollLeft == null) run.augRerollLeft = 1;
     run.items = run.items || [];

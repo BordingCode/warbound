@@ -66,11 +66,12 @@ function getOpponent() {
     return { ...b, name: 'Wave ' + wave, traitHint: 'the horde grows — survive' };
   }
   const realm = realmAt(run.realm || 0);
+  const asc = run.ascension || 0;   // opt-in Ascension rung feeds the escalation (A3 = +1 reinforcement)
   // Neutral Camp (creep) rounds — a wild-monster breather that drops loot, doesn't count as a warband.
-  if (Run.isCreepRound(run)) return getCreepCamp(run.round, { diff: realm.diff });
+  if (Run.isCreepRound(run)) return getCreepCamp(run.round, { diff: realm.diff, asc });
   // the realm's 10th/final warband is a themed BOSS with a gimmick (telegraphed pre-fight).
   if (run.wins + 1 === Run.WIN_TARGET) return bossForRealm(realm.index);
-  return getEnemyBoard(run.wins + 1, null, { diff: realm.diff, pool: realm.pool });
+  return getEnemyBoard(run.wins + 1, null, { diff: realm.diff, pool: realm.pool, asc });
 }
 
 // ---------- board ----------
@@ -1139,7 +1140,21 @@ function showEconomyInfo() {
   document.body.append(ov);
 }
 
-function showHelp() {
+function showHelp(brief = false) {
+  // First-run onboarding (brief): ONE line + one obvious action. The just-in-time coach toasts
+  // (COACH_TIPS / maybeCoach) teach fusing, synergies, positioning, items & reroll as they become
+  // relevant — so we don't front-load a wall of tips before the player has touched anything.
+  if (brief && run.mode !== 'ladder') {
+    const ov = el('.overlay', {}, el('.help-card', { style: { maxWidth: '320px' } }, [
+      el('h2', {}, 'Warbound'),
+      el('.sub', {}, 'A fantasy auto-battler'),
+      el('p', { style: { fontSize: '14px', lineHeight: '1.45', margin: '10px 0' } }, 'Build a warband, then let it fight. Start here:'),
+      el('p', { style: { fontSize: '15px', fontWeight: '700', color: 'var(--gold)', margin: '0 0 10px' } }, 'Tap a champion in the shop (bottom) to buy it.'),
+      el('button.btn.primary.go', { onclick: () => { audioResume(); try { localStorage.setItem('warbound_intro', '1'); } catch {} ov.remove(); } }, "Let's go"),
+    ]));
+    document.body.append(ov);
+    return;
+  }
   const tips = [
     ['coffer', '<b>Buy champions</b> from the shop (bottom) — tap a card. Each costs gold ⛁.'],
     ['sword', '<b>Drag</b> champions from your bench onto the board to deploy them. Drag to the Sell zone to sell.'],
@@ -1355,7 +1370,7 @@ function showRealms() {
     const dramaClass = drama >= 0.999 ? ' cataclysm' : drama >= 0.6 ? ' epic' : '';
     cards.push(el(`.realm-card ${status}${dramaClass}`, {
       style: { '--rc': r.color, '--d': drama.toFixed(3) },
-      onclick: status === 'locked' ? null : () => startSolo(true, i),
+      onclick: status === 'locked' ? null : () => chooseAscension(i),
     }, [
       el('.rc-side', {}, [el('.rc-num', {}, 'Realm ' + r.num), el('.rc-emblem', { html: realmEmblemSVG(i) }), status === 'conquered' ? el('.rc-mark', { html: ic('trophy') }) : status === 'locked' ? el('.rc-mark', { html: ic('lock') }) : null]),
       el('.rc-body', {}, [
@@ -1363,6 +1378,7 @@ function showRealms() {
         el('.rc-hint', {}, r.hint),
         el('.rc-foot', {}, [
           el('span.rc-danger', {}, [el('span', { style: { color: 'var(--ink-dim)' } }, 'Danger '), el('span', {}, danger(r.diff))]),
+          Meta.ascensionCleared(i) > 0 ? el('span.rc-badge', { style: { background: 'rgba(255,90,138,0.18)', borderColor: 'var(--danger, #ff5e8a)', color: '#ff9ab4' }, title: `Highest Ascension cleared: A${Meta.ascensionCleared(i)}` }, `A${Meta.ascensionCleared(i)} ✦`) : null,
           el('span.rc-badge', {}, status === 'conquered' ? 'Conquered · replay' : status === 'frontier' ? 'Conquer ▶' : 'Locked'),
         ]),
       ]),
@@ -1381,6 +1397,41 @@ function showRealms() {
     ]),
     el('.realm-list', {}, cards),
   ]));
+}
+
+// Opt-in difficulty ladder. Pick an Ascension rung before marching on a realm. Each rung is a
+// RULE CHANGE (not a flat multiplier), cumulative, and gated: you can only attempt one rung above
+// your highest cleared on that realm. Default = your highest cleared (so power-gear stays honest).
+function chooseAscension(realmIdx) {
+  audioResume();
+  const r = realmAt(realmIdx);
+  const cleared = Meta.ascensionCleared(realmIdx);
+  const maxPick = Math.min(Meta.ASCENSION_MAX, cleared + 1);   // unlock the next rung once the current is cleared
+  let pick = cleared;                                          // default to your proven level (never auto-harder than that)
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } });
+  const render = () => {
+    const rows = Meta.ASCENSIONS.map((a) => {
+      const locked = a.rung > maxPick;
+      const sel = a.rung === pick;
+      return el(`button.btn${sel ? '.primary' : ''}`, {
+        disabled: locked || undefined,
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px', textAlign: 'left', width: '100%', padding: '9px 12px', opacity: locked ? '0.4' : '1' },
+        onclick: locked ? null : () => { pick = a.rung; Sfx.click && Sfx.click(); render(); },
+      }, [
+        el('div', { style: { fontWeight: '700', fontSize: '13.5px' } }, `${a.name}${a.rung <= cleared ? ' ✓' : locked ? ' · locked' : ''}`),
+        el('div', { style: { fontSize: '11.5px', color: 'var(--ink-dim)', whiteSpace: 'normal', lineHeight: '1.35' } }, a.rule),
+      ]);
+    });
+    ov.replaceChildren(el('.help-card', { style: { maxWidth: '340px' } }, [
+      el('h2', { style: { fontSize: '19px' } }, `${r.name} — Ascension`),
+      el('.sub', {}, 'Opt-in stakes. Each rung is a rule change, not just bigger numbers. Off by default.'),
+      el('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', margin: '10px 0' } }, rows),
+      el('button.btn.primary.go', { onclick: () => { ov.remove(); startSolo(true, realmIdx, null, pick); } },
+        pick > 0 ? `March · Ascension ${pick} ▶` : 'March ▶'),
+    ]));
+  };
+  render();
+  document.body.append(ov);
 }
 
 // Comeback perk (research: lowest-HP gets first pick). Reuses the component draft, framed as
@@ -1439,12 +1490,17 @@ function endScreen(ladderSummary) {
       else { head = 'DEFEATED'; sub = `The bosses bested you — ${run.wins}/${TRIAL_COUNT} slain. Gear up in the Armory and face them again.`; }
     } else {
       const realm = realmAt(run.realm || 0);
+      const asc = run.ascension || 0;
       if (won) {
         const newConquest = Meta.conquerRealm(realm.index);
+        const newAsc = asc > 0 && Meta.recordAscension(realm.index, asc);   // new highest-ascension clear?
         launchConfetti(newConquest ? 4500 : 2200);
         head = 'REALM CONQUERED';
-        sub = newConquest ? `${realm.name} is yours for good — the next realm beckons.` : `${realm.name} cleared again. Spoils farmed; conquest already secured.`;
-      } else { head = 'DEFEATED'; sub = `${realm.name} held your warband off (${run.wins}/10). Gear up in the Armory and march again.`; }
+        const ascTag = asc > 0 ? ` (Ascension ${asc})` : '';
+        sub = newConquest ? `${realm.name}${ascTag} is yours for good — the next realm beckons.`
+            : newAsc ? `${realm.name} cleared at Ascension ${asc} — a new high. Spoils farmed.`
+            : `${realm.name} cleared again${ascTag}. Spoils farmed; conquest already secured.`;
+      } else { head = 'DEFEATED'; sub = `${realm.name}${asc > 0 ? ` (Ascension ${asc})` : ''} held your warband off (${run.wins}/10). Gear up in the Armory and march again.`; }
     }
     // record personal bests for the menu's at-a-glance progress (Endless depth, Trials bosses)
     if (isEndless) Meta.recordBest('endless', run.wins);
@@ -1476,8 +1532,8 @@ function endScreen(ladderSummary) {
       : isTrials
       ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startTrials(true) }, won ? '↻ Run the Trials again' : '↻ Retry the Trials')
       : won
-        ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realmAt(run.realm || 0).index + 1) }, `Next Realm ▶`)
-        : el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realmAt(run.realm || 0).index) }, `↻ Retry realm`);
+        ? el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realmAt(run.realm || 0).index + 1, null, run.ascension || 0) }, `Next Realm ▶`)
+        : el('button.btn.primary', { style: { fontSize: '16px', padding: '12px 28px' }, onclick: () => startSolo(true, realmAt(run.realm || 0).index, null, run.ascension || 0) }, `↻ Retry realm`);
   }
   const card = el('.endscreen', {}, [
     el('h1', { style: { fontSize: '34px', margin: '0' } }, head),
@@ -1612,20 +1668,26 @@ function showHonors(backTo) {
 
 // ---------- mode select ----------
 // Start (or resume) a Warpath run. `realm` = which realm to attempt (fresh runs reset everything).
-function startSolo(fresh, realm = 0, seedStr = null) {
+function startSolo(fresh, realm = 0, seedStr = null, asc = 0) {
   if (fresh) Run.clearSave();
   clearLobby();
   const resumed = !fresh && Run.load();
   run = resumed || Run.freshRun(seedStr || undefined);   // seedStr → daily/shared reproducible run
   run.mode = 'solo'; lobby = null;
-  if (!resumed) { run.realm = realm; applyGear(run); }   // a NEW realm run resets + starts with your gear boosts
+  if (!resumed) {
+    run.realm = realm;
+    run.ascension = Math.max(0, Math.min(Meta.ASCENSION_MAX, asc | 0));   // opt-in difficulty rung
+    applyGear(run);                                      // a NEW run starts with your gear boosts
+    if (run.ascension >= 2) run.lives = Math.max(1, run.lives - 1);       // A2 "Thin Ranks": −1 starting life
+    run.startLives = run.lives;                          // the round-3 net heals back UP TO this cap (not above)
+  }
   Run.save(run); renderPlanning();
   postStart(resumed);
 }
 // After entering planning: a BRAND-NEW run plays the Banishment reveal, then the intro tip (if
 // unseen); a RESUMED run just shows the intro tip. Keeps the two overlays from stacking.
 function postStart(resumed) {
-  const intro = () => { if (!seenIntro()) showHelp(); };
+  const intro = () => { if (!seenIntro()) showHelp(true); };
   if (resumed) { intro(); return; }
   showBanReveal(run.bannedRace, intro);
 }
@@ -2001,7 +2063,7 @@ function chooseMode() {
     if (lobby && lobby.human && lobby.human.alive) { run = saved; run.pool = lobby.pool; renderPlanning(); } else { clearLobby(); chooseMode(); }
   } else if (saved && saved.round > 1) {
     run = saved; run.mode = saved.mode || 'solo'; lobby = null; renderPlanning();
-    if (!seenIntro()) showHelp();
+    if (!seenIntro()) showHelp(true);
   } else {
     chooseMode();
   }

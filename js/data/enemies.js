@@ -51,6 +51,7 @@ export function realmAt(i) {
 // the authored ladder both push enemies harder; `opts.pool`/`opts.name` theme the reinforcements.
 export function getEnemyBoard(round, rng, opts = {}) {
   const diff = Math.max(0, opts.diff || 0);
+  const asc = Math.max(0, opts.asc || 0);   // Ascension rung (opt-in difficulty; see meta.js)
   const i = Math.min(round - 1, LADDER.length - 1);
   const base = LADDER[i];
   // total escalation steps. The within-realm ramp (round/4) is the key fix: previously a realm's
@@ -59,14 +60,17 @@ export function getEnemyBoard(round, rng, opts = {}) {
   // easing the climb into the boss without touching the gentle opening rounds.
   const esc = Math.max(0, round - LADDER.length) + diff + Math.floor((round - 1) / 4);
   let units = base.units.map((u) => ({ ...u }));
-  if (esc > 0) {
+  // A3 "Reinforced": one EXTRA reinforcement on every warband (a rule change, not a stat multiplier).
+  const ascAdds = asc >= 3 ? 1 : 0;
+  if (esc > 0 || ascAdds > 0) {
     const starBump = Math.min(2, Math.floor(esc / 3) + 1);
-    units = units.map((u) => ({ ...u, star: Math.min(3, u.star + starBump) }));
+    if (esc > 0) units = units.map((u) => ({ ...u, star: Math.min(3, u.star + starBump) }));
     const pool = (opts.pool && opts.pool.length) ? opts.pool : ['bramble_brute', 'warlock', 'moon_priestess', 'wraith', 'dragon_knight'];
-    const adds = Math.min(3, Math.ceil(esc / 2));            // reinforcements, capped so boards stay sane
-    const cols = [1, 6, 4];                                  // spread-out spawn columns
+    const adds = Math.min(3, Math.ceil(esc / 2)) + ascAdds;  // reinforcements, capped so boards stay sane (+A3)
+    const cols = [1, 6, 4, 0];                               // spread-out spawn columns
+    const addStar = Math.min(3, 1 + Math.floor(esc / 3));
     for (let k = 0; k < adds; k++) {
-      units.push(E(pool[(round + k) % pool.length], Math.min(3, 1 + Math.floor(esc / 3)), cols[k % cols.length], k % 2 === 0 ? 2 : 0));
+      units.push(E(pool[(round + k) % pool.length], addStar, cols[k % cols.length], k % 2 === 0 ? 2 : 0));
     }
   }
   const name = opts.name ? opts.name : (esc > 0 ? base.name + ' +' + esc : base.name);
@@ -79,12 +83,13 @@ export function getEnemyBoard(round, rng, opts = {}) {
 // never cast. Scales with the realm difficulty so it stays relevant deep in the run.
 export function getCreepCamp(round, opts = {}) {
   const diff = Math.max(0, opts.diff || 0);
+  const asc = Math.max(0, opts.asc || 0);   // Ascension rung (A3 adds one more monster)
   const esc = diff + Math.floor((round - 1) / 4);
   const star = Math.min(3, 1 + Math.floor(esc / 4));     // gentler ramp than getEnemyBoard's esc/3
   // pack SIZE scales with the run so the early opener is a tiny camp a 2-unit starter board can
   // beat (round 1, realm 0 → just 2 monsters), filling out to a full pack deeper in (cap 6). This
   // tracks the player's growing board limit so a camp is always a breather, never a first-fight wall.
-  const size = Math.max(2, Math.min(6, 2 + Math.floor(round / 3) + Math.floor(diff / 4)));
+  const size = Math.max(2, Math.min(6, 2 + Math.floor(round / 3) + Math.floor(diff / 4) + (asc >= 3 ? 1 : 0)));
   const roster = [
     E('creep_brute', star, 3, 3),
     E('creep_wolf', star, 2, 3),
