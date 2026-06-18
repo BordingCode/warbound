@@ -28,6 +28,90 @@ export const XP_COST = 4;
 export const WIN_TARGET = 10;
 export const START_LIVES = 5;
 
+// ---- Run-start BLESSINGS (solo Warpath/Trials/Endless) — a LATERAL identity pick, the
+// "I want a different game today" lever. Reuses the warlord-picker UI + the augment combat/econ
+// channels; every blessing is a TRADE-OFF (a plus paired with a minus), never pure +stats, so it
+// reshapes HOW you play without inflating power. Three of these are offered at run start.
+//   flat:   team combat mods (same COMBAT_KEYS channel as augments) — merged into the sim bundle.
+//   econ:   { interestCap, goldPerRound, boardPlus, freeRerolls, xpPerRound } — read by income/boardLimit.
+//   start:  one-time fresh-run setup { gold, lives, level, components } — applied in freshRun.
+//   hook:   gameplay flags read at the relevant moment { beastDiscount, firstBeastFree }.
+export const BLESSINGS = {
+  beastmaster: {
+    name: "Beastmaster's Call", icon: 'paw', color: '#ffb15a',
+    desc: 'Your first Beast bought is FREE, and Beasts cost 1 less. But you start with 2 less gold.',
+    start: { gold: -2 }, hook: { beastDiscount: 1, firstBeastFree: true },
+  },
+  hoarder: {
+    name: "Hoarder's Pact", icon: 'coffer', color: '#ffce5c',
+    desc: 'Interest cap +3 (bank up to 80g). But you start with 4 less gold.',
+    econ: { interestCap: 3 }, start: { gold: -4 },
+  },
+  glassVanguard: {
+    name: 'Glass Vanguard', icon: 'burst', color: '#ff7a3c',
+    desc: 'Your whole warband: +13% Attack Damage, but −9% Health. Win fast — or fold.',
+    flat: { ad: 0.13, hp: -0.09 },
+  },
+  ironheart: {
+    name: 'Ironheart', icon: 'shield', color: '#b9c4d0',
+    desc: 'Your warband: +20 Armor & Magic Resist, but −12% Attack Damage. A grinding war of attrition.',
+    flat: { armor: 20, mr: 20, ad: -0.12 },
+  },
+  warhost: {
+    name: 'Warhost', icon: 'sword', color: '#8fd24a',
+    desc: 'Field +1 champion (bigger board), but your whole warband has −10% Health. Go wide, stay fragile.',
+    econ: { boardPlus: 1 }, flat: { hp: -0.10 },
+  },
+  scavenger: {
+    name: "Scavenger's Luck", icon: 'gem', color: '#54e6c0',
+    desc: 'Start with 2 free item components to forge an early item. But you start with 1 less life.',
+    start: { components: 2, lives: -1 },
+  },
+  spendthrift: {
+    name: 'Spendthrift', icon: 'star', color: '#ff7eb6',
+    desc: 'One free shop reroll every round, and +1 starting level. But your interest cap is halved.',
+    econ: { freeRerolls: 1, interestCapOverride: 2 }, start: { level: 1 },
+  },
+};
+export const BLESSING_IDS = Object.keys(BLESSINGS);
+const COMBAT_KEYS = ['ad', 'as', 'hp', 'ap', 'armor', 'mr', 'shield', 'vamp', 'thorns', 'critChance', 'critDmg', 'revive'];
+// The blessing's combat flat bundle (merged into the sim alongside augments + gear). Empty if none.
+export function blessingFlat(run) {
+  const b = run && run.blessing && BLESSINGS[run.blessing];
+  const out = {};
+  if (b && b.flat) for (const k of COMBAT_KEYS) if (b.flat[k]) out[k] = b.flat[k];
+  return out;
+}
+// The blessing's econ contribution (additive to augments). interestCapOverride caps it absolutely.
+export function blessingEcon(run) {
+  const b = run && run.blessing && BLESSINGS[run.blessing];
+  return (b && b.econ) ? b.econ : {};
+}
+// Discount a unit's shop cost for the active blessing (Beastmaster: Beasts cost 1 less, never below 0).
+export function blessingUnitCost(run, def) {
+  let c = def.cost;
+  const h = run && run.blessing && BLESSINGS[run.blessing] && BLESSINGS[run.blessing].hook;
+  if (h && h.beastDiscount && def.origin === 'beast') c = Math.max(0, c - h.beastDiscount);
+  return c;
+}
+// Apply a chosen blessing to a FRESH solo run: set the id, run its one-time start setup, and
+// grant any starting components. Called from main.js right after freshRun (before planning).
+export function applyBlessing(run, id) {
+  if (!id || !BLESSINGS[id]) return;
+  run.blessing = id;
+  const s = BLESSINGS[id].start;
+  if (s) {
+    if (s.gold) run.gold = Math.max(0, run.gold + s.gold);
+    if (s.lives) run.lives = Math.max(1, run.lives + s.lives);
+    if (s.level) { run.level += s.level; if (run.level > MAX_LEVEL) run.level = MAX_LEVEL; }
+    if (s.components) for (let i = 0; i < s.components; i++) run.items.push({ iid: newUid(), id: COMPONENT_IDS[Math.floor(_rng.next() * COMPONENT_IDS.length)] });
+  }
+  // Beastmaster's first-Beast-free is a live flag consumed by the first Beast purchase.
+  const h = BLESSINGS[id].hook;
+  if (h && h.firstBeastFree) run.firstBeastFree = true;
+  saveRngState(run);
+}
+
 let uidCounter = 1;
 const newUid = () => 'u' + (uidCounter++);
 
@@ -123,8 +207,7 @@ export function rollShop(run) {
   saveRngState(run);
 }
 export function reroll(run) {
-  const econ = augmentEcon(run.augments);
-  const free = (econ.freeRerolls || 0) - (run.freeRerollsUsed || 0) > 0;
+  const free = freeRerollsLeft(run) > 0;
   if (!free && run.gold < REROLL_COST) return false;
   if (free) run.freeRerollsUsed = (run.freeRerollsUsed || 0) + 1;
   else run.gold -= REROLL_COST;
@@ -186,7 +269,7 @@ export function draftAugments(run) {
   saveRngState(run);
   return out;
 }
-export function freeRerollsLeft(run) { const econ = augmentEcon(run.augments); return Math.max(0, (econ.freeRerolls || 0) - (run.freeRerollsUsed || 0)); }
+export function freeRerollsLeft(run) { const econ = augmentEcon(run.augments); return Math.max(0, (econ.freeRerolls || 0) + (blessingEcon(run).freeRerolls || 0) - (run.freeRerollsUsed || 0)); }
 
 // ---- buy / sell / fuse ----
 function allUnits(run) { return [...run.board, ...run.bench.filter(Boolean)]; }
@@ -196,9 +279,14 @@ export function buy(run, shopIndex) {
   const defId = run.shop[shopIndex];
   if (!defId) return false;
   const def = UNITS_BY_ID[defId];
-  if (run.gold < def.cost) return false;
+  // Blessing pricing: Beastmaster discounts Beasts, and makes your FIRST Beast bought free.
+  let price = blessingUnitCost(run, def);
+  const firstBeastFree = run.firstBeastFree && def.origin === 'beast';
+  if (firstBeastFree) price = 0;
+  if (run.gold < price) return false;
   if (benchFreeIndex(run) === -1 && !wouldFuse(run, defId, 1)) return false;
-  run.gold -= def.cost;
+  run.gold -= price;
+  if (firstBeastFree) run.firstBeastFree = false;   // one-time: consume the free-Beast charge
   run.pool[defId] = Math.max(0, (run.pool[defId] || 0) - 1);
   run.shop[shopIndex] = null;
   const idx = benchFreeIndex(run);
@@ -294,7 +382,7 @@ export function buyXP(run) {
   return true;
 }
 export function xpNeeded(run) { return XP_TO_NEXT[run.level] || 0; }
-export function boardLimit(run) { return run.level + (augmentEcon(run.augments).boardPlus || 0); }
+export function boardLimit(run) { return run.level + (augmentEcon(run.augments).boardPlus || 0) + (blessingEcon(run).boardPlus || 0); }
 
 // ---- placement (drag results) ----
 export function placeOnBoard(run, uid, col, row) {
@@ -399,8 +487,11 @@ export function equipItem(run, iid, uid) {
 // ---- round resolution ----
 export function income(run) {
   const econ = augmentEcon(run.augments);
-  const interest = Math.min(5 + (econ.interestCap || 0), Math.floor(run.gold / 10));
-  const base = (run.round <= 4 ? 2 : run.round <= 11 ? 4 : 5) + (econ.goldPerRound || 0);
+  const be = blessingEcon(run);
+  // interest cap: base 5 + augment + blessing bonuses, unless a blessing OVERRIDES it absolutely (Spendthrift).
+  const cap = be.interestCapOverride != null ? be.interestCapOverride : (5 + (econ.interestCap || 0) + (be.interestCap || 0));
+  const interest = Math.min(cap, Math.floor(run.gold / 10));
+  const base = (run.round <= 4 ? 2 : run.round <= 11 ? 4 : 5) + (econ.goldPerRound || 0) + (be.goldPerRound || 0);
   const streakBonus = run.streak.n >= 5 ? 3 : run.streak.n >= 4 ? 2 : run.streak.n >= 2 ? 1 : 0;
   return { base, interest, streakBonus, total: base + interest + streakBonus };
 }
@@ -458,6 +549,7 @@ export function load() {
     run.augments = run.augments.filter((id) => AUGMENTS[id]);  // drop any ids no longer valid
     run.banished = run.banished || [];
     if (run.ascension == null) run.ascension = 0;     // opt-in difficulty rung (Warpath only)
+    if (run.blessing && !BLESSINGS[run.blessing]) run.blessing = null;   // drop a blessing id no longer valid
     if (run.banishLeft == null) run.banishLeft = 1;
     if (run.augRerollLeft == null) run.augRerollLeft = 1;
     run.items = run.items || [];

@@ -458,6 +458,12 @@ function renderPlanning() {
       el('.xpbar', { title: 'XP to next level (+2 each round)' }, el('.fill', { style: { transform: `scaleX(${Run.xpNeeded(run) ? run.xp / Run.xpNeeded(run) : 1})` } })),
       el('span', { style: { fontSize: '10px', color: 'var(--ink-dim)', whiteSpace: 'nowrap' } }, Run.xpNeeded(run) ? `${run.xp}/${Run.xpNeeded(run)} ⓘ` : 'MAX'),
     ]),
+    (run.mode !== 'ladder' && run.blessing && Run.BLESSINGS[run.blessing])
+      ? el('.blessing-pill', { style: { '--wc': Run.BLESSINGS[run.blessing].color }, title: Run.BLESSINGS[run.blessing].desc, onclick: () => modal2(Run.BLESSINGS[run.blessing].name, Run.BLESSINGS[run.blessing].desc) }, [
+          el('span.bp-ico', { html: ic(Run.BLESSINGS[run.blessing].icon) }),
+          el('span.bp-name', {}, Run.BLESSINGS[run.blessing].name),
+        ])
+      : null,
     run.augments.length ? el('.relic-bar', {}, run.augments.map((id) => el(`span.relic tier-${AUGMENTS[id].tier}`, { title: `${AUGMENTS[id].name}: ${AUGMENTS[id].desc}`, onclick: () => showAugmentInfo(id), html: augIcon(AUGMENTS[id]) }))) : null,
     buildTraitsEl(),
     run.mode === 'ladder' ? buildLobbyBar() : null,
@@ -473,6 +479,9 @@ function renderPlanning() {
     stage,
     el('.combat-ctl', {}, [
       el(`button.btn${overCap ? '.over-cap' : '.primary'}#readyBtn`, { style: { fontSize: '15px', padding: '10px 22px' }, onclick: startCombat }, overCap ? `Bench ${overCap} to fight` : 'Ready'),
+      // OPT-IN pre-fight read: the sim is deterministic, so a tap can surface a QUALITATIVE forecast
+      // ("their frontline out-tanks yours — likely loss") before you commit. Solo modes only; never nags.
+      run.mode !== 'ladder' && run.board.length ? el('button.btn#scoutBtn', { title: 'A qualitative pre-fight forecast — costs nothing, never required', onclick: scoutDeeper }, [el('span', { html: ic('telescope') }), ' Scout deeper']) : null,
       ...SPEEDS.map(([s, lbl]) => el(`button.btn#spd${spdId(s)}`, { onclick: () => setSpeed(s) }, lbl)),
     ]),
     // Full-width Sell drop bar — always on-screen and the WHOLE bar is the drop target, so it
@@ -1236,6 +1245,45 @@ function verdictCard(v) {
   ]);
 }
 
+// ---------- Scout deeper (opt-in pre-fight predictive verdict) ----------
+// The sim is fully deterministic and returns the whole result before any animation, so we can
+// surface a QUALITATIVE forecast of THIS exact fight — reusing fightVerdict's text branches — the
+// instant the player asks for it. It runs the IDENTICAL sim startCombat will (same boards, seed,
+// augs), so the forecast can never disagree with the played-out result. Never auto-shown.
+function scoutDeeper() {
+  if (inCombat) return;
+  audioResume(); Sfx.click && Sfx.click();
+  const over = run.board.length - Run.boardLimit(run);
+  if (over > 0) { modal2('Trim your board first', `You're fielding ${over} over the cap — bench or sell ${over}, then scout.`); return; }
+  if (!run.board.length) { modal2('No warband', 'Place at least one champion to scout the matchup.'); return; }
+  const enemy = getOpponent();
+  const playerBoard = run.board.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
+  const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
+  const seed = hashSeed(run.seed, run.round);
+  const augOpt = { aug: { player: soloCombatBundle() } };
+  if (enemy.gimmick) augOpt.aug.enemy = enemy.gimmick;
+  const sim = simulate(playerBoard, enemyBoard, seed, augOpt);
+  const won = sim.result.winner === 'player';
+  const v = fightVerdict(sim.events, won);   // reuse the same plain-language branches as the after-action card
+  // recast the after-action wording into a forward-looking forecast
+  const headline = won ? 'Reading the omens — you should WIN this.' : sim.result.winner === 'enemy' ? 'Reading the omens — you will likely LOSE this.' : 'Reading the omens — this looks like a DRAW (counts as a loss).';
+  // a couple of qualitative "why" cues lifted from the verdict (no win-%, deterministic)
+  const cues = [];
+  if (v.top && v.top[0]) cues.push(`${(UNITS_BY_ID[v.top[0].defId] || {}).name || 'your carry'} carries your damage.`);
+  if (v.tank) cues.push(`${(UNITS_BY_ID[v.tank.defId] || {}).name || 'your frontline'} holds the line.`);
+  const advice = won ? 'Your line holds — march when ready.' : v.text;   // on a loss, the verdict text is the actionable "why"
+  const accent = won ? 'var(--hp)' : sim.result.winner === 'enemy' ? 'var(--danger)' : 'var(--ink-dim)';
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) e.currentTarget.remove(); } });
+  ov.append(el('.help-card', { style: { maxWidth: '340px', borderTop: `3px solid ${accent}` } }, [
+    el('h2', { style: { fontSize: '18px', color: accent } }, [el('span', { html: ic('telescope') }), ' Scout Report']),
+    el('div', { style: { fontSize: '14px', fontWeight: '700', margin: '4px 0 8px' } }, headline),
+    cues.length ? el('ul', { style: { margin: '0 0 8px', paddingLeft: '18px', fontSize: '12.5px', color: 'var(--ink-dim)', lineHeight: '1.5' } }, cues.map((c) => el('li', {}, c))) : null,
+    el('.sub', { style: { fontSize: '12.5px', lineHeight: '1.45' } }, advice),
+    el('button.btn.primary', { style: { marginTop: '10px' }, onclick: () => ov.remove() }, 'Got it'),
+  ]));
+  document.body.append(ov);
+}
+
 // ---------- combat ----------
 async function startCombat() {
   if (inCombat) return;
@@ -1253,9 +1301,7 @@ async function startCombat() {
   const enemyBoard = enemy.units.map(({ defId, star, col, row }) => ({ defId, star, col, row }));
   const seed = hashSeed(run.seed, run.round);
   // build the combat aug: player augments, plus (in ladder) warlord powers + the lobby modifier
-  const soloBundle = Object.assign(augmentBundle(run.augments), { traitBonus: teamTraitBonus() });
-  if (run.mode !== 'ladder' && run.metaFlat) for (const k in run.metaFlat) soloBundle.flat[k] = (soloBundle.flat[k] || 0) + run.metaFlat[k];   // gear's team AD% etc.
-  let augOpt = { aug: { player: soloBundle } };
+  let augOpt = { aug: { player: soloCombatBundle() } };
   if (enemy.gimmick) augOpt.aug.enemy = enemy.gimmick;   // Warpath boss gimmick (aug.enemy channel)
   if (run.mode === 'ladder' && lobby) {
     const pb = augmentBundle(run.augments);
@@ -1669,6 +1715,11 @@ function showHonors(backTo) {
 // ---------- mode select ----------
 // Start (or resume) a Warpath run. `realm` = which realm to attempt (fresh runs reset everything).
 function startSolo(fresh, realm = 0, seedStr = null, asc = 0) {
+  // A fresh run first offers a run-start Blessing (a lateral "different game today" identity).
+  if (fresh) { chooseBlessing((bid) => beginSolo(realm, seedStr, asc, bid)); return; }
+  beginSolo(realm, seedStr, asc, null, false);
+}
+function beginSolo(realm = 0, seedStr = null, asc = 0, blessingId = null, fresh = true) {
   if (fresh) Run.clearSave();
   clearLobby();
   const resumed = !fresh && Run.load();
@@ -1678,6 +1729,7 @@ function startSolo(fresh, realm = 0, seedStr = null, asc = 0) {
     run.realm = realm;
     run.ascension = Math.max(0, Math.min(Meta.ASCENSION_MAX, asc | 0));   // opt-in difficulty rung
     applyGear(run);                                      // a NEW run starts with your gear boosts
+    if (blessingId) Run.applyBlessing(run, blessingId);  // lateral run-start identity (trade-offs, no power creep)
     if (run.ascension >= 2) run.lives = Math.max(1, run.lives - 1);       // A2 "Thin Ranks": −1 starting life
     run.startLives = run.lives;                          // the round-3 net heals back UP TO this cap (not above)
   }
@@ -1694,12 +1746,16 @@ function postStart(resumed) {
 // The Trials — boss-rush mode. Reuses the Warpath economy/planning; the foe each round is a
 // unique boss CREATURE. Beat all TRIAL_COUNT bosses to win. Your Armory gear applies; Spoils earned.
 function startTrials(fresh) {
+  if (fresh) { chooseBlessing((bid) => beginTrials(bid)); return; }
+  beginTrials(null, false);
+}
+function beginTrials(blessingId = null, fresh = true) {
   if (fresh) Run.clearSave();
   clearLobby();
   const resumed = !fresh && Run.load();
   run = resumed || Run.freshRun();
   run.mode = 'trials'; lobby = null;
-  if (!resumed) applyGear(run);
+  if (!resumed) { applyGear(run); if (blessingId) Run.applyBlessing(run, blessingId); }
   run.winTarget = TRIAL_COUNT;
   Run.save(run); renderPlanning();
   postStart(resumed);
@@ -1707,12 +1763,16 @@ function startTrials(fresh) {
 // Endless — infinite escalating waves on a life pool; bank Spoils scaled to the depth you reach.
 // Reuses the whole Warpath economy/planning; only the foe source (getOpponent) + end logic differ.
 function startEndless(fresh) {
+  if (fresh) { chooseBlessing((bid) => beginEndless(bid)); return; }
+  beginEndless(null, false);
+}
+function beginEndless(blessingId = null, fresh = true) {
   if (fresh) Run.clearSave();
   clearLobby();
   const resumed = !fresh && Run.load();
   run = resumed || Run.freshRun();
   run.mode = 'endless'; lobby = null;
-  if (!resumed) applyGear(run);
+  if (!resumed) { applyGear(run); if (blessingId) Run.applyBlessing(run, blessingId); }
   Run.save(run); renderPlanning();
   postStart(resumed);
 }
@@ -1730,6 +1790,47 @@ function teamTraitBonus() {
   const tb = { ...augmentBundle(run.augments).traitBonus };
   if (run.mode !== 'ladder' && run.metaTraitBonus) for (const t in run.metaTraitBonus) tb[t] = (tb[t] || 0) + run.metaTraitBonus[t];
   return tb;
+}
+// ---- Run-start BLESSING picker (solo Warpath/Trials/Endless) ----
+// A LATERAL identity choice — "I want a different game today" — shown before a fresh solo run.
+// Reuses the warlord-picker UI + the augment combat/econ channels. Three of N offered; every
+// blessing is a TRADE-OFF (a plus paired with a minus), so it reshapes HOW you play, never +power.
+// `onChosen(blessingId|null)` continues the run (null = decline / play a plain run).
+function pickThreeBlessings() {
+  const pool = Run.BLESSING_IDS.slice();
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return pool.slice(0, 3);
+}
+function chooseBlessing(onChosen) {
+  audioResume();
+  const offered = pickThreeBlessings();
+  const card = (id) => { const b = Run.BLESSINGS[id];
+    return el('.warlord-pick', { style: { '--wc': b.color }, onclick: () => { Sfx.click && Sfx.click(); ov.remove(); onChosen(id); } }, [
+      el('.wp-portrait', { html: ic(b.icon) }),
+      el('.wp-name', {}, b.name),
+      el('.wp-power', {}, b.desc),
+    ]); };
+  const ov = el('.overlay', { onclick: (e) => { if (e.target.classList.contains('overlay')) { /* require a choice — outside-tap does nothing */ } } });
+  ov.append(el('.game', { style: { alignItems: 'center', justifyContent: 'center', minHeight: '85svh', gap: '10px', padding: '14px', width: '100%' } }, [
+    el('h1', { style: { fontSize: '24px', margin: '0', textAlign: 'center' } }, 'Choose a Blessing'),
+    el('.sub', { style: { textAlign: 'center', color: 'var(--ink-dim)', marginTop: '-2px', maxWidth: '360px' } }, 'A lateral run-start identity — each is a trade-off, not raw power. It changes how this run plays. Pick one, or march without one.'),
+    el('.warlord-grid', { style: { gridTemplateColumns: '1fr' } }, offered.map(card)),
+    el('div', { style: { display: 'flex', gap: '8px', marginTop: '4px' } }, [
+      el('button.btn', { onclick: () => { ov.remove(); onChosen(null); } }, 'March without one'),
+      el('button.btn', { onclick: () => { ov.remove(); chooseMode(); } }, '← Back'),
+    ]),
+  ]));
+  document.body.append(ov);
+}
+
+// The full combat aug bundle for a SOLO/Trials/Endless fight: augments + synergy crowns + gear
+// flat + the run-start blessing's combat trade-off. Shared by the real fight AND the Scout preview
+// so the predicted outcome is byte-identical to what will actually play out.
+function soloCombatBundle() {
+  const b = Object.assign(augmentBundle(run.augments), { traitBonus: teamTraitBonus() });
+  if (run.metaFlat) for (const k in run.metaFlat) b.flat[k] = (b.flat[k] || 0) + run.metaFlat[k];
+  const bf = Run.blessingFlat(run); for (const k in bf) b.flat[k] = (b.flat[k] || 0) + bf[k];
+  return b;
 }
 // Pick a Warlord (your signature power) before the ladder begins — identity + run variety.
 function startLadder() { chooseWarlord(); }
